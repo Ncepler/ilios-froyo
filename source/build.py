@@ -559,22 +559,32 @@ def rmf(P):
     return Tn, N, B
 
 
+SIM = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
+
+
+def sim_centerline():
+    """The rope exactly where the pour simulation (sim.py) left it, in Blender axes,
+    with its radius from volume conservation (stretched -> thinner, squashed -> fatter)."""
+    meta = json.load(open(os.path.join(SIM, "pour-sim.json")))
+    F = np.load(os.path.join(SIM, "pour-final.npy"))
+    pts = np.stack([F[:, 0], -F[:, 2], F[:, 1]], -1)          # glTF (x, y-up, z-front) -> Blender
+    rest = np.array(meta["rest"])
+    rr = meta["radius"] * np.sqrt(meta["spacing"] / rest)
+    rad = np.empty(len(pts))
+    rad[0], rad[-1] = rr[0], rr[-1]
+    rad[1:-1] = 0.5 * (rr[:-1] + rr[1:])
+    return pts, np.clip(rad, 0.62 * A0, 1.2 * A0)
+
+
 def build_swirl():
-    pts, rad, T1 = build_centerline()
+    pts, rad = sim_centerline() if SIM else build_centerline()[:2]
     step = 0.0011
     P, R, S, L = resample(pts, rad, step)
     n = len(P)
-    # organic wobble of the centreline and thickness
-    P[:, 0] += 0.00035 * smooth_noise(n, 18, 1)
-    P[:, 1] += 0.00035 * smooth_noise(n, 18, 2)
-    P[:, 2] += 0.00025 * smooth_noise(n, 22, 3)
-    R *= 1 + 0.035 * smooth_noise(n, 14, 4)
-    # taper the very end into a soft rounded point
-    tail = 0.016
+    # taper the very end (where the tail broke off at the spout) into a soft point
+    tail = 0.012
     u = np.clip((S - (L - tail)) / tail, 0, 1)
     R *= np.sqrt(np.clip(1 - u ** 2.4, 0, 1)) * (1 - 0.15 * u) + 1e-5
-    # and swell the start so it reads as a blob landing in the cup
-    R *= 1 + 0.15 * (1 - smoothstep(0, 0.05, S))
     Tn, N, B = rmf(P)
     m = 48
     phis = np.arange(m) * 2 * math.pi / m
@@ -656,12 +666,12 @@ def swirl_core():
     return ob
 
 
-core = swirl_core()
+# (the simulated rope fills the cup solid, so no hidden core is needed any more)
 
 # group the product under one root so it imports as a single model
 cup_root = bpy.data.objects.new("IliosFroyoCup", None)
 scene.collection.objects.link(cup_root)
-for o in (cup, seam, emblem, swirl, core):
+for o in (cup, seam, emblem, swirl):
     o.parent = cup_root
 
 # =====================================================================
@@ -692,7 +702,7 @@ WALL_Y = -0.300            # front face of the shop wall
 NW, NH = 0.370, 1.020      # niche half-width, height (sill at z = 0)
 FACE_Y = -0.160            # brushed faceplate front
 SPOUT_X = (-0.100, 0.0, 0.100)
-SPOUT_Y = -0.212
+SPOUT_Y = -0.272
 NOZ_Z = 0.362
 NOZZLES = [Vector((x, SPOUT_Y, NOZ_Z)) for x in SPOUT_X]
 NOZ = NOZZLES[1]
@@ -747,9 +757,9 @@ for sx in (-1, 1):
                 rot=(math.pi / 2, 0, 0), verts=16))
 
 # ---- the freezer door (black) with spouts and star knobs
-add(rbox("Door", (0.340, 0.066, 0.150), (0, FACE_Y - 0.033, 0.498), 0.022, M["blackgloss"], segs=8))
-add(rbox("DoorCap", (0.300, 0.050, 0.020), (0, FACE_Y - 0.030, 0.582), 0.008, M["blackgloss"], segs=4))
-add(rbox("DoorParting", (0.344, 0.067, 0.003), (0, FACE_Y - 0.033, 0.452), 0.001, M["blackmatte"], segs=1))
+add(rbox("Door", (0.340, 0.128, 0.150), (0, FACE_Y - 0.064, 0.498), 0.024, M["blackgloss"], segs=8))
+add(rbox("DoorCap", (0.300, 0.100, 0.020), (0, FACE_Y - 0.058, 0.582), 0.008, M["blackgloss"], segs=4))
+add(rbox("DoorParting", (0.344, 0.129, 0.003), (0, FACE_Y - 0.064, 0.452), 0.001, M["blackmatte"], segs=1))
 add(rbox("DoorGasket", (0.352, 0.006, 0.166), (0, FACE_Y - 0.002, 0.498), 0.003, M["blackmatte"], segs=2))
 add(rbox("DoorBridge", (0.300, 0.020, 0.024), (0, SPOUT_Y + 0.004, 0.400), 0.006, M["blackgloss"], segs=3))
 for i, x in enumerate(SPOUT_X):
@@ -773,16 +783,16 @@ for i, x in enumerate(SPOUT_X):
     add(mouth())
 for sx in (-1, 1):
     x = sx * 0.050
-    add(cyl(f"StarKnobHub{sx}", 0.010, 0.020, (x, FACE_Y - 0.080, 0.418), M["blackgloss"], rot=(math.pi / 2, 0, 0),
+    add(cyl(f"StarKnobHub{sx}", 0.010, 0.020, (x, FACE_Y - 0.135, 0.418), M["blackgloss"], rot=(math.pi / 2, 0, 0),
             verts=24, bevel=0.002))
     for k in range(4):
         a = k * math.pi / 2 + math.pi / 4
-        add(cyl(f"StarKnobLobe{sx}{k}", 0.0065, 0.018, (x + 0.011 * math.cos(a), FACE_Y - 0.080, 0.418 + 0.011 * math.sin(a)),
+        add(cyl(f"StarKnobLobe{sx}{k}", 0.0065, 0.018, (x + 0.011 * math.cos(a), FACE_Y - 0.135, 0.418 + 0.011 * math.sin(a)),
                 M["blackgloss"], rot=(math.pi / 2, 0, 0), verts=16, bevel=0.002))
 
 # ---- three draw handles: left flavor, twist, right flavor
 HANDLE_NAMES = ("HandleL", "HandleC", "HandleR")
-PIVS = [Vector((x, FACE_Y - 0.068, 0.590)) for x in SPOUT_X]
+PIVS = [Vector((x, FACE_Y - 0.126, 0.590)) for x in SPOUT_X]
 handles = []
 for name, PIV in zip(HANDLE_NAMES, PIVS):
     h = bpy.data.objects.new(name, None)
@@ -818,8 +828,8 @@ for name, PIV in zip(HANDLE_NAMES, PIVS):
     add(cyl(f"{name}Clip", 0.0045, 0.010, top, M["chrome"], rot=(math.pi / 2, 0, 0), verts=16))
 
 # ---- drip tray: black tray, brushed top with three oval drains, back rail
-add(rbox("DripTray", (2 * NW - 0.040, 0.155, 0.060), (0, FACE_Y - 0.0775, 0.030), 0.006, M["blackmatte"], segs=3))
-add(rbox("TrayTop", (2 * NW - 0.070, 0.135, 0.005), (0, FACE_Y - 0.0775, TRAY_TOP - 0.0025), 0.0015, M["steel"], segs=2))
+add(rbox("DripTray", (2 * NW - 0.040, 0.245, 0.060), (0, FACE_Y - 0.1225, 0.030), 0.006, M["blackmatte"], segs=3))
+add(rbox("TrayTop", (2 * NW - 0.070, 0.225, 0.005), (0, FACE_Y - 0.1225, TRAY_TOP - 0.0025), 0.0015, M["steel"], segs=2))
 for i, x in enumerate(SPOUT_X):
     o = add(cyl(f"Drain{i}", 1.0, 0.002, (x, SPOUT_Y - 0.004, TRAY_TOP + 0.0002), M["blackmatte"], verts=48))
     o.scale = (0.036, 0.019, 1)
@@ -830,14 +840,14 @@ for i in range(6):
     for src in (cup, seam, emblem):
         o = bpy.data.objects.new(f"Stack{src.name}{i}", src.data)
         scene.collection.objects.link(o)
-        o.location = (-0.262, SPOUT_Y - 0.040, TRAY_TOP + 0.0004 + i * 0.0105)
+        o.location = (-0.262, FACE_Y - 0.062, TRAY_TOP + 0.0004 + i * 0.0105)
         o.rotation_euler = (0, 0, math.radians(-30 + i * 7))
         add(o)
 M["sample"] = make_mat("Sample Cup", lin("#f1eee7"), 0.45, spec=0.35)
 for i in range(4):
     add(lathe(f"SampleCup{i}", [(0.0, 0.0), (0.0145, 0.0), (0.0185, 0.028), (0.0190, 0.0285), (0.0182, 0.0285),
                                 (0.0140, 0.0006), (0.0, 0.0006)], M["sample"],
-              loc=(0.262, SPOUT_Y - 0.045, TRAY_TOP + i * 0.0045), segs=48))
+              loc=(0.262, FACE_Y - 0.040, TRAY_TOP + i * 0.0045), segs=48))
 
 # ---- the room: limewash wall with the niche, plaster frame, travertine ledge, gold sun + letters
 def slab_box(name, x0, x1, y0, y1, z0, z1, mat, bevel=0.0, uv=1.0):

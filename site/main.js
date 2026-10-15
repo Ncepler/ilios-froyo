@@ -5,9 +5,9 @@
 //   pull the handle -> a ribbon of froyo leaves the star spout -> the camera
 //   follows it down -> the cup circles under the spout while the swirl builds
 //   -> the tail breaks off, the tip curls, the handle springs back -> settle.
-// The swirl is a single extruded rope (from Blender) with a `_reveal` 0..1
-// attribute along its length; a shader discards everything past the pour
-// front. The falling stream is rebuilt on the CPU each frame.
+// The froyo is a viscous-rope simulation (source/sim.py): extruded from the spout, stretched thin by
+// gravity on the way down, coiling and piling in the cup as the server circles it, setting where it
+// lands. The page replays the baked simulation frame by frame and skins it as froyo.
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -189,8 +189,9 @@ manager.onProgress = (_u, done, total) => {
 };
 const loader = new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder);
 const load = url => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+const loadBin = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer(); });
 
-let machine, room, handles = [], balls = [], cup, swirl, core, path, stream, froyoMat;
+let machine, room, handles = [], balls = [], cup, swirl, path, rope, sim, froyoMat;
 let nozzles = [], cupBases = [];
 const knobWorld = new THREE.Vector3();
 
@@ -199,7 +200,9 @@ Promise.all([
   load('assets/models/ilios-froyo-cup.glb'),
   load('assets/models/ilios-room.glb'),
   fetch('assets/pour-path.json').then(r => r.json()),
-]).then(([gm, gc, gr, pj]) => {
+  fetch('assets/pour-sim.json').then(r => r.json()),
+  loadBin('assets/pour-sim.bin'),
+]).then(([gm, gc, gr, pj, sj, sb]) => {
   if (!renderer) return;
   machine = gm.scene;
   room = gr.scene;
@@ -234,30 +237,21 @@ Promise.all([
     }
     if (o.material.map) o.material.map.anisotropy = 8;
   });
+  // the finished swirl in the cup model is for the spin viewer; the hero pours a live rope instead
   swirl = cup.getObjectByName('Swirl');
-  core = cup.getObjectByName('SwirlCore');
-  // the fill inside the cup is clipped by a rising level instead of scaled
-  // (squashing a flared shape would push its wide top through the narrower wall below)
   froyoMat = swirl.material;
-  core.material = froyoMat.clone();
-  core.material.side = THREE.DoubleSide;
-  core.castShadow = false;
-  froyoPatch(core.material, 'fill');
-  swirl.material = froyoMat.clone();
-  froyoPatch(swirl.material, 'reveal');
-  const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
-  revealDepthPatch(depth);
-  swirl.customDepthMaterial = depth;
+  swirl.visible = false;
+  sim = prepSim(sj, sb);
 
   nozzles = path.nozzlesMachine.map(a => new THREE.Vector3().fromArray(a));
   cupBases = path.cupBasesMachine.map(a => new THREE.Vector3().fromArray(a));
   cup.position.copy(cupBases[1]);
   scene.add(room, machine, cup);
 
-  const smat = froyoMat.clone();
-  froyoPatch(smat, 'plain');
-  stream = makeStream(smat);
-  scene.add(stream.mesh);
+  const rmat = froyoMat.clone();
+  froyoPatch(rmat, 'plain');
+  rope = makeRope(rmat, sim);
+  cup.add(rope.mesh);                 // the simulation is in the cup's own frame
 
   initSpin(gc);
   root.classList.add('ready');
@@ -266,162 +260,181 @@ Promise.all([
   wake();
 }).catch(fail);
 
-// ------------------------------------------------------------------ swirl path helpers
-const _a = new THREE.Vector3(), _b = new THREE.Vector3();
-function pathAt(s, out = new THREE.Vector3()) {
-  const P = path.path;
-  if (s <= P[0].s) return out.fromArray(P[0].p);
-  if (s >= P[P.length - 1].s) return out.fromArray(P[P.length - 1].p);
-  let lo = 0, hi = P.length - 1;
-  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m].s < s) lo = m; else hi = m; }
-  const t = (s - P[lo].s) / (P[hi].s - P[lo].s);
-  return out.fromArray(P[lo].p).lerp(_a.fromArray(P[hi].p), t);
+// ------------------------------------------------------------------ the pour (a simulated rope, played back)
+// sim.py runs a viscous-rope simulation: extrusion from the spout, gravity stretching and thinning the
+// falling column, bending, collisions with the cup and with itself, and yield stress (it sets where it
+// lands). It saves every particle's path until it sets. Here we replay any frame and skin it as froyo.
+function prepSim(meta, buf) {
+  const raw = new Int16Array(buf);
+  const pos = new Float32Array(raw.length);
+  for (let i = 0; i < raw.length; i++) pos[i] = raw[i] / meta.scale;
+  return { ...meta, pos, detach: Math.round((meta.emitEnd + 0.08) * meta.fps) };
 }
-function tangentAt(s, out = new THREE.Vector3()) {
-  pathAt(Math.min(1, s + 0.003), out);
-  pathAt(Math.max(0, s - 0.003), _b);
-  return out.sub(_b).normalize();
+function particleAt(S, i, f, out) {
+  const k = Math.max(0, Math.min(Math.min(f, S.settle[i]) - S.emit[i], S.length[i] - 1));
+  const o = (S.offset[i] + k) * 3;
+  out[0] = S.pos[o]; out[1] = S.pos[o + 1]; out[2] = S.pos[o + 2];
 }
 
-// ------------------------------------------------------------------ the falling stream
-// A ridged rope, rebuilt each frame along a cubic bezier from the spout to the pour front.
-function makeStream(mat) {
-  const NS = 110, MS = 40;
-  const A0 = 0.0089;
-  const verts = (NS + 1) * (MS + 1) + 2;
-  const pos = new Float32Array(verts * 3);
-  const uv = new Float32Array(verts * 2);
-  const idx = [];
-  for (let i = 0; i < NS; i++) for (let j = 0; j < MS; j++) {
-    const a = i * (MS + 1) + j, b = a + MS + 1;
-    idx.push(a, b, a + 1, a + 1, b, b + 1);
-  }
-  const top = (NS + 1) * (MS + 1), bot = top + 1;
-  for (let j = 0; j < MS; j++) {
-    idx.push(top, j + 1, j);
-    const r = NS * (MS + 1);
-    idx.push(r + j, r + j + 1, bot);
+function makeRope(mat, S) {
+  const SUB = 3, M = 40;
+  const A = S.radius, Dsp = S.spacing;
+  const maxRings = (S.count - 1) * SUB + 1;
+  const vcount = maxRings * (M + 1);
+  const pos = new Float32Array(vcount * 3), nrm = new Float32Array(vcount * 3), uv = new Float32Array(vcount * 2);
+  const idx = new Uint32Array((maxRings - 1) * M * 6);
+  let q = 0;
+  for (let i = 0; i < maxRings - 1; i++) for (let j = 0; j < M; j++) {
+    const a = i * (M + 1) + j, b = a + M + 1;
+    idx[q++] = a; idx[q++] = b; idx[q++] = a + 1; idx[q++] = a + 1; idx[q++] = b; idx[q++] = b + 1;
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('normal', new THREE.BufferAttribute(nrm, 3).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2).setUsage(THREE.DynamicDrawUsage));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.setDrawRange(0, 0);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
+  mesh.receiveShadow = true;
   mesh.frustumCulled = false;
-  mesh.visible = false;
 
-  const P = [], T = [], N = [], B = [], L = [];
-  for (let i = 0; i <= NS; i++) { P.push(new THREE.Vector3()); T.push(new THREE.Vector3()); N.push(new THREE.Vector3()); B.push(new THREE.Vector3()); L.push(0); }
-  const p0 = new THREE.Vector3(), p1 = new THREE.Vector3(), p2 = new THREE.Vector3(), p3 = new THREE.Vector3();
-  const tmp = new THREE.Vector3(), v1 = new THREE.Vector3(), rL = new THREE.Vector3(), tL = new THREE.Vector3(), v2 = new THREE.Vector3();
+  const P = new Float32Array(S.count * 3), P1 = new Float32Array(3), P2 = new Float32Array(3);
+  const LL = new Float32Array(S.count), LS = new Float32Array(S.count);
+  const C = new Float32Array(maxRings * 3), T = new Float32Array(maxRings * 3), Rr = new Float32Array(maxRings), Sm = new Float32Array(maxRings);
+  const N = new Float32Array(3), B = new Float32Array(3);
+  const circ = 2 * Math.PI * A;
+  const cosT = new Float32Array(M + 1), sinT = new Float32Array(M + 1);
+  for (let j = 0; j <= M; j++) { cosT[j] = Math.cos(j / M * Math.PI * 2); sinT[j] = Math.sin(j / M * Math.PI * 2); }
 
-  function bez(t, out) {
-    const u = 1 - t;
-    return out.set(0, 0, 0)
-      .addScaledVector(p0, u * u * u).addScaledVector(p1, 3 * u * u * t)
-      .addScaledVector(p2, 3 * u * t * t).addScaledVector(p3, t * t * t);
-  }
-
-  // a, b: bezier control points set by the caller; capTop/capBot: rounded ends; flow: material moved (m)
-  function update({ from, to, toDir, capTop, capBot, flow }) {
-    const len = from.distanceTo(to);
-    p0.copy(from);
-    p3.copy(to);
-    p1.copy(from).y -= len * 0.42;
-    if (toDir) {
-      // land and bend into the laid rope
-      p2.copy(to).addScaledVector(toDir, -0.006);
-      p2.y += Math.min(0.022, len * 0.45);
-    } else {
-      p2.copy(to);
-      p2.y += len * 0.2;
+  function update(fr) {
+    const f0 = Math.floor(fr), t = fr - f0;
+    let n = 0;
+    while (n < S.count && S.emit[n] <= f0) n++;
+    if (n < 2) { geo.setDrawRange(0, 0); mesh.visible = false; return; }
+    mesh.visible = true;
+    for (let i = 0; i < n; i++) {
+      particleAt(S, i, f0, P1);
+      particleAt(S, i, f0 + 1, P2);
+      P[i * 3] = P1[0] + (P2[0] - P1[0]) * t;
+      P[i * 3 + 1] = P1[1] + (P2[1] - P1[1]) * t;
+      P[i * 3 + 2] = P1[2] + (P2[2] - P1[2]) * t;
     }
-    for (let i = 0; i <= NS; i++) bez(i / NS, P[i]);
-    let acc = 0;
-    for (let i = 0; i <= NS; i++) {
-      if (i) acc += P[i].distanceTo(P[i - 1]);
-      L[i] = acc;
-      tmp.copy(P[Math.min(NS, i + 1)]).sub(P[Math.max(0, i - 1)]);
-      T[i].copy(tmp.lengthSq() > 1e-14 ? tmp.normalize() : T[Math.max(0, i - 1)].lengthSq() ? T[Math.max(0, i - 1)] : tmp.set(0, -1, 0));
+    // link lengths, smoothed over a few links (the sim's spacing jitters slightly link to link)
+    for (let i = 0; i < n - 1; i++) {
+      LL[i] = Math.hypot(P[i * 3 + 3] - P[i * 3], P[i * 3 + 4] - P[i * 3 + 1], P[i * 3 + 5] - P[i * 3 + 2]);
     }
-    // rotation-minimising frames (double reflection)
-    N[0].set(1, 0, 0).addScaledVector(T[0], -T[0].x).normalize();
-    for (let i = 0; i < NS; i++) {
-      v1.copy(P[i + 1]).sub(P[i]);
-      const c1 = v1.dot(v1) || 1e-12;
-      rL.copy(N[i]).addScaledVector(v1, -2 / c1 * v1.dot(N[i]));
-      tL.copy(T[i]).addScaledVector(v1, -2 / c1 * v1.dot(T[i]));
-      v2.copy(T[i + 1]).sub(tL);
-      const c2 = v2.dot(v2);
-      N[i + 1].copy(c2 > 1e-12 ? rL.addScaledVector(v2, -2 / c2 * v2.dot(rL)) : rL).normalize();
+    for (let i = 0; i < n - 1; i++) {
+      let s = 0, c = 0;
+      for (let k = Math.max(0, i - 4); k <= Math.min(n - 2, i + 4); k++) { s += LL[k]; c++; }
+      LS[i] = s / c;
     }
-    for (let i = 0; i <= NS; i++) B[i].crossVectors(T[i], N[i]);
-    const total = acc;
-    const circ = 2 * Math.PI * A0;
-    let k = 0, q = 0;
-    for (let i = 0; i <= NS; i++) {
-      let r = A0;
-      const dTop = L[i], dBot = total - L[i];
-      if (capTop) r *= Math.sqrt(clamp(1 - Math.pow(clamp(1 - dTop / (A0 * 1.4)), 2)));
-      if (capBot) r *= Math.sqrt(clamp(1 - Math.pow(clamp(1 - dBot / (A0 * 1.1)), 2)));
-      // slight neck-down as it stretches under gravity, fattening again where it lands
-      r *= 1 - 0.07 * smooth(0.0, 0.08, dTop) * (1 - smooth(0.0, 0.03, dBot));
-      const tw = (dTop - flow) * 9.0;
-      for (let j = 0; j <= MS; j++) {
-        const phi = j / MS * Math.PI * 2;
-        const ridge = 1 + 0.065 * Math.cos(6 * (phi + tw)) - 0.015 * Math.cos(12 * (phi + tw));
-        const c = Math.cos(phi) * r * ridge, s = Math.sin(phi) * r * ridge;
-        pos[k++] = P[i].x + N[i].x * c + B[i].x * s;
-        pos[k++] = P[i].y + N[i].y * c + B[i].y * s;
-        pos[k++] = P[i].z + N[i].z * c + B[i].z * s;
-        uv[q++] = (dTop - flow) / 0.04;
-        uv[q++] = j / MS * circ / 0.04;
+    // Catmull-Rom through the particles, SUB samples per link
+    let r = 0;
+    for (let i = 0; i < n - 1; i++) {
+      const i0 = Math.max(0, i - 1) * 3, i1 = i * 3, i2 = (i + 1) * 3, i3 = Math.min(n - 1, i + 2) * 3;
+      // volume conservation: a stretched stretch of rope is thinner, a squashed one fatter
+      const ra = A * Math.min(1.2, Math.max(0.6, Math.sqrt(Dsp / Math.max(LS[i], 1e-5))));
+      const rb = A * Math.min(1.2, Math.max(0.6, Math.sqrt(Dsp / Math.max(LS[Math.min(n - 2, i + 1)], 1e-5))));
+      for (let s = 0; s < SUB; s++) {
+        const u = s / SUB, u2 = u * u, u3 = u2 * u;
+        for (let c = 0; c < 3; c++) {
+          const p0 = P[i0 + c], p1 = P[i1 + c], p2 = P[i2 + c], p3 = P[i3 + c];
+          C[r * 3 + c] = 0.5 * ((2 * p1) + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u2 + (-p0 + 3 * p1 - 3 * p2 + p3) * u3);
+        }
+        Rr[r] = ra + (rb - ra) * u;
+        Sm[r] = (i + u) * Dsp;
+        r++;
       }
     }
-    // end caps
-    tmp.copy(P[0]);
-    pos[k++] = tmp.x; pos[k++] = tmp.y; pos[k++] = tmp.z;
-    tmp.copy(P[NS]);
-    pos[k++] = tmp.x; pos[k++] = tmp.y; pos[k++] = tmp.z;
-    geo.attributes.position.needsUpdate = true;
-    geo.attributes.uv.needsUpdate = true;
-    geo.computeVertexNormals();
-    // weld the uv seam normals
-    const nrm = geo.attributes.normal.array;
-    for (let i = 0; i <= NS; i++) {
-      const a = (i * (MS + 1)) * 3, b = (i * (MS + 1) + MS) * 3;
-      for (let c = 0; c < 3; c++) { const m = (nrm[a + c] + nrm[b + c]) / 2; nrm[a + c] = nrm[b + c] = m; }
+    C[r * 3] = P[(n - 1) * 3]; C[r * 3 + 1] = P[(n - 1) * 3 + 1]; C[r * 3 + 2] = P[(n - 1) * 3 + 2];
+    Rr[r] = Rr[r - 1]; Sm[r] = (n - 1) * Dsp; r++;
+    const rings = r;
+    // smooth the radius a touch and taper the tail once it has broken off the spout
+    const tailFree = f0 >= S.detach && n === S.count;
+    for (let k = 0; k < rings; k++) {
+      const fromEnd = (rings - 1 - k) / SUB * Dsp;
+      if (tailFree && fromEnd < 0.012) Rr[k] *= Math.sqrt(Math.max(0, 1 - Math.pow(1 - fromEnd / 0.012, 2.4))) * 0.9 + 0.05;
+      if (k === 0) Rr[k] *= 0.6;
     }
+    for (let k = 0; k < rings; k++) {
+      const a = Math.max(0, k - 1) * 3, b = Math.min(rings - 1, k + 1) * 3;
+      let tx = C[b] - C[a], ty = C[b + 1] - C[a + 1], tz = C[b + 2] - C[a + 2];
+      const l = Math.hypot(tx, ty, tz) || 1;
+      T[k * 3] = tx / l; T[k * 3 + 1] = ty / l; T[k * 3 + 2] = tz / l;
+    }
+    // rotation-minimising frame, started from the cup's X axis
+    N[0] = 1; N[1] = 0; N[2] = 0;
+    { const d = N[0] * T[0] + N[1] * T[1] + N[2] * T[2]; N[0] -= d * T[0]; N[1] -= d * T[1]; N[2] -= d * T[2];
+      const l = Math.hypot(N[0], N[1], N[2]) || 1; N[0] /= l; N[1] /= l; N[2] /= l; }
+    let v = 0, w = 0;
+    for (let k = 0; k < rings; k++) {
+      if (k > 0) {
+        // project the previous normal onto the plane of this tangent (cheap, stable at this spacing)
+        const d = N[0] * T[k * 3] + N[1] * T[k * 3 + 1] + N[2] * T[k * 3 + 2];
+        N[0] -= d * T[k * 3]; N[1] -= d * T[k * 3 + 1]; N[2] -= d * T[k * 3 + 2];
+        const l = Math.hypot(N[0], N[1], N[2]) || 1; N[0] /= l; N[1] /= l; N[2] /= l;
+      }
+      const tx = T[k * 3], ty = T[k * 3 + 1], tz = T[k * 3 + 2];
+      B[0] = ty * N[2] - tz * N[1]; B[1] = tz * N[0] - tx * N[2]; B[2] = tx * N[1] - ty * N[0];
+      // lying coils sag flat under their own weight
+      const flat = 1 - Math.abs(ty);
+      const sq = 1 - 0.2 * Math.max(0, Math.min(1, (flat - 0.55) / 0.4));
+      const tw = Sm[k] * 9.0;
+      const rk = Rr[k];
+      for (let j = 0; j <= M; j++) {
+        const ct = cosT[j], st = sinT[j];
+        let ox = ct * N[0] + st * B[0], oy = ct * N[1] + st * B[1], oz = ct * N[2] + st * B[2];
+        // star-nozzle ridges, carried by the material as it moves
+        const ps = (j / M) * Math.PI * 2 + tw;
+        const ridge = 0.032 * Math.cos(6 * ps);
+        const dRidge = -0.192 * Math.sin(6 * ps);
+        const R = rk * (1 + ridge);
+        // squash along world up
+        const oyS = oy * sq;
+        pos[v] = C[k * 3] + ox * R; pos[v + 1] = C[k * 3 + 1] + oyS * R; pos[v + 2] = C[k * 3 + 2] + oz * R;
+        // normal: radial minus the ridge slope along the circumference
+        const px = -st * N[0] + ct * B[0], py = -st * N[1] + ct * B[1], pz = -st * N[2] + ct * B[2];
+        let nx = ox - px * dRidge, ny = (oy - py * dRidge) / sq, nz = oz - pz * dRidge;
+        const nl = Math.hypot(nx, ny, nz) || 1;
+        nrm[v] = nx / nl; nrm[v + 1] = ny / nl; nrm[v + 2] = nz / nl;
+        uv[w] = Sm[k] / 0.04; uv[w + 1] = (j / M) * circ / 0.04;
+        v += 3; w += 2;
+      }
+    }
+    geo.setDrawRange(0, (rings - 1) * M * 6);
+    geo.attributes.position.needsUpdate = true;
     geo.attributes.normal.needsUpdate = true;
+    geo.attributes.uv.needsUpdate = true;
+    geo.attributes.position.updateRange = undefined;
   }
-  return { mesh, update, A0 };
+  return { mesh, update };
 }
 
 // ------------------------------------------------------------------ camera choreography
 // Keys are [p, camera position, look target] in machine space (metres, Y up, front = +Z).
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const Z0 = 0.272;   // spout line (the cup circles under it)
 const CAM_KEYS = [
   [0.000, V(0.16, 0.64, 3.55), V(0.05, 0.56, 0.20)],
-  [0.045, V(0.13, 0.60, 2.55), V(0.00, 0.52, 0.20)],
-  [0.140, V(0.21, 0.56, 1.12), V(0.00, 0.49, 0.24)],
-  [0.210, V(0.13, 0.40, 0.66), V(0.00, 0.355, 0.21)],
-  [0.265, V(0.14, 0.27, 0.68), V(0.00, 0.23, 0.21)],
-  [0.315, V(0.12, 0.245, 0.68), V(0.00, 0.12, 0.21)],
+  [0.045, V(0.13, 0.60, 2.55), V(0.00, 0.52, 0.22)],
+  [0.140, V(0.22, 0.56, 1.18), V(0.00, 0.49, Z0)],
+  [0.200, V(0.14, 0.41, Z0 + 0.45), V(0.00, 0.355, Z0)],
+  [0.250, V(0.15, 0.29, Z0 + 0.46), V(0.00, 0.24, Z0)],
+  [0.300, V(0.13, 0.25, Z0 + 0.45), V(0.00, 0.13, Z0)],
 ];
-// during the pour the camera orbits the spout axis and rises with the swirl
+// during the pour the camera orbits the spout axis and rises with the pile
 for (let i = 0; i <= 6; i++) {
   const t = i / 6;
-  const p = 0.36 + t * 0.44;
+  const p = 0.34 + t * 0.44;
   const ang = THREE.MathUtils.degToRad(16 - 58 * t);
-  const rad = 0.345 - 0.045 * Math.sin(t * Math.PI);
-  const y = 0.215 + 0.085 * t;
-  CAM_KEYS.push([p, V(Math.sin(ang) * rad, y, 0.212 + Math.cos(ang) * rad), V(0, 0.112 + 0.062 * t, 0.212)]);
+  const rad = 0.36 - 0.04 * Math.sin(t * Math.PI);
+  const y = 0.23 + 0.07 * t;
+  CAM_KEYS.push([p, V(Math.sin(ang) * rad, y, Z0 + Math.cos(ang) * rad), V(0, 0.11 + 0.05 * t, Z0)]);
 }
-CAM_KEYS.push([0.865, V(0.02, 0.29, 0.80), V(-0.02, 0.17, 0.24)]);
-CAM_KEYS.push([0.970, V(0.42, 0.31, 1.02), V(-0.10, 0.175, 0.28)]);
-CAM_KEYS.push([1.000, V(0.425, 0.312, 1.03), V(-0.102, 0.175, 0.28)]);
+CAM_KEYS.push([0.865, V(0.02, 0.28, Z0 + 0.58), V(-0.02, 0.16, Z0 + 0.02)]);
+CAM_KEYS.push([0.970, V(0.42, 0.30, Z0 + 0.80), V(-0.10, 0.165, Z0 + 0.06)]);
+CAM_KEYS.push([1.000, V(0.425, 0.302, Z0 + 0.81), V(-0.102, 0.165, Z0 + 0.06)]);
 
 const camPosCurve = new THREE.CatmullRomCurve3(CAM_KEYS.map(k => k[1]), false, 'centripetal');
 const camTgtCurve = new THREE.CatmullRomCurve3(CAM_KEYS.map(k => k[2]), false, 'centripetal');
@@ -454,64 +467,33 @@ function fitPortrait(pos, tgt, p) {
 
 // ------------------------------------------------------------------ the scene at progress p
 const camPos = new THREE.Vector3(), camTgt = new THREE.Vector3();
-const D = new THREE.Vector3(), Dt = new THREE.Vector3(), Dw = new THREE.Vector3();
-const tipW = new THREE.Vector3(), from = new THREE.Vector3(), _cb = new THREE.Vector3();
+const _cb = new THREE.Vector3();
+
+// scroll p -> simulation frame
+const SIM_P = [0.15, 0.86];
+const simFrameAt = p => clamp((p - SIM_P[0]) / (SIM_P[1] - SIM_P[0])) * (sim.frames - 1);
 
 function pose(p) {
   if (!machine) return;
-  // handle: pulled, held through the pour, released
-  const pull = easeInOut(smooth(TL.pull[0], TL.pull[1], p)) * (1 - easeInOut(smooth(TL.release[0], TL.release[0] + 0.035, p)));
+  const fr = simFrameAt(p);
+  // the valve closes when the sim stops extruding; the handle springs back with it
+  const pRel = SIM_P[0] + (sim.emitEnd * sim.fps / (sim.frames - 1)) * (SIM_P[1] - SIM_P[0]);
+  const pull = easeInOut(smooth(TL.pull[0], TL.pull[1], p)) * (1 - easeInOut(smooth(pRel, pRel + 0.03, p)));
   handles.forEach((h, i) => { h.rotation.x = i === sel ? pull * path.handlePullRadians : 0; });
-  const nozzle = nozzles[sel];
-  // the empty cup waits under the twist spout, then slides under the chosen one
+
+  // the empty cup waits under the twist spout, slides under the chosen one, then the server
+  // circles it exactly as the simulation's hand did
   const slide = easeInOut(smooth(0.03, 0.12, p));
-  const cupBase = _cb.copy(cupBases[1]).lerp(cupBases[sel], slide);
+  const base = _cb.copy(cupBases[1]).lerp(cupBases[sel], slide);
+  const f0 = Math.min(sim.frames - 1, Math.floor(fr)), f1 = Math.min(sim.frames - 1, f0 + 1), ft = fr - f0;
+  const co = sim.cupOffset;
+  const live = p > SIM_P[0] ? 1 : 0;
+  cup.position.set(
+    base.x + live * (co[f0][0] + (co[f1][0] - co[f0][0]) * ft),
+    base.y,
+    base.z + live * (co[f0][1] + (co[f1][1] - co[f0][1]) * ft));
 
-  // pour front along the swirl (0..1)
-  const pr = clamp((p - TL.pour[0]) / (TL.pour[1] - TL.pour[0]));
-  const reveal = pr <= 0 ? 0 : 0.002 + 0.998 * pr;
-  uReveal.value = p >= TL.pour[1] ? 1.01 : reveal;
-
-  // the cup circles under the spout so the pour front is always straight below it
-  pathAt(Math.min(reveal, 0.999), D);
-  tangentAt(Math.min(reveal, 0.999), Dt);
-  const follow = 1 - smooth(TL.release[0] + 0.01, TL.settle[0] + 0.05, p);
-  cup.position.set(cupBase.x - D.x * follow, cupBase.y, cupBase.z - D.z * follow);
-  // the hidden fill rises with the coils inside the cup
-  const fill = clamp(reveal / path.insideRevealEnd);
-  uFillY.value = cup.position.y + 0.0068 + fill * 0.0505;
-  core.visible = fill > 0.002;
-  swirl.visible = reveal > 0;
-
-  // stream
-  const emerge = smooth(TL.emerge[0], TL.emerge[1], p);
-  Dw.copy(D).add(cup.position);
-  const flow = (emerge * 0.22 + pr * path.swirlLength);
-  if (p < TL.emerge[0] || p > TL.release[1]) {
-    stream.mesh.visible = false;
-  } else if (p < TL.pour[0]) {
-    // falling: gravity accelerates the front (t^2), rounded nub at the bottom
-    const fall = Math.pow(emerge, 1.6);
-    from.copy(nozzle);
-    tipW.copy(nozzle);
-    tipW.y = THREE.MathUtils.lerp(nozzle.y - 0.003, Dw.y + 0.004, fall);
-    stream.mesh.visible = true;
-    stream.update({ from, to: tipW, toDir: null, capTop: false, capBot: true, flow });
-  } else if (p < TL.pour[1]) {
-    from.copy(nozzle);
-    stream.mesh.visible = true;
-    stream.update({ from, to: Dw, toDir: Dt, capTop: false, capBot: false, flow });
-  } else {
-    // released: the tail leaves the spout and drops onto the tip
-    const t = easeInOut(clamp((p - TL.release[0]) / (TL.release[1] - TL.release[0])));
-    pathAt(0.999, D);
-    tangentAt(0.999, Dt);
-    Dw.copy(D).add(cup.position);
-    from.copy(nozzle);
-    from.y = THREE.MathUtils.lerp(nozzle.y, Dw.y + 0.006, t);
-    stream.mesh.visible = from.y - Dw.y > 0.003;
-    if (stream.mesh.visible) stream.update({ from, to: Dw, toDir: Dt, capTop: true, capBot: false, flow: flow + t * 0.1 });
-  }
+  if (p > SIM_P[0]) rope.update(fr); else rope.mesh.visible = false;
 
   // camera
   camAt(p, camPos, camTgt);
@@ -522,7 +504,6 @@ function pose(p) {
   fitPortrait(camPos, camTgt, p);
   camera.position.copy(camPos);
   camera.lookAt(camTgt);
-  // narrow the lens a touch for the close moments
   const close = smooth(0.12, 0.24, p) * (1 - smooth(0.82, 0.95, p));
   camera.fov = THREE.MathUtils.lerp(26, 30, close) * (camera.aspect < 1 ? 1.12 : 1);
   camera.updateProjectionMatrix();
@@ -722,7 +703,7 @@ new IntersectionObserver(([e]) => {
 document.addEventListener('visibilitychange', () => document.body.classList.toggle('paused', document.hidden));
 
 // test hook: jump straight to a progress value (used by the screenshot harness)
-window.__ilios = { scene, render: () => renderer.render(scene, camera), setP(p) { target = shown = p; loadK = 1; frame(p); }, cam: () => ({ tgt: camTgt.toArray(), dir: camera.getWorldDirection(new THREE.Vector3()).toArray(), pos: camera.position.toArray(), fov: camera.fov, near: camera.near, stream: stream && stream.mesh.visible, cup: cup && cup.position.toArray() }), setFlavor };
+window.__ilios = { scene, render: () => renderer.render(scene, camera), setP(p) { target = shown = p; loadK = 1; frame(p); }, cam: () => ({ tgt: camTgt.toArray(), dir: camera.getWorldDirection(new THREE.Vector3()).toArray(), pos: camera.position.toArray(), fov: camera.fov, near: camera.near, cup: cup && cup.position.toArray() }), setFlavor };
 
 // section entrances
 const io = new IntersectionObserver(es => es.forEach(e => {
