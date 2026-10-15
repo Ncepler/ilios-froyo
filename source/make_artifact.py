@@ -28,6 +28,12 @@ js = js.replace(
     "  .then(t => { const bin = atob(t.trim()); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);\n"
     "    manager.itemStart(url); return new Promise((res, rej) => loader.parse(u.buffer, '', g => { manager.itemEnd(url); res(g); }, rej)); });")
 assert ".b64.txt" in js
+# the pour simulation's binary ships the same way
+js = js.replace(
+    "const loadBin = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer(); });",
+    "const loadBin = url => fetch(url + '.b64.txt').then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.text(); })\n"
+    "  .then(t => { const bin = atob(t.trim()); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; });")
+assert "pour-sim" in js and ".b64.txt'" in js
 h = h.replace('<script type="module" src="main.js"></script>', '<script type="module">\n' + js + "\n</script>")
 open(out, "w", encoding="utf8").write(h)
 print("wrote", out, len(h))

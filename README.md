@@ -20,6 +20,7 @@ models/
 site/                                    the scroll-driven hero site (plain HTML + JS, no build step)
 renders/                                 photoreal Cycles renders (product shots, macro, machine)
 source/
+  sim.py                                 the pour: a viscous-rope physics simulation (see below)
   tex.py                                 procedural textures: sun emblem, paper, brushed steel, marble, froyo micro-surface
   build.py                               Blender script: builds the cup, swirl, machine, materials; exports GLB + pour path
   render.py                              Cycles product renders
@@ -77,8 +78,15 @@ page settles on the finished cup with directions.
 - Everything is rendered live in WebGL (three.js r169, vendored in `site/vendor/three`, MIT). There is no video file.
 - The flavor is a shader on the froyo: one color, or two-tone stripes that follow the ridges for the twist, with
   tiny dark specks for vanilla bean. The same choice carries into the spin viewer below.
-- The swirl is revealed by a shader that discards everything past the pour front (`_reveal > uReveal`); the falling
-  stream is a ridged rope rebuilt on the CPU each frame along a curve from the spout to the pour front.
+- The froyo is real physics, baked: `source/sim.py` simulates the soft serve as a viscous rope (position-based
+  dynamics). It is extruded from the star spout at a steady rate; gravity draws the falling column out and it thins
+  (radius follows volume conservation); it bends softly; it collides with the cup and with the rope already in it;
+  pieces that land lying flat set almost at once while upright folds topple first (yield stress); and the server's
+  hand circles the cup, filling it in flat layers and then stepping inward to build the dome, steering by watching
+  where the rope touches down. When the valve closes the tail breaks off and falls onto the top. The site replays
+  the baked frames as one live rope (`pour-sim.bin`, 0.4 MB) as you scroll, forward or back.
+- The downloadable cup's `Swirl` is the simulation's final frame. It still carries a `_reveal` attribute (0 where the
+  rope starts, 1 at the tip), so another site can animate a simple pour with a one-line shader discard.
 - The scroll position is eased (frame-rate independent lerp) and the render loop rests once it has caught up.
 - Phones get the same 3D scene with portrait framing. Reduced motion gets the finished frame, with no scrubbing.
   If WebGL fails, the page shows a still render.
@@ -105,7 +113,12 @@ npx gltf-transform optimize /tmp/out/ilios-froyo-cup.glb site/assets/models/ilio
     --compress meshopt --texture-compress webp --texture-size 2048 --simplify false
 ```
 
-Keep `--simplify false`: simplification would re-mesh the swirl and break the pour order.
+Keep `--simplify false` (it would re-mesh the swirl) and, for the machine, `--flatten false --join false`
+(they would merge away the three handle pivots).
+
+The pour: `python source/sim.py /tmp/sim` (about 25 s on a laptop CPU), then pass `/tmp/sim` as the third
+argument to `build.py` so the cup's swirl is the simulation's final frame, and copy `pour-sim.json` +
+`pour-sim.bin` into `site/assets/`.
 
 ## Before this goes to the client
 
