@@ -168,13 +168,14 @@ def card(loc, size, strength):
 
 cup = bpy.data.objects["IliosFroyoCup"]
 mach = bpy.data.objects["IliosSoftServeMachine"]
-handle = bpy.data.objects["Handle"]
+handle = bpy.data.objects["HandleC"]
+room = bpy.data.objects.get("IliosRoom")
 plaster = plaster_mat()
 marble = marble_mat()
 
 if SHOT.startswith("cup"):
     # cup alone on a marble block against the plaster wall
-    for o in mach.children_recursive + [mach]:
+    for o in mach.children_recursive + [mach] + ((room.children_recursive + [room]) if room else []):
         o.hide_render = True
     cup.location = (0, 0, 0.040)
     slab("Plinth", (0.22, 0.16, 0.040), (0, 0.0, 0.020), marble)
@@ -195,19 +196,21 @@ if SHOT.startswith("cup"):
         sc.render.resolution_x, sc.render.resolution_y = WIDTH, int(WIDTH * 0.625)
         camera((-0.06, -0.17, 0.085), (0, -0.043, 0.074), 100, 6.3)
 else:
-    # machine on a marble counter, cup under the spout
-    slab("Counter", (1.6, 0.9, 0.040), (0, 0.10, -0.020), marble)
-    plane("Wall", (4, 3), (0, 0.55, 1.0), (math.pi / 2, 0, 0), plaster)
-    area("Key", (-1.1, -1.0, 1.3), (0, -0.1, 0.35), 1.6, 160, "#fff0dc")
-    area("Fill", (1.2, -1.1, 0.5), (0, -0.1, 0.35), 2.0, 40, "#f3f0ea")
-    area("Rim", (0.6, 0.6, 1.4), (0, 0, 0.5), 0.8, 60, "#ffe7c4")
-    card((-1.4, -1.6, 0.9), 1.6, 0.8)
-    card((1.6, -1.2, 1.2), 1.4, 0.5)
-    card((0.0, -2.0, 2.2), 2.0, 0.4)
+    # the wall-set station in its limewash niche, lit like the shop's ceiling cans
+    area("Can1", (0.0, -0.75, 1.75), (0, -0.2, 0.45), 0.35, 55, "#ffe9cc", shape="DISK")
+    area("Can2", (0.95, -0.75, 1.75), (0.86, -0.3, 1.0), 0.35, 38, "#ffe9cc", shape="DISK")
+    area("Fill", (-1.2, -2.2, 0.9), (0, -0.2, 0.5), 2.4, 38, "#f6efe4")
+    area("NicheGlow", (0.0, -0.24, 0.99), (0, -0.24, 0.0), 0.5, 4, "#fff2df", size_y=0.12)
+    card((-1.4, -1.8, 0.9), 1.6, 0.6)
+    card((1.2, -1.6, 1.0), 1.4, 0.4)
     if SHOT == "machine_pull":
-        handle.rotation_euler = (math.radians(62), 0, 0)
-    sc.render.resolution_x, sc.render.resolution_y = WIDTH, int(WIDTH * 1.25)
-    camera((0.95, -1.75, 0.70), (0, -0.05, 0.38), 50, 5.6)
+        handle.rotation_euler = (math.radians(55), 0, 0)
+    if SHOT == "station_wide":
+        sc.render.resolution_x, sc.render.resolution_y = WIDTH, int(WIDTH * 0.625)
+        camera((0.55, -2.75, 0.80), (0.32, -0.3, 0.62), 35, 8.0)
+    else:
+        sc.render.resolution_x, sc.render.resolution_y = WIDTH, int(WIDTH * 1.25)
+        camera((0.36, -1.55, 0.70), (0.02, -0.2, 0.49), 45, 5.6)
 
 sc.render.filepath = os.path.join(OUT, f"render_{SHOT}.png")
 bpy.ops.render.render(write_still=True)

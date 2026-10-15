@@ -303,6 +303,101 @@ def marble(n=2048):
     r = 0.16 + 0.10 * (1 - v) + 0.05 * t3
     to_img(np.stack([np.ones_like(r), r, np.zeros_like(r)], -1)).save(f"{OUT}/marble_orm.png")
 
+# ---------------------------------------------------------------- the machine's header sign
+def header_sign(W=2048, Hh=420, left=("SWEET", "HARBOR COFFEE"), right=("ORGANIC", "VANILLA BEAN"), name="sign"):
+    """White header panel: flavor left, gold sun + ILIOS FROYO centre, flavor right (as on the real machines)."""
+    S = 2
+    im = Image.new("RGB", (W * S, Hh * S), (244, 242, 237))
+    d = ImageDraw.Draw(im)
+    ink = (128, 98, 58)
+    sans = ImageFont.truetype(find_font("ArsenalSC-Regular.ttf"), int(Hh * S * 0.118))
+    serif = ImageFont.truetype(find_font("Italiana-Regular.ttf"), int(Hh * S * 0.105))
+    small = ImageFont.truetype(find_font("Italiana-Regular.ttf"), int(Hh * S * 0.070))
+
+    def tracked(text, font, cx, y, track):
+        widths = [d.textlength(ch, font=font) for ch in text]
+        total = sum(widths) + track * (len(text) - 1)
+        x = cx - total / 2
+        for ch, wch in zip(text, widths):
+            d.text((x, y), ch, font=font, fill=ink, anchor="ls")
+            x += wch + track
+
+    for (l1, l2), cx in ((left, W * S * 0.18), (right, W * S * 0.82)):
+        tracked(l1, sans, cx, Hh * S * 0.46, Hh * S * 0.012)
+        tracked(l2, sans, cx, Hh * S * 0.64, Hh * S * 0.012)
+    sun = Image.open(f"{OUT}/emblem_color.png").convert("RGBA")
+    w = sun.size[0]
+    sun = sun.crop((int(w * 0.13), int(w * 0.04), int(w * 0.87), int(w * 0.78)))
+    sz = int(Hh * S * 0.62)
+    sun = sun.resize((sz, sz), Image.LANCZOS)
+    # lift the foil a touch for print on white
+    im.paste(sun, (int(W * S / 2 - sz / 2), int(Hh * S * 0.06)), sun)
+    tracked("ILIOS", serif, W * S / 2 - Hh * S * 0.04, Hh * S * 0.80, Hh * S * 0.012)
+    tracked("FROYO", small, W * S / 2 + Hh * S * 0.08, Hh * S * 0.90, Hh * S * 0.010)
+    im = im.resize((W, Hh), Image.LANCZOS)
+    im.save(f"{OUT}/{name}_color.png")
+
+
+# ---------------------------------------------------------------- limewash plaster (the shop's walls)
+def limewash(n=1024):
+    c1 = periodic_noise(n, 90, seed=71)
+    c2 = periodic_noise(n, 22, seed=72)
+    c3 = periodic_noise(n, 5, seed=73)
+    # brushy, slightly directional strokes
+    strokes = periodic_noise(n, 40, 9, seed=74)
+    v = 0.55 * c1 + 0.25 * c2 + 0.12 * strokes + 0.08 * c3
+    base = srgb("#d9cfbf")
+    col = base[None, None] * (0.93 + 0.13 * v[..., None])
+    to_img(col).save(f"{OUT}/limewash_color.jpg", quality=92)
+    height_to_normal(0.6 * c3 + 0.4 * strokes, 1.2).save(f"{OUT}/limewash_normal.png")
+
+
+# ---------------------------------------------------------------- travertine ledge
+def travertine(n=1024):
+    yy, xx = np.mgrid[0:n, 0:n] / n
+    t1 = periodic_noise(n, 60, 6, seed=81)
+    t2 = periodic_noise(n, 12, 2, seed=82)
+    bands = 0.5 + 0.5 * np.sin(2 * math.pi * (6 * yy) + 3.0 * t1)
+    pits = np.clip((periodic_noise(n, 2.2, 1.2, seed=83) - 0.70) * 5, 0, 1)
+    v = 0.6 * bands + 0.4 * t2
+    base = srgb("#d7d0c4")
+    dark = srgb("#b9b0a3")
+    col = base[None, None] * (1 - 0.35 * v[..., None]) + dark[None, None] * 0.35 * v[..., None]
+    col *= (1 - 0.25 * pits)[..., None]
+    to_img(col).save(f"{OUT}/travertine_color.jpg", quality=92)
+    height_to_normal(0.3 * t2 - 0.7 * pits, 1.6).save(f"{OUT}/travertine_normal.png")
+
+
+# ---------------------------------------------------------------- faceplate stickers (generic, no third-party marks)
+def stickers():
+    # amber caution label
+    w, h = 512, 300
+    im = Image.new("RGB", (w, h), (246, 244, 238))
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, w, 70], fill=(233, 140, 30))
+    d.polygon([(20, 60), (50, 10), (80, 60)], fill=(20, 20, 20))
+    for i in range(7):
+        y = 95 + i * 28
+        d.rectangle([24, y, 24 + RNG.integers(260, 470), y + 9], fill=(110, 110, 110))
+    im.save(f"{OUT}/sticker_caution.png")
+    # white service label
+    im = Image.new("RGB", (w, h), (248, 248, 246))
+    d = ImageDraw.Draw(im)
+    d.ellipse([22, 70, 182, 230], outline=(30, 30, 30), width=10)
+    d.ellipse([62, 110, 142, 190], fill=(30, 30, 30))
+    for i in range(8):
+        y = 40 + i * 30
+        d.rectangle([210, y, 210 + RNG.integers(120, 270), y + 10], fill=(90, 90, 90))
+    im.save(f"{OUT}/sticker_service.png")
+    # switch labels strip
+    im = Image.new("RGB", (1024, 64), (205, 205, 200))
+    d = ImageDraw.Draw(im)
+    for i in range(10):
+        x = 30 + i * 100
+        d.rectangle([x, 22, x + 52, 30], fill=(60, 60, 60))
+        d.rectangle([x + 8, 38, x + 44, 44], fill=(90, 90, 90))
+    im.save(f"{OUT}/switch_labels.png")
+
 
 if __name__ == "__main__":
     paper_tiles()
@@ -312,4 +407,8 @@ if __name__ == "__main__":
     sun_emblem()
     badge()
     marble()
+    header_sign()
+    limewash()
+    travertine()
+    stickers()
     print("textures ->", OUT)

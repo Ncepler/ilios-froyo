@@ -665,15 +665,45 @@ for o in (cup, seam, emblem, swirl, core):
     o.parent = cup_root
 
 # =====================================================================
-# THE MACHINE  (countertop single-head soft-serve freezer, Ilios edition)
+# THE STATION  (the shop's wall-set, three-handle twist machine + the room around it)
+# Modelled on the real Ilios counter: the machine sits in a limewash niche with a plaster
+# frame; a white header sign reads "Sweet Harbor Coffee | sun + ILIOS FROYO | Organic Vanilla
+# Bean"; brushed faceplate, black door, three black ball draw handles (left flavor, twist,
+# right flavor), a black drip tray with three oval drains, paper cups stacked on the tray.
 # =====================================================================
-FRONT = -0.200            # front face of the body
-NOZ = Vector((0.0, -0.290, 0.335))   # star-spout exit point
-TRAY_TOP = 0.062
+M["blackgloss"] = make_mat("Black Door Plastic", lin("#111112"), 0.2, coat=0.5, coat_rough=0.12)
+M["ball"] = make_mat("Black Handle Ball", lin("#0b0b0c"), 0.34, coat=0.25, coat_rough=0.2, spec=0.4)
+M["blackmatte"] = make_mat("Black Tray", lin("#121212"), 0.55)
+M["whiteplastic"] = make_mat("Spout Plastic", lin("#ecebe6"), 0.32, coat=0.3, coat_rough=0.2)
+M["sign"] = make_mat("Header Sign", lin("#ffffff"), 0.42, base_tex="sign_color.png", spec=0.3)
+M["red"] = make_mat("Red Indicator", lin("#c42a22"), 0.3, emission=lin("#ff3a2a"), emission_strength=3.0)
+M["caution"] = make_mat("Caution Label", lin("#ffffff"), 0.45, base_tex="sticker_caution.png")
+M["service"] = make_mat("Service Label", lin("#ffffff"), 0.45, base_tex="sticker_service.png")
+M["labels"] = make_mat("Switch Labels", lin("#ffffff"), 0.4, base_tex="switch_labels.png")
+M["limewash"] = make_mat("Limewash Plaster", lin("#ffffff"), 0.93, base_tex="limewash_color.jpg",
+                         normal="limewash_normal.png", normal_strength=0.4, spec=0.25)
+M["travertine"] = make_mat("Travertine", lin("#ffffff"), 0.38, base_tex="travertine_color.jpg",
+                           normal="travertine_normal.png", normal_strength=0.5, coat=0.15, coat_rough=0.3)
+M["wallgold"] = make_mat("Wall Sun Gold", lin("#c39a4e"), 0.3, metal=1.0, base_tex="badge_color.png",
+                         orm="badge_orm.png", normal="badge_normal.png", normal_strength=1.0,
+                         uv="Decal", alpha_from_base=True)
+
+WALL_Y = -0.300            # front face of the shop wall
+NW, NH = 0.370, 1.020      # niche half-width, height (sill at z = 0)
+FACE_Y = -0.160            # brushed faceplate front
+SPOUT_X = (-0.100, 0.0, 0.100)
+SPOUT_Y = -0.212
+NOZ_Z = 0.362
+NOZZLES = [Vector((x, SPOUT_Y, NOZ_Z)) for x in SPOUT_X]
+NOZ = NOZZLES[1]
+TRAY_TOP = 0.0645
+PULL = math.radians(55)
 
 mach_root = bpy.data.objects.new("IliosSoftServeMachine", None)
 scene.collection.objects.link(mach_root)
-parts = []
+room_root = bpy.data.objects.new("IliosRoom", None)
+scene.collection.objects.link(room_root)
+parts, room = [], []
 
 
 def add(o):
@@ -681,188 +711,226 @@ def add(o):
     return o
 
 
-# body shell + plinth
-add(rbox("Body", (0.420, 0.600, 0.720), (0, FRONT + 0.300, 0.040 + 0.360), 0.028, M["body"]))
-add(rbox("BodyPlinth", (0.430, 0.610, 0.022), (0, FRONT + 0.300, 0.034), 0.006, M["steel"]))
-# top deck + hopper lid with a cream knob
-add(rbox("TopDeck", (0.400, 0.560, 0.012), (0, FRONT + 0.300, 0.766), 0.005, M["steel"]))
-add(lathe("HopperLid", [(0, 0.020), (0.095, 0.020), (0.105, 0.016), (0.110, 0.006), (0.112, 0.0)],
-          M["steel"], loc=(0, FRONT + 0.36, 0.772), segs=96))
-add(lathe("HopperKnob", [(0, 0), (0.016, 0), (0.017, 0.006), (0.010, 0.016), (0.012, 0.024),
-                         (0.008, 0.030), (0, 0.031)], M["knob"], loc=(0, FRONT + 0.36, 0.792)))
-# feet
+def addr(o):
+    room.append(o)
+    return o
+
+
+def decal(name, w, h, center, mat, uvname="UVMap", y_out=-1):
+    """Flat quad facing -Y (the room's front) with a 0..1 UV."""
+    cx, cy, cz = center
+    verts = [(cx - w / 2, cy, cz - h / 2), (cx + w / 2, cy, cz - h / 2), (cx + w / 2, cy, cz + h / 2),
+             (cx - w / 2, cy, cz + h / 2)]
+    faces = [(0, 1, 2, 3)]
+    uvs = {uvname: [(0, 0), (1, 0), (1, 1), (0, 1)]}
+    return mesh_obj(name, verts, faces, [mat], uvs=uvs, smooth=False)
+
+
+# ---- faceplate, sign, details
+add(rbox("Faceplate", (2 * NW - 0.012, 0.030, 0.790), (0, FACE_Y + 0.015, 0.070 + 0.395), 0.004, M["steel"], segs=3, uv=0.22))
+add(rbox("PanelSeam", (2 * NW - 0.03, 0.002, 0.003), (0, FACE_Y - 0.0005, 0.352), 0.0008, M["blackmatte"], segs=1))
+add(rbox("SignPanel", (2 * NW - 0.024, 0.016, 0.142), (0, FACE_Y - 0.010, 0.918), 0.004, M["whiteplastic"], segs=3))
+add(decal("SignFace", 2 * NW - 0.034, 0.134, (0, FACE_Y - 0.0185, 0.918), M["sign"]))
+add(decal("SwitchLabels", 0.50, 0.032, (0, FACE_Y - 0.0006, 0.818), M["labels"]))
+for k in range(8):
+    x = -0.21 + k * 0.06
+    add(cyl(f"ToggleBase{k}", 0.0055, 0.006, (x, FACE_Y - 0.003, 0.795), M["chrome"], rot=(math.pi / 2, 0, 0), verts=20))
+    lever = add(cyl(f"Toggle{k}", 0.0016, 0.016, (x, FACE_Y - 0.010, 0.799), M["chrome"], rot=(math.radians(60), 0, 0), verts=10))
 for sx in (-1, 1):
-    for sy in (0, 1):
-        y = FRONT + 0.045 + sy * 0.51
-        add(cyl(f"Foot{sx}{sy}", 0.017, 0.020, (sx * 0.175, y, 0.014), M["chrome"], bevel=0.003))
-        add(cyl(f"FootPad{sx}{sy}", 0.019, 0.006, (sx * 0.175, y, 0.003), M["rubber"], bevel=0.002))
-# side vents: recessed slots on both sides
-for sx in (-1, 1):
-    for k in range(16):
-        add(rbox(f"Vent{sx}_{k}", (0.006, 0.300, 0.0075),
-                 (sx * 0.2085, FRONT + 0.36, 0.090 + k * 0.016), 0.0035, M["vent"], segs=3))
-# freezer door (brushed steel) with four black star knobs
-add(rbox("FreezerDoor", (0.300, 0.026, 0.240), (0, FRONT - 0.011, 0.480), 0.010, M["steel"]))
-add(rbox("DoorGasket", (0.312, 0.008, 0.252), (0, FRONT - 0.002, 0.480), 0.004, M["black"]))
+    add(rbox(f"RedLight{sx}", (0.012, 0.006, 0.032), (sx * 0.272, FACE_Y - 0.002, 0.640), 0.002, M["red"], segs=2))
+add(decal("CautionLabel", 0.072, 0.042, (-0.090, FACE_Y - 0.0008, 0.640), M["caution"]))
+add(decal("ServiceLabel", 0.086, 0.050, (0.215, FACE_Y - 0.0008, 0.452), M["service"]))
+add(rbox("DataPlate", (0.040, 0.004, 0.060), (-0.282, FACE_Y - 0.002, 0.430), 0.002, M["chrome"], segs=2))
 for sx in (-1, 1):
     for sz in (-1, 1):
-        k = add(lathe(f"DoorKnob{sx}{sz}", [(0, 0), (0.016, 0), (0.017, 0.004), (0.015, 0.014),
-                                            (0.012, 0.018), (0, 0.019)], M["black"],
-                      loc=(sx * 0.128, FRONT - 0.024, 0.480 + sz * 0.098), rot=(math.pi / 2, 0, 0), segs=12,
-                      smooth=False))
-        add(cyl(f"DoorStud{sx}{sz}", 0.005, 0.012, (sx * 0.128, FRONT - 0.045, 0.480 + sz * 0.098),
-                M["chrome"], rot=(math.pi / 2, 0, 0), verts=24))
-# dispensing head
-add(rbox("Head", (0.130, 0.105, 0.095), (0, FRONT - 0.070, 0.405), 0.022, M["steel"], segs=8))
-add(rbox("HeadTrim", (0.134, 0.006, 0.099), (0, FRONT - 0.121, 0.405), 0.003, M["chrome"], segs=4))
-add(rbox("HeadCollar", (0.150, 0.016, 0.115), (0, FRONT - 0.030, 0.405), 0.008, M["steel"]))
-add(cyl("PrimePlug", 0.010, 0.014, (0.032, FRONT - 0.075, 0.457), M["black"], bevel=0.002))
-# spout: a turned chrome nozzle with a six-point star mouth
-spout = add(lathe("Spout", [(0.0, 0.040), (0.026, 0.040), (0.027, 0.036), (0.022, 0.030),
-                            (0.0195, 0.016), (0.0185, 0.004), (0.0175, 0.0), (0.0, 0.0)],
-                  M["chrome"], loc=(NOZ.x, NOZ.y, NOZ.z), segs=96))
-star = []
-for k in range(13):
-    a = k / 12 * 2 * math.pi
-    star.append(a)
+        add(cyl(f"PanelScrew{sx}{sz}", 0.0035, 0.003, (sx * 0.322, FACE_Y - 0.001, 0.465 + sz * 0.37), M["chrome"],
+                rot=(math.pi / 2, 0, 0), verts=16))
 
+# ---- the freezer door (black) with spouts and star knobs
+add(rbox("Door", (0.340, 0.066, 0.150), (0, FACE_Y - 0.033, 0.498), 0.022, M["blackgloss"], segs=8))
+add(rbox("DoorCap", (0.300, 0.050, 0.020), (0, FACE_Y - 0.030, 0.582), 0.008, M["blackgloss"], segs=4))
+add(rbox("DoorParting", (0.344, 0.067, 0.003), (0, FACE_Y - 0.033, 0.452), 0.001, M["blackmatte"], segs=1))
+add(rbox("DoorGasket", (0.352, 0.006, 0.166), (0, FACE_Y - 0.002, 0.498), 0.003, M["blackmatte"], segs=2))
+add(rbox("DoorBridge", (0.300, 0.020, 0.024), (0, SPOUT_Y + 0.004, 0.400), 0.006, M["blackgloss"], segs=3))
+for i, x in enumerate(SPOUT_X):
+    add(lathe(f"Spout{i}", [(0.0, 0.040), (0.020, 0.040), (0.0205, 0.030), (0.0185, 0.026), (0.0180, 0.008),
+                            (0.0170, 0.002), (0.0160, 0.0), (0.0, 0.0)], M["whiteplastic"],
+              loc=(x, SPOUT_Y, NOZ_Z), segs=64))
 
-def star_mouth():
-    m = 96
-    verts, faces = [], []
-    for ring, (rr, z) in enumerate([(0.0168, 0.0005), (0.0128, 0.0), (0.0128, 0.030)]):
-        for j in range(m):
-            phi = j / m * 2 * math.pi
-            k = 1 + 0.16 * math.cos(6 * phi) if ring > 0 else 1
-            verts.append((NOZ.x + rr * k * math.cos(phi), NOZ.y + rr * k * math.sin(phi), NOZ.z + z - 0.0004))
-    for r in range(2):
-        for j in range(m):
-            j2 = (j + 1) % m
-            faces.append((r * m + j, r * m + j2, (r + 1) * m + j2, (r + 1) * m + j))
-    ob = mesh_obj("SpoutStar", verts, faces, [M["black"]])
-    return ob
-
-
-add(star_mouth())
-
-# ---- draw handle (animated). Pivot sits on a clevis on top of the head.
-PIV = Vector((0.0, FRONT - 0.112, 0.468))
-handle = bpy.data.objects.new("Handle", None)
-scene.collection.objects.link(handle)
-handle.location = PIV
+    def mouth(x=x, i=i):
+        m = 72
+        verts, faces = [], []
+        for ring, (rr, z) in enumerate([(0.0150, 0.0004), (0.0110, 0.0), (0.0110, 0.028)]):
+            for j in range(m):
+                phi = j / m * 2 * math.pi
+                k = 1 + 0.16 * math.cos(6 * phi) if ring > 0 else 1
+                verts.append((x + rr * k * math.cos(phi), SPOUT_Y + rr * k * math.sin(phi), NOZ_Z + z - 0.0004))
+        for r in range(2):
+            for j in range(m):
+                j2 = (j + 1) % m
+                faces.append((r * m + j, r * m + j2, (r + 1) * m + j2, (r + 1) * m + j))
+        return mesh_obj(f"SpoutStar{i}", verts, faces, [M["blackmatte"]])
+    add(mouth())
 for sx in (-1, 1):
-    add(rbox(f"Clevis{sx}", (0.007, 0.040, 0.034), (sx * 0.016, PIV.y + 0.012, PIV.z - 0.010), 0.003,
-             M["chrome"], segs=4))
-add(cyl("PivotPin", 0.0045, 0.046, PIV, M["gold"], rot=(0, math.pi / 2, 0), verts=32, bevel=0.0015))
-hparts = []
-arm_dir = Vector((0, -1, 0.58)).normalized()
-arm_len = 0.165
-mid = PIV + arm_dir * (arm_len / 2)
-arm = cyl("HandleArm", 0.0072, arm_len, mid, M["chrome"], verts=32)
-arm.rotation_euler = arm_dir.to_track_quat("Z", "Y").to_euler()
-hparts.append(arm)
-hparts.append(cyl("HandleHub", 0.012, 0.024, PIV, M["chrome"], rot=(0, math.pi / 2, 0), verts=40, bevel=0.003))
-tip = PIV + arm_dir * arm_len
-knob = lathe("HandleKnob", [(0, -0.027), (0.012, -0.0265), (0.020, -0.021), (0.0240, -0.011),
-                            (0.0250, 0.0), (0.0240, 0.011), (0.020, 0.020), (0.014, 0.0255), (0, 0.0262)],
-             M["knob"], loc=tip + arm_dir * 0.019, segs=64)
-cap = lathe("HandleCap", [(0, 0.0), (0.0115, 0.0), (0.0118, 0.0012), (0.0100, 0.0022), (0, 0.0026)],
-            M["gold"], loc=tip + arm_dir * (0.019 + 0.0246), segs=48)
-cap.rotation_euler = arm_dir.to_track_quat("Z", "Y").to_euler()
-hparts.append(cap)
-knob.rotation_euler = arm_dir.to_track_quat("Z", "Y").to_euler()
-hparts.append(knob)
-ring = lathe("HandleRing", [(0.0076, 0.0), (0.0118, 0.0), (0.0124, 0.0028), (0.0118, 0.0056), (0.0076, 0.0056)],
-             M["gold"], loc=tip - arm_dir * 0.006, segs=48)
-ring.rotation_euler = arm_dir.to_track_quat("Z", "Y").to_euler()
-hparts.append(ring)
-# the plunger link: a short rod from the hub into the head (slides when pulled)
-link = cyl("PlungerLink", 0.0045, 0.040, PIV + Vector((0, 0.010, -0.022)), M["chrome"], verts=24)
-hparts.append(link)
-bpy.context.view_layer.update()
-for p in hparts:
-    parent(p, handle)
+    x = sx * 0.050
+    add(cyl(f"StarKnobHub{sx}", 0.010, 0.020, (x, FACE_Y - 0.080, 0.418), M["blackgloss"], rot=(math.pi / 2, 0, 0),
+            verts=24, bevel=0.002))
+    for k in range(4):
+        a = k * math.pi / 2 + math.pi / 4
+        add(cyl(f"StarKnobLobe{sx}{k}", 0.0065, 0.018, (x + 0.011 * math.cos(a), FACE_Y - 0.080, 0.418 + 0.011 * math.sin(a)),
+                M["blackgloss"], rot=(math.pi / 2, 0, 0), verts=16, bevel=0.002))
 
-# ---- drip tray with a perforated grate
-add(rbox("DripTray", (0.200, 0.190, 0.034), (0, FRONT - 0.090, 0.045), 0.008, M["steel"]))
-add(rbox("TrayLip", (0.204, 0.194, 0.006), (0, FRONT - 0.090, TRAY_TOP - 0.003), 0.003, M["chrome"]))
-for k in range(11):
-    add(rbox(f"GrateBar{k}", (0.182, 0.006, 0.004), (0, FRONT - 0.172 + k * 0.0165, TRAY_TOP + 0.0005),
-             0.0018, M["chrome"], segs=2))
-add(rbox("TrayBracket", (0.120, 0.030, 0.050), (0, FRONT - 0.012, 0.055), 0.006, M["steel"]))
+# ---- three draw handles: left flavor, twist, right flavor
+HANDLE_NAMES = ("HandleL", "HandleC", "HandleR")
+PIVS = [Vector((x, FACE_Y - 0.068, 0.590)) for x in SPOUT_X]
+handles = []
+for name, PIV in zip(HANDLE_NAMES, PIVS):
+    h = bpy.data.objects.new(name, None)
+    scene.collection.objects.link(h)
+    h.location = PIV
+    hp = []
+    adir = Vector((0, -1, 0.30)).normalized()
+    alen = 0.118
+    arm = cyl(f"{name}Arm", 0.0055, alen, PIV + adir * (alen / 2), M["chrome"], verts=24)
+    arm.rotation_euler = adir.to_track_quat("Z", "Y").to_euler()
+    hp.append(arm)
+    hp.append(cyl(f"{name}Hub", 0.0095, 0.022, PIV, M["chrome"], rot=(0, math.pi / 2, 0), verts=32, bevel=0.002))
+    ball = bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=0.026,
+                                                location=PIV + adir * (alen + 0.020))
+    ball = bpy.context.active_object
+    ball.name = f"{name}Ball"
+    bpy.ops.object.shade_smooth()
+    ball.data.materials.append(M["ball"])
+    hp.append(ball)
+    col = cyl(f"{name}Collar", 0.0085, 0.010, PIV + adir * (alen - 0.004), M["chrome"], verts=24)
+    col.rotation_euler = adir.to_track_quat("Z", "Y").to_euler()
+    hp.append(col)
+    bpy.context.view_layer.update()
+    for p in hp:
+        parent(p, h)
+    handles.append(h)
+    # the wire hanger that runs up the faceplate from each handle
+    top = Vector((PIV.x, FACE_Y - 0.006, 0.790))
+    bot = PIV + Vector((0, 0.012, 0.016))
+    mid = (top + bot) / 2
+    wire = add(cyl(f"{name}Hanger", 0.0022, (top - bot).length, mid, M["chrome"], verts=12))
+    wire.rotation_euler = (top - bot).normalized().to_track_quat("Z", "Y").to_euler()
+    add(cyl(f"{name}Clip", 0.0045, 0.010, top, M["chrome"], rot=(math.pi / 2, 0, 0), verts=16))
 
-# ---- control panel: black glass, warm status LEDs, steel buttons
-add(rbox("Panel", (0.300, 0.012, 0.085), (0, FRONT - 0.004, 0.672), 0.010, M["glass"]))
-for k, mat in enumerate((M["led_w"], M["led_w"], M["led_g"])):
-    add(cyl(f"Led{k}", 0.0032, 0.004, (-0.112 + k * 0.020, FRONT - 0.0105, 0.690), mat,
-            rot=(math.pi / 2, 0, 0), verts=20))
-for k in range(3):
-    add(cyl(f"Button{k}", 0.0105, 0.006, (0.040 + k * 0.034, FRONT - 0.0115, 0.668), M["steel"],
-            rot=(math.pi / 2, 0, 0), verts=40, bevel=0.002))
-    add(cyl(f"ButtonBezel{k}", 0.0135, 0.002, (0.040 + k * 0.034, FRONT - 0.0102, 0.668), M["chrome"],
-            rot=(math.pi / 2, 0, 0), verts=40))
-# temperature readout: a thin warm emissive bar behind the glass
-add(rbox("Readout", (0.060, 0.002, 0.016), (-0.070, FRONT - 0.0103, 0.662), 0.002, M["led_w"], segs=2))
+# ---- drip tray: black tray, brushed top with three oval drains, back rail
+add(rbox("DripTray", (2 * NW - 0.040, 0.155, 0.060), (0, FACE_Y - 0.0775, 0.030), 0.006, M["blackmatte"], segs=3))
+add(rbox("TrayTop", (2 * NW - 0.070, 0.135, 0.005), (0, FACE_Y - 0.0775, TRAY_TOP - 0.0025), 0.0015, M["steel"], segs=2))
+for i, x in enumerate(SPOUT_X):
+    o = add(cyl(f"Drain{i}", 1.0, 0.002, (x, SPOUT_Y - 0.004, TRAY_TOP + 0.0002), M["blackmatte"], verts=48))
+    o.scale = (0.036, 0.019, 1)
+add(cyl("BackRail", 0.0055, 2 * NW - 0.08, (0, FACE_Y - 0.010, 0.082), M["steel"], rot=(0, math.pi / 2, 0), verts=24))
 
-
-# ---- the brand badge: a round dark plate with the gold sun
-def badge_decal(side):
-    """Round dark plate with the gold sun, on a side panel (side = -1 left, +1 right)."""
-    r = 0.040
-    x = side * (0.210 + 0.0005)
-    loc = Vector((x, FRONT + 0.135, 0.560))
-    plate = cyl(f"BadgePlate{side}", r + 0.006, 0.004, loc, M["badge_plate"], rot=(0, math.pi / 2, 0), verts=96,
-                bevel=0.0015)
-    plate.location.x = x + side * 0.0015
-    nu = 32
-    verts, uvs, faces = [], [], []
-    for iv in range(nu + 1):
-        for iu in range(nu + 1):
-            u, v = iu / nu, iv / nu
-            # u runs toward the machine front when seen from that side
-            yy = loc.y + (0.5 - u) * 2 * r * side
-            verts.append((x + side * 0.0040, yy, loc.z + (v - 0.5) * 2 * r))
-            uvs.append((u, v))
-    for iv in range(nu):
-        for iu in range(nu):
-            a = iv * (nu + 1) + iu
-            f = (a, a + 1, a + nu + 2, a + nu + 1)
-            faces.append(f if side > 0 else f[::-1])
-    luv = loop_uvs_from_face_corners(faces, lambda fi, ci, vi: uvs[vi])
-    dec = mesh_obj(f"BadgeSun{side}", verts, faces, [M["badge"]], uvs={"Decal": luv})
-    return plate, dec
-
-
-for sd in (-1, 1):
-    for o in badge_decal(sd):
+# ---- paper cups stacked on the tray, and a few sample cups
+for i in range(6):
+    for src in (cup, seam, emblem):
+        o = bpy.data.objects.new(f"Stack{src.name}{i}", src.data)
+        scene.collection.objects.link(o)
+        o.location = (-0.262, SPOUT_Y - 0.040, TRAY_TOP + 0.0004 + i * 0.0105)
+        o.rotation_euler = (0, 0, math.radians(-30 + i * 7))
         add(o)
+M["sample"] = make_mat("Sample Cup", lin("#f1eee7"), 0.45, spec=0.35)
+for i in range(4):
+    add(lathe(f"SampleCup{i}", [(0.0, 0.0), (0.0145, 0.0), (0.0185, 0.028), (0.0190, 0.0285), (0.0182, 0.0285),
+                                (0.0140, 0.0006), (0.0, 0.0006)], M["sample"],
+              loc=(0.262, SPOUT_Y - 0.045, TRAY_TOP + i * 0.0045), segs=48))
 
-# a slim gold pinstripe under the control panel: the only accent on the front
-add(rbox("Pinstripe", (0.300, 0.003, 0.003), (0, FRONT - 0.0012, 0.622), 0.001, M["gold"], segs=2))
+# ---- the room: limewash wall with the niche, plaster frame, travertine ledge, gold sun + letters
+def slab_box(name, x0, x1, y0, y1, z0, z1, mat, bevel=0.0, uv=1.0):
+    o = rbox(name, (x1 - x0, y1 - y0, z1 - z0), ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2),
+             max(bevel, 0.0002), mat, segs=3 if bevel else 1, uv=uv)
+    return o
+
+
+T_W = 0.06
+addr(slab_box("WallL", -2.6, -NW - 0.0, WALL_Y, WALL_Y + T_W, -0.95, 2.6, M["limewash"], uv=1.0))
+addr(slab_box("WallR", NW, 2.6, WALL_Y, WALL_Y + T_W, -0.95, 2.6, M["limewash"], uv=1.0))
+addr(slab_box("WallTop", -NW, NW, WALL_Y, WALL_Y + T_W, NH, 2.6, M["limewash"], uv=1.0))
+addr(slab_box("WallBelow", -NW, NW, WALL_Y, WALL_Y + T_W, -0.95, 0.0, M["limewash"], uv=1.0))
+# niche reveals and back
+addr(slab_box("RevealL", -NW - 0.02, -NW, WALL_Y, 0.10, 0.0, NH, M["limewash"], uv=1.0))
+addr(slab_box("RevealR", NW, NW + 0.02, WALL_Y, 0.10, 0.0, NH, M["limewash"], uv=1.0))
+addr(slab_box("RevealTop", -NW, NW, WALL_Y, 0.10, NH, NH + 0.02, M["limewash"], uv=1.0))
+addr(slab_box("NicheBack", -NW, NW, 0.08, 0.10, 0.0, NH, M["limewash"], uv=1.0))
+# raised plaster frame around the opening
+FR, FD = 0.072, 0.034
+addr(slab_box("FrameL", -NW - FR, -NW, WALL_Y - FD, WALL_Y, 0.0, NH + FR, M["limewash"], bevel=0.008, uv=1.0))
+addr(slab_box("FrameR", NW, NW + FR, WALL_Y - FD, WALL_Y, 0.0, NH + FR, M["limewash"], bevel=0.008, uv=1.0))
+addr(slab_box("FrameTop", -NW, NW, WALL_Y - FD, WALL_Y, NH, NH + FR, M["limewash"], bevel=0.008, uv=1.0))
+# travertine sill inside the niche and a ledge running along the wall
+addr(slab_box("NicheSill", -NW, NW, WALL_Y, 0.08, -0.03, 0.0, M["travertine"], uv=0.8))
+addr(slab_box("Ledge", -1.9, 1.9, WALL_Y - 0.240, WALL_Y, -0.045, 0.0, M["travertine"], bevel=0.004, uv=0.8))
+addr(slab_box("LedgeApron", -1.9, 1.9, WALL_Y - 0.236, WALL_Y, -0.95, -0.045, M["limewash"], uv=1.0))
+
+# the gold sun relief on the wall, beside the niche, with ILIOS / FROYO in gold letters
+SUN_C = Vector((0.86, WALL_Y - 0.010, 1.08))
+sun_plate = addr(cyl("WallSunDisc", 0.086, 0.008, SUN_C + Vector((0, 0.006, 0.0)), M["gold"],
+                     rot=(math.pi / 2, 0, 0), verts=96, bevel=0.003))
+sun = decal("WallSun", 0.46, 0.46, (SUN_C.x, WALL_Y - 0.0122, SUN_C.z), M["wallgold"], uvname="Decal")
+addr(sun)
+
+
+def gold_text(name, body, size, loc, font="Italiana-Regular.ttf", extrude=0.004, spacing=1.25):
+    cu = bpy.data.curves.new(name, "FONT")
+    cu.body = body
+    path = None
+    for d in ("/mnt/skills/examples/canvas-design/canvas-fonts",):
+        p = os.path.join(d, font)
+        if os.path.exists(p):
+            path = p
+    if path:
+        cu.font = bpy.data.fonts.load(path)
+    cu.size = size
+    cu.extrude = extrude
+    cu.space_character = spacing
+    cu.align_x = "CENTER"
+    cu.align_y = "BOTTOM"
+    o = bpy.data.objects.new(name, cu)
+    scene.collection.objects.link(o)
+    o.location = loc
+    o.rotation_euler = (math.pi / 2, 0, 0)
+    select_only(o)
+    bpy.ops.object.convert(target="MESH")
+    o = bpy.context.active_object
+    o.data.materials.clear()
+    o.data.materials.append(M["gold"])
+    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(30))
+    box_uv(o, 0.2)
+    return o
+
+
+addr(gold_text("WallILIOS", "ILIOS", 0.085, (SUN_C.x - 0.020, WALL_Y - 0.004, SUN_C.z - 0.330)))
+addr(gold_text("WallFROYO", "FROYO", 0.046, (SUN_C.x + 0.050, WALL_Y - 0.004, SUN_C.z - 0.385)))
 
 bpy.context.view_layer.update()
 for p in parts:
     parent(p, mach_root)
-parent(handle, mach_root)
+for h in handles:
+    parent(h, mach_root)
+for p in room:
+    parent(p, room_root)
 
-# handle animation: rest -> pulled (frames 1..24) for the glTF clip
+# handle animation (twist handle) for the glTF clip
+handle = handles[1]
 handle.rotation_mode = "XYZ"
 handle.rotation_euler = (0, 0, 0)
 handle.keyframe_insert("rotation_euler", frame=1)
-handle.rotation_euler = (math.radians(62), 0, 0)
+handle.rotation_euler = (PULL, 0, 0)
 handle.keyframe_insert("rotation_euler", frame=24)
 handle.rotation_euler = (0, 0, 0)
 act = handle.animation_data.action
 act.name = "PullHandle"
-for fc in act.fcurves:
-    for kp in fc.keyframe_points:
-        kp.interpolation = "BEZIER"
 scene.frame_start, scene.frame_end = 1, 24
 scene.render.fps = 24
 scene.frame_set(1)
+PIV = PIVS[1]
 
-# place the cup under the spout on the drip tray, for renders and for the json
-cup_root.location = (NOZ.x, NOZ.y, TRAY_TOP + 0.0015)
+# place the cup under the twist spout on the drip tray, for renders and for the json
+cup_root.location = (NOZ.x, NOZ.y, TRAY_TOP + 0.0004)
 
 
 # =====================================================================
@@ -882,7 +950,10 @@ meta = {
     "cupLocalToMachine": to_gltf(cup_root.location),
     "nozzleMachine": to_gltf(NOZ),
     "handlePivotMachine": to_gltf(PIV),
-    "handlePullRadians": math.radians(62),
+    "handlePullRadians": PULL,
+    "handles": ["HandleL", "HandleC", "HandleR"],
+    "nozzlesMachine": [to_gltf(n) for n in NOZZLES],
+    "cupBasesMachine": [to_gltf((n.x, n.y, TRAY_TOP + 0.0004)) for n in NOZZLES],
     "handleAxis": "x",
     "swirlLength": round(float(SL), 5),
     "cupHeight": H,
@@ -928,6 +999,7 @@ def export(root, path, anim=False):
 
 export(cup_root, os.path.join(OUT, "ilios-froyo-cup.glb"))
 export(mach_root, os.path.join(OUT, "ilios-softserve-machine.glb"), anim=True)
+export(room_root, os.path.join(OUT, "ilios-room.glb"))
 
 print("swirl length %.3f m, verts %d" % (SL, len(swirl.data.vertices)))
 print("cup verts", len(cup.data.vertices))

@@ -1,4 +1,6 @@
 // Ilios Froyo: the pour.
+// Built on the shop's real station: a three-handle twist machine set into a limewash niche.
+// Pick a handle (Sweet Harbor Coffee, twist, Organic Vanilla Bean), pull it, and the cup fills.
 // One live three.js scene, scrubbed by scroll:
 //   pull the handle -> a ribbon of froyo leaves the star spout -> the camera
 //   follows it down -> the cup circles under the spout while the swirl builds
@@ -63,94 +65,92 @@ function fail(err) {
 }
 
 const scene = new THREE.Scene();
-const PLASTER = new THREE.Color('#aaa297');
+const PLASTER = new THREE.Color('#cfc5b5');
 scene.background = PLASTER.clone();
-scene.fog = new THREE.Fog(PLASTER, 2.6, 7.5);
+scene.fog = new THREE.Fog(PLASTER, 6.5, 16.0);
 
 const camera = new THREE.PerspectiveCamera(26, 1, 0.01, 30);
 
 if (renderer) {
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.62;
+  scene.environmentIntensity = 0.5;
 }
 
-// light: a big warm window key from the left, a soft fill, a warm rim
-const key = new THREE.DirectionalLight('#fff0db', 2.4);
-key.position.set(-1.35, 1.75, 1.35);
-key.target.position.set(0, 0.25, 0.1);
-key.castShadow = true;
-key.shadow.mapSize.set(2048, 2048);
-Object.assign(key.shadow.camera, { left: -0.75, right: 0.75, top: 0.95, bottom: -0.45, near: 0.5, far: 5 });
-key.shadow.bias = -0.0003;
-key.shadow.normalBias = 0.012;
-key.shadow.radius = 5;
-scene.add(key, key.target);
-scene.add(new THREE.HemisphereLight('#fff7ec', '#b3a898', 0.55));
-const rim = new THREE.DirectionalLight('#ffe2b8', 1.1);
-rim.position.set(1.2, 1.4, -1.0);
-scene.add(rim);
-
-// room: limewash wall + warm white marble counter
-function plasterTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 512;
-  const g = c.getContext('2d');
-  g.fillStyle = '#b1a99e';
-  g.fillRect(0, 0, 512, 512);
-  // soft limewash clouds: many big translucent blots
-  let s = 7;
-  const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 260; i++) {
-    const x = r() * 512, y = r() * 512, rad = 30 + r() * 120;
-    const grd = g.createRadialGradient(x, y, 0, x, y, rad);
-    const light = r() > .5;
-    grd.addColorStop(0, light ? 'rgba(200,192,181,.10)' : 'rgba(140,132,121,.08)');
-    grd.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = grd;
-    for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) {
-      g.save(); g.translate(ox, oy); g.fillRect(x - rad, y - rad, rad * 2, rad * 2); g.restore();
-    }
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(3, 2);
-  return t;
-}
-const wall = new THREE.Mesh(new THREE.PlaneGeometry(9, 5),
-  new THREE.MeshStandardMaterial({ map: plasterTexture(), roughness: 0.95, color: '#ffffff' }));
-wall.position.set(0, 1.6, -0.62);
-wall.receiveShadow = true;
-scene.add(wall);
-
-const counterMat = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.24, clearcoat: 0.35, clearcoatRoughness: 0.12 });
-new THREE.TextureLoader().load('assets/tex/marble.jpg', t => {
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(2.2, 1.1);
-  t.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 1;
-  counterMat.map = t;
-  counterMat.needsUpdate = true;
-  wake();
-});
-const counter = new THREE.Mesh(new RoundedSlab(3.2, 0.05, 1.6, 0.006), counterMat);
-counter.position.set(0, -0.025, 0.18);
-counter.receiveShadow = true;
-scene.add(counter);
-const front = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.2),
-  new THREE.MeshStandardMaterial({ color: '#8e867b', roughness: 0.9 }));
-front.position.set(0, -0.65, 0.98);
-scene.add(front);
-
-function RoundedSlab(w, h, d) {
-  // a box is fine at this distance; the clearcoat gives the stone its edge
-  return new THREE.BoxGeometry(w, h, d);
-}
+// light: the shop's warm ceiling cans, one over the niche and one over the wall sun,
+// a soft bounce off the room, and a glow at the top of the niche
+const can = new THREE.SpotLight('#ffe8cc', 9, 4.5, 0.62, 0.85, 1.4);
+can.position.set(0.05, 1.85, 1.05);
+can.target.position.set(0, 0.35, 0.15);
+can.castShadow = true;
+can.shadow.mapSize.set(2048, 2048);
+can.shadow.bias = -0.0002;
+can.shadow.normalBias = 0.01;
+can.shadow.radius = 6;
+can.shadow.camera.near = 0.6;
+can.shadow.camera.far = 4;
+scene.add(can, can.target);
+const can2 = new THREE.SpotLight('#ffe8cc', 5, 4, 0.5, 0.9, 1.4);
+can2.position.set(0.9, 1.9, 1.0);
+can2.target.position.set(0.86, 1.0, 0.3);
+scene.add(can2, can2.target);
+scene.add(new THREE.HemisphereLight('#fff6ea', '#bdb2a2', 0.85));
+const fillL = new THREE.DirectionalLight('#f6efe4', 0.7);
+fillL.position.set(-1.2, 0.9, 2.2);
+scene.add(fillL);
+const nicheGlow = new THREE.PointLight('#fff1dc', 0.35, 1.2, 1.6);
+nicheGlow.position.set(0, 0.97, 0.05);
+scene.add(nicheGlow);
 
 // ------------------------------------------------------------------ the swirl reveal shader
 const uReveal = { value: 0 };
-function revealPatch(mat) {
+const uFillY = { value: 0 };
+// flavours, in handle order (left, centre, right), as on the shop's machine sign
+const FLAVORS = [
+  { name: 'Sweet Harbor Coffee', a: '#b98a5c', b: '#b98a5c', twist: 0, speckA: 0, speckB: 0 },
+  { name: 'Twist', a: '#b98a5c', b: '#f2e8cf', twist: 1, speckA: 0, speckB: 0.8 },
+  { name: 'Organic Vanilla Bean', a: '#f2e8cf', b: '#f2e8cf', twist: 0, speckA: 1, speckB: 1 },
+];
+const U = {
+  uColA: { value: new THREE.Color(FLAVORS[1].a) }, uColB: { value: new THREE.Color(FLAVORS[1].b) },
+  uTwist: { value: 1 }, uSpeckA: { value: 0 }, uSpeckB: { value: 0.8 },
+};
+const FLAVOR_GLSL = `
+  {
+    float phi = vFlavUv.y / 1.3980 * 6.2831853;
+    float along = vFlavUv.x * 0.04;
+    float band = fract((phi + along * 9.0) / 6.2831853 * 3.0);
+    float m = uTwist * smoothstep(0.02, 0.10, band) * (1.0 - smoothstep(0.48, 0.56, band));
+    vec3 fc = mix(uColA, uColB, m);
+    vec2 cell = floor(vFlavUv * vec2(240.0, 100.0));
+    float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+    float sp = mix(uSpeckA, uSpeckB, m) * step(0.986, h);
+    fc = mix(fc, vec3(0.05, 0.036, 0.028), sp * 0.9);
+    diffuseColor.rgb = fc;
+  }`;
+function froyoPatch(mat, mode) {
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, U, { uReveal, uFillY });
+    let vs = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vFlavUv;' +
+      (mode === 'reveal' ? '\nattribute float _reveal;\nvarying float vReveal;' : '') +
+      (mode === 'fill' ? '\nvarying float vWorldY;' : ''));
+    vs = vs.replace('#include <begin_vertex>', '#include <begin_vertex>\nvFlavUv = uv;' +
+      (mode === 'reveal' ? '\nvReveal = _reveal;' : '') +
+      (mode === 'fill' ? '\nvWorldY = (modelMatrix * vec4(transformed, 1.0)).y;' : ''));
+    let fs = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vFlavUv;\n' +
+      'uniform vec3 uColA; uniform vec3 uColB; uniform float uTwist; uniform float uSpeckA; uniform float uSpeckB;' +
+      (mode === 'reveal' ? '\nuniform float uReveal;\nvarying float vReveal;' : '') +
+      (mode === 'fill' ? '\nuniform float uFillY;\nvarying float vWorldY;' : ''));
+    if (mode === 'reveal') fs = fs.replace('void main() {', 'void main() {\n  if (vReveal > uReveal) discard;');
+    if (mode === 'fill') fs = fs.replace('void main() {', 'void main() {\n  if (vWorldY > uFillY) discard;');
+    fs = fs.replace('#include <color_fragment>', '#include <color_fragment>' + FLAVOR_GLSL);
+    sh.vertexShader = vs;
+    sh.fragmentShader = fs;
+  };
+  mat.customProgramCacheKey = () => 'froyo-' + mode;
+}
+// the swirl's shadow must follow the pour too
+function revealDepthPatch(mat) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uReveal = uReveal;
     sh.vertexShader = sh.vertexShader
@@ -160,22 +160,27 @@ function revealPatch(mat) {
       .replace('#include <common>', '#include <common>\nuniform float uReveal;\nvarying float vReveal;')
       .replace('void main() {', 'void main() {\n  if (vReveal > uReveal) discard;');
   };
-  mat.customProgramCacheKey = () => 'reveal';
+  mat.customProgramCacheKey = () => 'reveal-depth';
 }
 
-const uFillY = { value: 0 };
-function fillPatch(mat) {
-  mat.onBeforeCompile = sh => {
-    sh.uniforms.uFillY = uFillY;
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying float vWorldY;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWorldY = (modelMatrix * vec4(transformed, 1.0)).y;');
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uFillY;\nvarying float vWorldY;')
-      .replace('void main() {', 'void main() {\n  if (vWorldY > uFillY) discard;');
-  };
-  mat.customProgramCacheKey = () => 'fill';
+// ------------------------------------------------------------------ flavour choice
+let sel = 1;            // 0 left (coffee), 1 centre (twist), 2 right (vanilla bean)
+const chips = [...document.querySelectorAll('[data-flavor]')];
+const flavorNames = [...document.querySelectorAll('[data-flavor-name]')];
+function setFlavor(i, fromUser) {
+  if (scrub && shown > TL.emerge[0] && fromUser) return;   // the cup is already under a spout
+  sel = i;
+  const f = FLAVORS[i];
+  U.uColA.value.set(f.a);
+  U.uColB.value.set(f.b);
+  U.uTwist.value = f.twist;
+  U.uSpeckA.value = f.speckA;
+  U.uSpeckB.value = f.speckB;
+  chips.forEach(c => c.setAttribute('aria-pressed', String(+c.dataset.flavor === i)));
+  flavorNames.forEach(n => { n.textContent = f.name; });
+  wake();
 }
+chips.forEach(c => c.addEventListener('click', () => setFlavor(+c.dataset.flavor, true)));
 
 // ------------------------------------------------------------------ load
 const manager = new THREE.LoadingManager();
@@ -185,17 +190,26 @@ manager.onProgress = (_u, done, total) => {
 const loader = new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder);
 const load = url => new Promise((res, rej) => loader.load(url, res, undefined, rej));
 
-let machine, handle, cup, swirl, core, path, stream, cupBase, nozzle, froyoMat;
+let machine, room, handles = [], balls = [], cup, swirl, core, path, stream, froyoMat;
+let nozzles = [], cupBases = [];
 const knobWorld = new THREE.Vector3();
-let knobMesh = null;
 
 Promise.all([
   load('assets/models/ilios-softserve-machine.glb'),
   load('assets/models/ilios-froyo-cup.glb'),
+  load('assets/models/ilios-room.glb'),
   fetch('assets/pour-path.json').then(r => r.json()),
-]).then(([gm, gc, pj]) => {
+]).then(([gm, gc, gr, pj]) => {
   if (!renderer) return;
   machine = gm.scene;
+  room = gr.scene;
+  room.traverse(o => {
+    if (!o.isMesh) return;
+    o.receiveShadow = true;
+    o.castShadow = !o.material.transparent;
+    if (o.material.transparent) { o.material.depthWrite = false; o.material.polygonOffset = true; o.material.polygonOffsetFactor = -2; }
+    if (o.material.map) o.material.map.anisotropy = 8;
+  });
   cup = gc.scene;
   path = pj;
   machine.traverse(o => {
@@ -206,8 +220,8 @@ Promise.all([
       if (o.material.map) o.material.map.anisotropy = 8;
     }
   });
-  handle = machine.getObjectByName('Handle');
-  knobMesh = machine.getObjectByName('HandleKnob');
+  handles = path.handles.map(n => machine.getObjectByName(n));
+  balls = path.handles.map(n => machine.getObjectByName(n + 'Ball'));
   cup.traverse(o => {
     if (!o.isMesh) return;
     o.castShadow = true;
@@ -228,20 +242,21 @@ Promise.all([
   core.material = froyoMat.clone();
   core.material.side = THREE.DoubleSide;
   core.castShadow = false;
-  fillPatch(core.material);
-  // the swirl gets its own material so the core (no _reveal attribute) is not affected by cache keys
+  froyoPatch(core.material, 'fill');
   swirl.material = froyoMat.clone();
-  revealPatch(swirl.material);
+  froyoPatch(swirl.material, 'reveal');
   const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
-  revealPatch(depth);
+  revealDepthPatch(depth);
   swirl.customDepthMaterial = depth;
 
-  nozzle = new THREE.Vector3().fromArray(path.nozzleMachine);
-  cupBase = new THREE.Vector3().fromArray(path.cupLocalToMachine);
-  cup.position.copy(cupBase);
-  scene.add(machine, cup);
+  nozzles = path.nozzlesMachine.map(a => new THREE.Vector3().fromArray(a));
+  cupBases = path.cupBasesMachine.map(a => new THREE.Vector3().fromArray(a));
+  cup.position.copy(cupBases[1]);
+  scene.add(room, machine, cup);
 
-  stream = makeStream(froyoMat.clone());
+  const smat = froyoMat.clone();
+  froyoPatch(smat, 'plain');
+  stream = makeStream(smat);
   scene.add(stream.mesh);
 
   initSpin(gc);
@@ -388,25 +403,25 @@ function makeStream(mat) {
 // Keys are [p, camera position, look target] in machine space (metres, Y up, front = +Z).
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const CAM_KEYS = [
-  [0.000, V(0.30, 0.50, 2.25), V(-0.13, 0.39, 0.10)],
-  [0.045, V(0.27, 0.49, 1.90), V(-0.09, 0.39, 0.14)],
-  [0.140, V(0.28, 0.46, 1.02), V(0.00, 0.37, 0.26)],
-  [0.210, V(0.17, 0.35, 0.62), V(0.00, 0.31, 0.29)],
-  [0.265, V(0.17, 0.24, 0.64), V(0.00, 0.20, 0.29)],
-  [0.315, V(0.13, 0.205, 0.63), V(0.00, 0.12, 0.29)],
+  [0.000, V(0.16, 0.64, 3.55), V(0.05, 0.56, 0.20)],
+  [0.045, V(0.13, 0.60, 2.55), V(0.00, 0.52, 0.20)],
+  [0.140, V(0.21, 0.56, 1.12), V(0.00, 0.49, 0.24)],
+  [0.210, V(0.13, 0.40, 0.66), V(0.00, 0.355, 0.21)],
+  [0.265, V(0.14, 0.27, 0.68), V(0.00, 0.23, 0.21)],
+  [0.315, V(0.12, 0.245, 0.68), V(0.00, 0.12, 0.21)],
 ];
 // during the pour the camera orbits the spout axis and rises with the swirl
 for (let i = 0; i <= 6; i++) {
   const t = i / 6;
   const p = 0.36 + t * 0.44;
-  const ang = THREE.MathUtils.degToRad(16 - 60 * t);
-  const rad = 0.355 - 0.045 * Math.sin(t * Math.PI);
+  const ang = THREE.MathUtils.degToRad(16 - 58 * t);
+  const rad = 0.345 - 0.045 * Math.sin(t * Math.PI);
   const y = 0.215 + 0.085 * t;
-  CAM_KEYS.push([p, V(Math.sin(ang) * rad, y, 0.29 + Math.cos(ang) * rad), V(0, 0.112 + 0.062 * t, 0.29)]);
+  CAM_KEYS.push([p, V(Math.sin(ang) * rad, y, 0.212 + Math.cos(ang) * rad), V(0, 0.112 + 0.062 * t, 0.212)]);
 }
-CAM_KEYS.push([0.865, V(0.02, 0.29, 0.80), V(-0.02, 0.17, 0.30)]);
-CAM_KEYS.push([0.970, V(0.42, 0.31, 1.00), V(-0.10, 0.175, 0.35)]);
-CAM_KEYS.push([1.000, V(0.425, 0.312, 1.01), V(-0.102, 0.175, 0.35)]);
+CAM_KEYS.push([0.865, V(0.02, 0.29, 0.80), V(-0.02, 0.17, 0.24)]);
+CAM_KEYS.push([0.970, V(0.42, 0.31, 1.02), V(-0.10, 0.175, 0.28)]);
+CAM_KEYS.push([1.000, V(0.425, 0.312, 1.03), V(-0.102, 0.175, 0.28)]);
 
 const camPosCurve = new THREE.CatmullRomCurve3(CAM_KEYS.map(k => k[1]), false, 'centripetal');
 const camTgtCurve = new THREE.CatmullRomCurve3(CAM_KEYS.map(k => k[2]), false, 'centripetal');
@@ -440,13 +455,17 @@ function fitPortrait(pos, tgt, p) {
 // ------------------------------------------------------------------ the scene at progress p
 const camPos = new THREE.Vector3(), camTgt = new THREE.Vector3();
 const D = new THREE.Vector3(), Dt = new THREE.Vector3(), Dw = new THREE.Vector3();
-const tipW = new THREE.Vector3(), from = new THREE.Vector3();
+const tipW = new THREE.Vector3(), from = new THREE.Vector3(), _cb = new THREE.Vector3();
 
 function pose(p) {
   if (!machine) return;
   // handle: pulled, held through the pour, released
   const pull = easeInOut(smooth(TL.pull[0], TL.pull[1], p)) * (1 - easeInOut(smooth(TL.release[0], TL.release[0] + 0.035, p)));
-  handle.rotation.x = pull * path.handlePullRadians;
+  handles.forEach((h, i) => { h.rotation.x = i === sel ? pull * path.handlePullRadians : 0; });
+  const nozzle = nozzles[sel];
+  // the empty cup waits under the twist spout, then slides under the chosen one
+  const slide = easeInOut(smooth(0.03, 0.12, p));
+  const cupBase = _cb.copy(cupBases[1]).lerp(cupBases[sel], slide);
 
   // pour front along the swirl (0..1)
   const pr = clamp((p - TL.pour[0]) / (TL.pour[1] - TL.pour[0]));
@@ -496,6 +515,10 @@ function pose(p) {
 
   // camera
   camAt(p, camPos, camTgt);
+  // once a flavour is chosen the whole close-up follows its spout
+  const sx = nozzles[sel].x * smooth(0.05, 0.14, p);
+  camPos.x += sx;
+  camTgt.x += sx;
   fitPortrait(camPos, camTgt, p);
   camera.position.copy(camPos);
   camera.lookAt(camTgt);
@@ -585,9 +608,14 @@ function onScroll() {
 // gold ring that sits on the knob until the handle is pulled
 let cueOp = -1;
 function placeKnobCue(p) {
+  const knobMesh = balls[sel];
   if (!knobMesh) return;
   const op = 1 - smooth(0.01, 0.05, p);
-  if (Math.abs(op - cueOp) > 0.01) { cueOp = op; knobcue.style.opacity = (op * (root.classList.contains('ready') ? 1 : 0)).toFixed(2); }
+  if (Math.abs(op - cueOp) > 0.01) {
+    cueOp = op;
+    knobcue.style.opacity = (op * (root.classList.contains('ready') ? 1 : 0)).toFixed(2);
+    knobcue.style.visibility = op < 0.02 ? 'hidden' : 'visible';
+  }
   if (op <= 0) return;
   knobMesh.getWorldPosition(knobWorld).project(camera);
   const x = (knobWorld.x * 0.5 + 0.5) * stage.clientWidth;
@@ -600,23 +628,28 @@ const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 let drag = null;
 function hitHandle(e) {
-  if (!handle) return false;
+  if (!handles.length) return -1;
   const r = canvas.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  ray.params.Line = { threshold: 0 };
-  const hits = ray.intersectObject(handle, true);
-  if (hits.length) return true;
-  // generous target: anywhere within ~40px of the knob counts
-  if (!knobMesh) return false;
-  knobMesh.getWorldPosition(knobWorld).project(camera);
-  const kx = (knobWorld.x * 0.5 + 0.5) * r.width + r.left, ky = (-knobWorld.y * 0.5 + 0.5) * r.height + r.top;
-  return Math.hypot(e.clientX - kx, e.clientY - ky) < 44;
+  for (let i = 0; i < handles.length; i++) if (ray.intersectObject(handles[i], true).length) return i;
+  // generous target: anywhere within ~40px of a ball counts
+  let best = -1, bd = 40;
+  balls.forEach((b, i) => {
+    b.getWorldPosition(knobWorld).project(camera);
+    const kx = (knobWorld.x * 0.5 + 0.5) * r.width + r.left, ky = (-knobWorld.y * 0.5 + 0.5) * r.height + r.top;
+    const d = Math.hypot(e.clientX - kx, e.clientY - ky);
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
 }
 const pullPx = () => Math.max(140, innerHeight * 0.28);   // drag distance for a full pull
 const pullScroll = () => (hero.offsetHeight - innerHeight) * (TL.pull[1] + 0.01);
 canvas.addEventListener('pointerdown', e => {
-  if (!scrub || shown > TL.pull[1] + 0.02 || !hitHandle(e)) return;
+  if (!scrub || shown > TL.pull[1] + 0.02) return;
+  const hi = hitHandle(e);
+  if (hi < 0) return;
+  if (shown < TL.emerge[0]) setFlavor(hi, true);
   drag = { y: e.clientY, start: scrollY, id: e.pointerId };
   canvas.setPointerCapture(e.pointerId);
   root.classList.add('grabbing');
@@ -630,7 +663,7 @@ canvas.addEventListener('pointermove', e => {
     return;
   }
   if (e.pointerType === 'mouse' && scrub && shown < TL.pull[1]) {
-    const over = hitHandle(e);
+    const over = hitHandle(e) >= 0;
     root.classList.toggle('grab', over);
   }
 }, { passive: true });
@@ -689,7 +722,7 @@ new IntersectionObserver(([e]) => {
 document.addEventListener('visibilitychange', () => document.body.classList.toggle('paused', document.hidden));
 
 // test hook: jump straight to a progress value (used by the screenshot harness)
-window.__ilios = { scene, render: () => renderer.render(scene, camera), setP(p) { target = shown = p; loadK = 1; frame(p); }, cam: () => ({ tgt: camTgt.toArray(), dir: camera.getWorldDirection(new THREE.Vector3()).toArray(), pos: camera.position.toArray(), fov: camera.fov, near: camera.near, stream: stream && stream.mesh.visible, cup: cup && cup.position.toArray() }) };
+window.__ilios = { scene, render: () => renderer.render(scene, camera), setP(p) { target = shown = p; loadK = 1; frame(p); }, cam: () => ({ tgt: camTgt.toArray(), dir: camera.getWorldDirection(new THREE.Vector3()).toArray(), pos: camera.position.toArray(), fov: camera.fov, near: camera.near, stream: stream && stream.mesh.visible, cup: cup && cup.position.toArray() }), setFlavor };
 
 // section entrances
 const io = new IntersectionObserver(es => es.forEach(e => {
@@ -722,6 +755,7 @@ function initSpin(gltf) {
   model.position.set(0, 0, 0);
   // the hero scene patches the froyo materials (pour reveal, fill clip); the viewer shows the finished cup
   const plain = froyoMat.clone();
+  froyoPatch(plain, 'plain');
   model.traverse(o => {
     if (!o.isMesh) return;
     o.castShadow = !o.material.transparent;

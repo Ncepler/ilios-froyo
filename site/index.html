@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ilios Froyo, Roslyn NY</title>
 <meta name="description" content="Organic Greek frozen yogurt, swirled to order at 1355 Old Northern Blvd, Roslyn, NY.">
-<meta name="theme-color" content="#aaa297">
+<meta name="theme-color" content="#d3c9b9">
 <!-- DEPLOY STEP: set og:url and og:image to absolute URLs once the site has its live address. -->
 <meta property="og:title" content="Ilios Froyo, Roslyn NY">
-<meta property="og:description" content="Organic Greek frozen yogurt, swirled to order.">
+<meta property="og:description" content="Organic froyo, pulled fresh in Roslyn.">
 <meta property="og:image" content="assets/img/cup-hero.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='%23b48a44'%3E%3Ccircle cx='32' cy='32' r='13'/%3E%3Cg id='r'%3E%3Cpath d='M30 4h4l-2 13z'/%3E%3C/g%3E%3Cuse href='%23r' transform='rotate(30 32 32)'/%3E%3Cuse href='%23r' transform='rotate(60 32 32)'/%3E%3Cuse href='%23r' transform='rotate(90 32 32)'/%3E%3Cuse href='%23r' transform='rotate(120 32 32)'/%3E%3Cuse href='%23r' transform='rotate(150 32 32)'/%3E%3Cuse href='%23r' transform='rotate(180 32 32)'/%3E%3Cuse href='%23r' transform='rotate(210 32 32)'/%3E%3Cuse href='%23r' transform='rotate(240 32 32)'/%3E%3Cuse href='%23r' transform='rotate(270 32 32)'/%3E%3Cuse href='%23r' transform='rotate(300 32 32)'/%3E%3Cuse href='%23r' transform='rotate(330 32 32)'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,9 +23,9 @@
 </script>
 <style>
 :root{
-  --plaster:#aaa297; --plaster-lo:#9b9388; --plaster-hi:#bdb5aa;
+  --plaster:#d3c9b9; --plaster-lo:#c6bba9; --plaster-hi:#e2d9cb;
   --cream:#f1e9d6; --paper:#ece2cb; --ink:#28221b; --ink-2:#4a4137;
-  --gold:#a57c38; --gold-hi:#d6b064;
+  --gold:#93692a; --gold-hi:#d6b064; --coffee:#b98a5c; --vanilla:#f2e8cf;
   --ease-out:cubic-bezier(.16,1,.3,1); --ease-io:cubic-bezier(.65,0,.35,1);
   --display:"Italiana",ui-serif,Georgia,serif;
   --body:"Manrope",ui-sans-serif,system-ui,sans-serif;
@@ -91,7 +91,8 @@ body.paused *,body.paused *::before,body.paused *::after{animation-play-state:pa
 .eyebrow{font:400 12px/1.4 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;gap:10px}
 .right .eyebrow{justify-content:flex-end}
 .eyebrow::before{content:"";width:22px;height:1px;background:var(--gold)}
-.h1{font:400 clamp(56px,8.4vw,132px)/.92 var(--display);letter-spacing:-.01em;margin:16px 0 18px}
+.first.left{max-width:min(440px,31vw)}
+.h1{font:400 clamp(52px,6.4vw,108px)/.92 var(--display);letter-spacing:-.01em;margin:16px 0 18px}
 .h2{font:400 clamp(40px,5.6vw,88px)/.98 var(--display);letter-spacing:-.005em;margin:12px 0 14px}
 .lede{font:400 clamp(16px,1.35vw,19px)/1.55 var(--body);color:var(--ink-2);max-width:34ch}
 .right .lede{margin-left:auto}
@@ -108,6 +109,16 @@ body.paused *,body.paused *::before,body.paused *::after{animation-play-state:pa
 .band .sub{opacity:clamp(0,(var(--k,0) - .55)*3,1)}
 .band .row{opacity:clamp(0,(var(--k,0) - .72)*4,1);transform:translateY(calc((1 - clamp(0,(var(--k,0) - .72)*4,1))*10px))}
 
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chip{display:inline-flex;align-items:center;gap:9px;min-height:40px;padding:0 14px 0 10px;border-radius:999px;border:1px solid rgba(40,34,27,.28);
+  background:rgba(243,236,224,.55);color:var(--ink);font:500 13px/1 var(--body);cursor:pointer;
+  transition:background .3s var(--ease-out),border-color .3s var(--ease-out),transform .3s var(--ease-out)}
+.chip:hover{background:rgba(243,236,224,.9)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.chip .sw{width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(40,34,27,.25)}
+.sw.coffee{background:var(--coffee)}
+.sw.vanilla{background:radial-gradient(circle at 30% 35%,#2a1d14 0 1px,transparent 1.5px),radial-gradient(circle at 65% 60%,#2a1d14 0 1px,transparent 1.5px),var(--vanilla)}
+.sw.twist{background:conic-gradient(var(--coffee) 0 60deg,var(--vanilla) 60deg 120deg,var(--coffee) 120deg 180deg,var(--vanilla) 180deg 240deg,var(--coffee) 240deg 300deg,var(--vanilla) 300deg)}
 .btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
 .right .btns{justify-content:flex-end}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border-radius:999px;
@@ -166,7 +177,17 @@ section.s{position:relative;padding:clamp(96px,14vw,180px) var(--gutter)}
 .inside{background:var(--ink);color:var(--cream)}
 .inside .kicker{color:rgba(241,233,214,.7)}
 .rows{margin-top:clamp(48px,6vw,80px);border-top:1px solid rgba(241,233,214,.18)}
-.rowi{display:grid;grid-template-columns:80px minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:baseline;padding:clamp(26px,3vw,40px) 0;border-bottom:1px solid rgba(241,233,214,.18)}
+.rowi{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:baseline;padding:clamp(26px,3vw,40px) 0;border-bottom:1px solid rgba(241,233,214,.18)}
+.big-sw{width:34px;height:34px;border-radius:50%;align-self:center;box-shadow:inset 0 0 0 1px rgba(241,233,214,.25)}
+.sw.tart{background:#f6f3ec}
+.sw.rasp{background:#e3a2b4}
+.inside .note{margin-top:28px;font:400 12px/1.6 var(--mono);letter-spacing:.08em;color:rgba(241,233,214,.6)}
+.toppings{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.4fr);gap:clamp(32px,6vw,96px);align-items:start;background:var(--cream)}
+.tgroups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,3vw,40px)}
+.tg h3{font:400 12px/1.4 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--gold);padding-bottom:14px;border-bottom:1px solid rgba(40,34,27,.16)}
+.tg ul{list-style:none;margin-top:10px}
+.tg li{font:400 clamp(22px,2.1vw,30px)/1.25 var(--display);padding:8px 0;border-bottom:1px solid rgba(40,34,27,.08)}
+.tg li small{display:block;font:400 11px/1.5 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin-top:2px}
 .rowi .n{font:400 12px/1 var(--mono);letter-spacing:.16em;color:var(--gold-hi)}
 .rowi h3{font:400 clamp(36px,4.4vw,68px)/1 var(--display)}
 .rowi p{color:rgba(241,233,214,.72);max-width:44ch}
@@ -192,7 +213,9 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
   .band.right .lede{margin-left:0}
   .band .inner{background:linear-gradient(180deg,rgba(184,176,165,.0),rgba(184,176,165,0));}
   .band.final{top:auto;bottom:calc(26px + env(safe-area-inset-bottom))}
-  .band.final .inner{padding:18px 18px 20px;margin:0 -8px;border-radius:18px;background:rgba(236,228,212,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .band .inner{padding:16px 16px 18px;margin:0 -8px;border-radius:18px;background:rgba(236,228,212,.84);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .band .hint{display:none}
+  .first.left{max-width:none}
   .band.right .inner{padding:18px 18px 20px;margin:0 -8px;border-radius:18px;background:rgba(236,228,212,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
   .h1{font-size:clamp(50px,15vw,84px)}
   .h2{font-size:clamp(38px,11vw,60px)}
@@ -200,6 +223,7 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
   .sun,.spin,.visit{grid-template-columns:1fr}
   .sun figure{margin-right:calc(var(--gutter) * -1)}
   .rowi{grid-template-columns:44px 1fr}
+  .toppings,.tgroups{grid-template-columns:1fr}
   .rowi p{grid-column:2}
 }
 @media (max-height:560px) and (min-width:821px){.rail,.hint{display:none}}
@@ -232,7 +256,7 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
   <div class="nav-links">
     <a href="#sun">The name</a>
     <a href="#cup">The cup</a>
-    <a href="#inside">Inside</a>
+    <a href="#inside">Flavors</a>
     <a class="cta" href="#visit">Visit us</a>
   </div>
 </nav>
@@ -253,9 +277,14 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
     <div class="band left first" data-band="0,0.085">
       <div class="inner">
         <p class="eyebrow">Ilios Froyo · Roslyn, NY</p>
-        <h1 class="h1 rise" data-split>Pull the handle.</h1>
-        <p class="lede sub">Organic Greek frozen yogurt, swirled to order.</p>
-        <p class="hint row" aria-hidden="true"><i></i>Drag the handle or scroll</p>
+        <h1 class="h1 rise" data-split>Pick a handle.</h1>
+        <p class="lede sub">Organic froyo, pulled fresh at the counter. Choose a flavor, then pull.</p>
+        <div class="chips row" role="group" aria-label="Choose a flavor">
+          <button type="button" class="chip" data-flavor="0" aria-pressed="false"><i class="sw coffee"></i>Sweet Harbor Coffee</button>
+          <button type="button" class="chip" data-flavor="1" aria-pressed="true"><i class="sw twist"></i>Twist</button>
+          <button type="button" class="chip" data-flavor="2" aria-pressed="false"><i class="sw vanilla"></i>Organic Vanilla Bean</button>
+        </div>
+        <p class="hint row" aria-hidden="true"><i></i>Drag a handle or scroll</p>
       </div>
     </div>
     <div class="band left" data-band="0.15,0.33">
@@ -266,15 +295,16 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
     </div>
     <div class="band left" data-band="0.37,0.56">
       <div class="inner">
-        <p class="eyebrow">Organic</p>
-        <h2 class="h2 dd" data-split>Real Greek yogurt.</h2>
-        <p class="lede sub">Thick, clean, and properly Greek.</p>
+        <p class="eyebrow" data-flavor-name>Twist</p>
+        <h2 class="h2 dd" data-split>Straight from the machine.</h2>
+        <p class="lede sub">Organic, clean, and pulled while you watch.</p>
       </div>
     </div>
     <div class="band left" data-band="0.6,0.8">
       <div class="inner">
-        <p class="eyebrow">Made in front of you</p>
-        <h2 class="h2 dd" data-split>Swirled by hand, one cup at a time.</h2>
+        <p class="eyebrow">Next stop, the topping bar</p>
+        <h2 class="h2 dd" data-split>Then you make it yours.</h2>
+        <p class="lede sub">Pistachio kataifi, Biscoff crunch, honey, cinnamon rolls, Nutella, and a whole bar of fruit.</p>
       </div>
     </div>
     <div class="band left final" data-band="0.9,1">
@@ -299,7 +329,7 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
     <div>
       <p class="kicker reveal">The name</p>
       <h2 class="big reveal">Named for the sun.</h2>
-      <p class="reveal">Ilios is the Greek word for sun. That's the gold face stamped on every cup, and it's the whole idea: something bright, simple, and made with care.</p>
+      <p class="reveal">Ilios is the Greek word for sun. It's the gold face on every cup, on the sign over the machines, and on the wall when you walk in.</p>
       <p class="greek reveal" lang="el">Ήλιος<small>ee-lee-os · the sun</small></p>
     </div>
     <figure class="reveal"><img src="assets/img/cup-macro.jpg" alt="Close-up of the gold foil sun face printed on an Ilios cup" width="1400" height="875" loading="lazy"></figure>
@@ -318,24 +348,39 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
   </section>
 
   <section class="s inside io" id="inside">
-    <p class="kicker reveal">What's inside</p>
-    <h2 class="big reveal">Short list. On purpose.</h2>
+    <p class="kicker reveal">On the machines</p>
+    <h2 class="big reveal">Pull one. Or twist two.</h2>
     <div class="rows">
-      <div class="rowi reveal"><span class="n">01</span><h3>Organic</h3><p>Organic Greek yogurt is the base of every cup.</p></div>
-      <div class="rowi reveal"><span class="n">02</span><h3>Greek</h3><p>Thick and tangy, the way Greek yogurt should taste.</p></div>
-      <div class="rowi reveal"><span class="n">03</span><h3>Clean</h3><p>Clean ingredients, kept simple.</p></div>
+      <div class="rowi reveal"><i class="sw vanilla big-sw"></i><h3>Organic Vanilla Bean</h3><p>Organic</p></div>
+      <div class="rowi reveal"><i class="sw tart big-sw"></i><h3>Organic Original Tart</h3><p>Organic</p></div>
+      <div class="rowi reveal"><i class="sw coffee big-sw"></i><h3>Sweet Harbor Coffee</h3><p>Coffee</p></div>
+      <div class="rowi reveal"><i class="sw rasp big-sw"></i><h3>Raspberry</h3><p>Fruit</p></div>
+    </div>
+    <p class="note reveal">Flavors rotate. These are the ones on the machine signs right now.</p>
+  </section>
+
+  <section class="s toppings io" id="toppings">
+    <div class="tophead">
+      <p class="kicker reveal">The topping bar</p>
+      <h2 class="big reveal">Load it up.</h2>
+    </div>
+    <div class="tgroups">
+      <div class="tg reveal"><h3>Warm and drizzled</h3><ul><li>Pistachio kataifi</li><li>Biscoff crunch</li><li>Honey</li><li>Cinnamon rolls</li><li>Nutella</li></ul></div>
+      <div class="tg reveal"><h3>Fruit</h3><ul><li>Strawberry</li><li>Mango</li><li>Dates</li><li>Figs</li></ul></div>
+      <div class="tg reveal"><h3>Crunch and sweet</h3><ul><li>Granola <small>nut free, gluten free</small></li><li>Chocolate chips</li><li>Brownies</li><li>Rainbow cookies</li><li>Sprinkles</li></ul></div>
     </div>
   </section>
 
   <section class="s visit io" id="visit">
     <div>
-      <p class="kicker reveal">Visit</p>
+      <p class="kicker reveal">Froyo is so back</p>
       <p class="addr reveal">1355 Old Northern Blvd<br>Roslyn, NY 11576</p>
     </div>
     <div class="card reveal">
       <dl>
         <dt>Where</dt><dd>Old Northern Blvd, in the heart of Roslyn</dd>
-        <dt>What</dt><dd>Organic Greek frozen yogurt</dd>
+        <dt>What</dt><dd>Organic froyo and a full topping bar</dd>
+        <dt>Find us</dt><dd>@iliosfroyo</dd>
       </dl>
       <div class="btns">
         <a class="btn solid" href="https://www.google.com/maps/search/?api=1&query=Ilios+Froyo+1355+Old+Northern+Blvd+Roslyn+NY+11576" target="_blank" rel="noopener">Get directions</a>
