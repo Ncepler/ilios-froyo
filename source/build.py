@@ -124,8 +124,7 @@ M["paper_in"] = make_mat("Ilios Paper (PE-coated inside)", lin("#f4eddc"), 0.38,
 M["foil"] = make_mat("Ilios Gold Foil", lin("#b58c45"), 0.32, metal=1.0, base_tex="emblem_color.png",
                      orm="emblem_orm.png", normal="emblem_normal.png", normal_strength=0.6,
                      uv="Decal", alpha_from_base=True)
-M["froyo"] = make_mat("Organic Greek Froyo", lin("#f2ead2"), 0.38, orm="froyo_orm.png",
-                      normal="froyo_normal.png", normal_strength=0.45, coat=0.18, coat_rough=0.32,
+M["froyo"] = make_mat("Organic Greek Froyo", lin("#f2ead2"), 0.42, coat=0.18, coat_rough=0.30,
                       sheen=0.35, sheen_rough=0.35, sss=0.35, sss_radius=(1.0, 0.85, 0.6), spec=0.45)
 M["body"] = make_mat("Machine Powder-Coat Cream", lin("#e7dfcc"), 0.48, normal="powder_normal.png",
                      normal_strength=0.12, coat=0.12, coat_rough=0.35)
@@ -651,7 +650,29 @@ def build_swirl():
     return ob, P, R, S, L
 
 
-swirl, SP, SR, SS, SL = build_swirl()
+SWIRL_OBJ = os.environ.get("SWIRL_OBJ")
+
+
+def import_swirl(path):
+    """The finished swirl: the last frame of the froyo simulation (mpm.py), meshed by analyze.py."""
+    before = set(bpy.data.objects)
+    bpy.ops.wm.obj_import(filepath=path, forward_axis="NEGATIVE_Z", up_axis="Y")
+    ob = [o for o in bpy.data.objects if o not in before][0]
+    ob.name = "Swirl"
+    ob.data.materials.clear()
+    ob.data.materials.append(M["froyo"])
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)
+    bpy.ops.object.shade_smooth()
+    return ob
+
+
+if SWIRL_OBJ:
+    swirl = import_swirl(SWIRL_OBJ)
+    SP = np.zeros((2, 3))
+    SL = 1.0
+else:
+    swirl, SP, SR, SS, SL = build_swirl()
 
 
 # the hidden fill inside the cup that rises as it's poured (seen between coils from above)
@@ -950,13 +971,9 @@ def to_gltf(v):
     return [round(float(v[0]), 6), round(float(v[2]), 6), round(float(-v[1]), 6)]
 
 
-path_out = []
-stride = 3
-for i in range(0, len(SP), stride):
-    path_out.append({"p": to_gltf(SP[i]), "r": round(float(SR[i]), 6), "s": round(float(SS[i] / SL), 6)})
 meta = {
     "units": "metres, glTF Y-up",
-    "note": "Swirl centreline in the cup's local space. s = the _reveal value at that point.",
+    "note": "Machine layout for the pour. The froyo itself is the baked simulation (pour.json / pour.bin).",
     "cupLocalToMachine": to_gltf(cup_root.location),
     "nozzleMachine": to_gltf(NOZ),
     "handlePivotMachine": to_gltf(PIV),
@@ -965,15 +982,9 @@ meta = {
     "nozzlesMachine": [to_gltf(n) for n in NOZZLES],
     "cupBasesMachine": [to_gltf((n.x, n.y, TRAY_TOP + 0.0004)) for n in NOZZLES],
     "handleAxis": "x",
-    "swirlLength": round(float(SL), 5),
     "cupHeight": H,
     "rimRadius": RT,
-    "insideRevealEnd": None,
-    "path": path_out,
 }
-# reveal value at which the rope rises above the rim (used for the camera)
-above = np.where(SP[:, 2] > H)[0]
-meta["insideRevealEnd"] = round(float(SS[above[0]] / SL), 5) if len(above) else 0.6
 with open(os.path.join(OUT, "pour-path.json"), "w") as f:
     json.dump(meta, f)
 
@@ -1011,6 +1022,6 @@ export(cup_root, os.path.join(OUT, "ilios-froyo-cup.glb"))
 export(mach_root, os.path.join(OUT, "ilios-softserve-machine.glb"), anim=True)
 export(room_root, os.path.join(OUT, "ilios-room.glb"))
 
-print("swirl length %.3f m, verts %d" % (SL, len(swirl.data.vertices)))
+print("swirl verts %d" % len(swirl.data.vertices))
 print("cup verts", len(cup.data.vertices))
 print("done ->", OUT)
