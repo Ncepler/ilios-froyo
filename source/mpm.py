@@ -392,7 +392,8 @@ def run():
             if t_lift is None and t - t_close >= CLOSE_T + 0.02:
                 t_lift = t
                 tang = np.array([-math.sin(hand.theta), math.cos(hand.theta)])
-                lift_dir = tang
+                ang = math.radians(E("LIFT_DIR", 0.0))
+                lift_dir = np.array([math.cos(ang), math.sin(ang)])      # the server draws the cup away to one side
             if t_lift is not None:
                 tl = t - t_lift
                 if t_release is None:

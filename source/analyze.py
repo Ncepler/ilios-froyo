@@ -53,7 +53,7 @@ def splat(P, w, org, shape, vs):
     return out
 
 
-def field(P, tag, meta, vs, org=(-0.075, 0.0, -0.075), size=(0.15, 0.22, 0.15), blur=0.9):
+def field(P, tag, meta, vs, org=(-0.075, 0.0, -0.075), size=(0.15, 0.22, 0.15), blur=1.0):
     shape = tuple(int(math.ceil(s / vs)) for s in size)
     sp = meta["spacing"]
     w = np.full(len(P), (sp ** 3) / (vs ** 3), np.float32)
@@ -61,7 +61,7 @@ def field(P, tag, meta, vs, org=(-0.075, 0.0, -0.075), size=(0.15, 0.22, 0.15), 
     dens = splat(P, w, org, shape, vs)
     tg = splat(P, w * tag[:len(P)].astype(np.float32), org, shape, vs)
     # the splat is a point cloud at roughly 2 particles per voxel: smooth it into a continuous fill fraction
-    s = blur * max(1.0, sp / vs * 1.1)
+    s = blur * sp / vs * 0.62          # about 0.6 particle spacings: continuous, but coil grooves survive
     dens = ndimage.gaussian_filter(dens, s)
     tg = ndimage.gaussian_filter(tg, s)
     dens, tg = clip_to_cup(dens, tg, org, vs)
@@ -146,7 +146,7 @@ if __name__ == "__main__":
         v, fc, nr, m = mesh_from(dens, tg, org, a.vs)
         import trimesh
         tm = trimesh.Trimesh(vertices=v, faces=fc, process=True)
-        trimesh.smoothing.filter_taubin(tm, lamb=0.5, nu=-0.53, iterations=6)
+        trimesh.smoothing.filter_taubin(tm, lamb=0.5, nu=-0.53, iterations=4)
         tm.fix_normals()
         if tm.volume < 0:
             tm.invert()
