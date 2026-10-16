@@ -65,18 +65,23 @@ G = 9.81
 
 # ---------------------------------------------------------------- the pour
 A_NOZ = E("A_NOZ", 0.0089)       # nozzle radius
-VE = E("VE", 0.15)               # extrusion speed, m/s (about 20 mL/s, a cup in ~15 s... see RUN)
+VE = E("VE", 0.30)               # extrusion speed, m/s (a quasi-static deposit: the pour is run at twice real time)
 GAP = E("GAP", 0.013)            # nozzle height above the surface under it
 RATIO = E("RATIO", 1.0)          # hand speed over the surface / extrusion speed
-R0 = E("R0", 0.0335)             # outer ring radius of the hand
-N_OUT = E("N_OUT", 1.6)          # turns round the wall
-D_RHO = E("D_RHO", 0.0058)       # inward step per turn (m)
+PITCH_FILL = E("PITCH_FILL", 0.0125)  # radial step per turn while filling the cup (m)
+FILL_MARGIN = E("FILL_MARGIN", 0.020)  # start the dome when the pile is this far below the rim
+RING_TURNS = E("RING_TURNS", 1.0)      # turns round the wall to seal the rim before the dome
+D_RHO = E("D_RHO", 0.0058)       # inward step per turn of the dome (m)
 RHO_END = E("RHO_END", 0.0035)
-OMEGA_MAX = E("OMEGA_MAX", 7.0)
-LIFT_RATE = E("LIFT_RATE", 0.10)  # fastest the nozzle rises (the cup lowers)
-FLICK_T = E("FLICK_T", 0.50)
-FLICK_V = E("FLICK_V", 0.075)
-SETTLE_T = E("SETTLE_T", 1.6)
+RHO_MIN = E("RHO_MIN", 0.012)
+OMEGA_MAX = E("OMEGA_MAX", 8.0)
+LIFT_RATE = E("LIFT_RATE", 0.12)  # fastest the nozzle rises while building (the cup lowers)
+CLOSE_T = E("CLOSE_T", 0.25)     # valve closing time
+PEAK_V = E("PEAK_V", 0.11)       # nozzle lift speed that draws the peak (the paste clings to the spout)
+PEAK_LIFT = E("PEAK_LIFT", 0.040)  # how far it lifts before letting go
+PEAK_SIDE = E("PEAK_SIDE", 0.035)  # sideways drift during the lift: leans the peak
+STICK_R = E("STICK_R", 0.0075)
+SETTLE_T = E("SETTLE_T", 1.0)
 FPS_OUT = int(E("FPS_OUT", 24))
 MAX_TIME = E("MAX_TIME", 40.0)
 
@@ -91,7 +96,7 @@ NZ = NX
 P_VOL = SP ** 3
 P_MASS = RHO * P_VOL
 C_WAVE = math.sqrt((LAM + 2 * MU) / RHO)
-DT = E("DT", 0.22 * DX / (C_WAVE + 0.45))
+DT = E("DT", 0.32 * DX / (C_WAVE + 0.6))
 YIELD_STRAIN = TAU_Y / (2 * MU)
 VISC_DEN = 1.0 + ETA / (2 * MU * DT)
 
@@ -116,6 +121,7 @@ v = ti.Vector.field(3, ti.f32, NP)
 C = ti.Matrix.field(3, 3, ti.f32, NP)
 F = ti.Matrix.field(3, 3, ti.f32, NP)
 tag = ti.field(ti.f32, NP)
+stress = ti.Matrix.field(3, 3, ti.f32, NP)
 born = ti.field(ti.f32, NP)
 grid_v = ti.Vector.field(3, ti.f32, (NX, NY, NZ))
 grid_m = ti.field(ti.f32, (NX, NY, NZ))
@@ -141,7 +147,8 @@ def is_solid(p):
 
 @ti.func
 def project(Fm):
-    """Hencky strain + von Mises yield with viscous regularisation (Yue et al. 2015)."""
+    """Hencky strain + von Mises yield with viscous regularisation (Yue et al. 2015).
+    Returns the projected deformation gradient and the Kirchhoff stress, from one SVD."""
     U, sig, V = ti.svd(Fm)
     e0 = ti.log(ti.max(sig[0, 0], 0.05))
     e1 = ti.log(ti.max(sig[1, 1], 0.05))
@@ -163,8 +170,12 @@ def project(Fm):
         e0 -= f * d0
         e1 -= f * d1
         e2 -= f * d2
+        tr = e0 + e1 + e2
     S = ti.Matrix([[ti.exp(e0), 0.0, 0.0], [0.0, ti.exp(e1), 0.0], [0.0, 0.0, ti.exp(e2)]])
-    return U @ S @ V.transpose()
+    Dm = ti.Matrix([[2 * MU * e0 + LAM * tr, 0.0, 0.0],
+                    [0.0, 2 * MU * e1 + LAM * tr, 0.0],
+                    [0.0, 0.0, 2 * MU * e2 + LAM * tr]])
+    return U @ S @ V.transpose(), U @ Dm @ U.transpose()
 
 
 @ti.kernel
@@ -181,15 +192,7 @@ def p2g(n: ti.i32, dt: ti.f32):
         base = (Xp - 0.5).cast(ti.i32)
         fx = Xp - base.cast(ti.f32)
         w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2]
-        U, sig, V = ti.svd(F[p])
-        e0 = ti.log(ti.max(sig[0, 0], 0.05))
-        e1 = ti.log(ti.max(sig[1, 1], 0.05))
-        e2 = ti.log(ti.max(sig[2, 2], 0.05))
-        tr = e0 + e1 + e2
-        Dm = ti.Matrix([[2 * MU * e0 + LAM * tr, 0.0, 0.0],
-                        [0.0, 2 * MU * e1 + LAM * tr, 0.0],
-                        [0.0, 0.0, 2 * MU * e2 + LAM * tr]])
-        tau = U @ Dm @ U.transpose()
+        tau = stress[p]
         affine = (-dt * P_VOL * 4.0 * INV_DX * INV_DX) * tau + P_MASS * C[p]
         for i, j, k in ti.static(ti.ndrange(3, 3, 3)):
             off = ti.Vector([i, j, k])
@@ -200,7 +203,7 @@ def p2g(n: ti.i32, dt: ti.f32):
 
 
 @ti.kernel
-def grid_op(dt: ti.f32):
+def grid_op(dt: ti.f32, stick: ti.i32, sx: ti.f32, sy: ti.f32, sz: ti.f32, svx: ti.f32, svy: ti.f32, svz: ti.f32):
     for I in ti.grouped(grid_m):
         if grid_m[I] > 0:
             vel = grid_v[I] / grid_m[I]
@@ -209,6 +212,11 @@ def grid_op(dt: ti.f32):
             pos = ti.Vector([ORG[0] + I[0] * DX, ORG[1] + I[1] * DX, ORG[2] + I[2] * DX])
             if is_solid(pos):
                 vel = ti.Vector([0.0, 0.0, 0.0])      # froyo sticks to the paper
+            if stick == 1:
+                ddx = pos[0] - sx
+                ddz = pos[2] - sz
+                if ddx * ddx + ddz * ddz < STICK_R * STICK_R and pos[1] > sy - 0.007 and pos[1] < sy + 0.002:
+                    vel = ti.Vector([svx, svy, svz])      # the paste clings to the spout as it lifts away
             if I[0] < 3 or I[0] > NX - 4 or I[1] < 3 or I[1] > NY - 4 or I[2] < 3 or I[2] > NZ - 4:
                 vel = ti.Vector([0.0, 0.0, 0.0])
             grid_v[I] = vel
@@ -234,7 +242,9 @@ def g2p(n: ti.i32, dt: ti.f32):
         C[p] = nC
         x[p] += dt * nv
         Fn = (ti.Matrix.identity(ti.f32, 3) + dt * nC) @ F[p]
-        F[p] = project(Fn)
+        Fp, tau = project(Fn)
+        F[p] = Fp
+        stress[p] = tau
 
 
 @ti.kernel
@@ -247,6 +257,7 @@ def emit(base: ti.i32, nx: ti.f32, ny: ti.f32, nz: ti.f32, vx: ti.f32, vy: ti.f3
         v[p] = ti.Vector([vx, vy, vz])
         C[p] = ti.Matrix.zero(ti.f32, 3, 3)
         F[p] = ti.Matrix.identity(ti.f32, 3)
+        stress[p] = ti.Matrix.zero(ti.f32, 3, 3)
         tag[p] = slab_tag[i]
         born[p] = tnow
 
@@ -263,99 +274,156 @@ def probe(n: ti.i32, cx: ti.f32, cz: ti.f32, rr: ti.f32, ymax: ti.f32, vthr: ti.
 
 
 # ---------------------------------------------------------------- the hand
-THA = 2 * math.pi * 0.9
-THB = THA + 2 * math.pi * N_OUT
-RING = {"c": None}
-
-
 def ring_radius(ny):
     """The hand rides a ring that keeps the rope off the wall: the cup is a cone, so the ring widens as the pile rises."""
     y_dep = min(ny - GAP + 0.55 * A_NOZ, H_RIM)
-    return max(0.014, min(R0, r_in(y_dep) - 0.92 * A_NOZ))
+    return max(0.014, r_in(y_dep) - 0.92 * A_NOZ)
 
 
-def rho_of(theta, ny):
-    if theta < THA:
-        return 0.018 + (ring_radius(ny) - 0.018) * (theta / THA)
-    if theta < THB:
-        RING["c"] = ring_radius(ny)
-        return RING["c"]
-    if RING["c"] is None:
-        RING["c"] = ring_radius(ny)
-    return max(RHO_END, RING["c"] - D_RHO * (theta - THB) / (2 * math.pi))
+class Hand:
+    """What a server does: spiral out and in to fill the cup in layers, ring the rim, spiral in to build the dome."""
+
+    def __init__(self):
+        self.mode = "out"
+        self.phi = 0.0
+        self.theta = 0.0
+        self.r_from = RHO_MIN
+        self.r_start = RHO_MIN
+        self.spirals = 0
+        self.rho = RHO_MIN
+        self.log = []
+
+    def _next(self, surf, ny):
+        self.phi = 0.0
+        if self.mode == "out":
+            self.spirals += 1
+            if surf >= H_RIM - FILL_MARGIN or self.spirals >= 10:
+                self.mode = "ring"
+                self.r_start = ring_radius(ny)
+            else:
+                self.mode = "in"
+                self.r_start = ring_radius(ny)
+        elif self.mode == "in":
+            self.mode = "out"
+        elif self.mode == "ring":
+            self.mode = "dome"
+            self.r_start = ring_radius(ny)
+        self.log.append((self.mode, self.theta, surf))
+
+    def advance(self, dtheta, ny, surf):
+        self.phi += dtheta
+        self.theta += dtheta
+        ring = ring_radius(ny)
+        if self.mode == "out":
+            tot = 2 * math.pi * max(ring - RHO_MIN, 0.004) / PITCH_FILL
+            f = min(1.0, self.phi / tot)
+            self.rho = RHO_MIN + (ring - RHO_MIN) * f
+            if f >= 1.0:
+                self._next(surf, ny)
+        elif self.mode == "in":
+            tot = 2 * math.pi * max(self.r_start - RHO_MIN, 0.004) / PITCH_FILL
+            f = min(1.0, self.phi / tot)
+            self.rho = self.r_start - (self.r_start - RHO_MIN) * f
+            if f >= 1.0:
+                self._next(surf, ny)
+        elif self.mode == "ring":
+            self.rho = ring
+            if self.phi >= 2 * math.pi * RING_TURNS:
+                self._next(surf, ny)
+        elif self.mode == "dome":
+            self.rho = max(RHO_END, self.r_start - D_RHO * self.phi / (2 * math.pi))
+        return self.rho
+
+    @property
+    def finished(self):
+        return self.mode == "dome" and self.rho <= RHO_END + 1e-6
 
 
-def valve(t, t_end):
+def valve(t, t_close):
     up = min(1.0, t / 0.18)
-    dn = 1.0 if t_end is None else max(0.0, 1.0 - (t - t_end) / 0.25)
-    s = up * dn
-    return VE * s * s * (3 - 2 * s)
+    dn = 1.0 if t_close is None else max(0.0, 1.0 - (t - t_close) / CLOSE_T)
+    k = up * dn
+    return VE * k * k * (3 - 2 * k)
 
 
 def run():
     t0 = time.time()
     n = 0
     t = 0.0
-    theta = 0.0
+    hand = Hand()
     ny = ZB + GAP + 0.002
     acc = 0.0
-    hx, hz = 0.018, 0.0
-    last_hand = np.array([hx, hz])
-    t_end = None                  # when the valve closes
-    t_flick = None
-    flick_dir = np.zeros(2)
-    flick_off = np.zeros(2)
+    last_hand = np.array([RHO_MIN, 0.0])
+    last_ny = ny
+    t_close = None               # valve starts closing
+    t_lift = None                # the nozzle starts lifting away
+    t_release = None
+    side = np.zeros(2)
     frames, hand_log = [], []
     next_frame = 0.0
     step = 0
     ny_target = ny
     surf = ZB
+    hx, hz = RHO_MIN, 0.0
     done_at = None
     while True:
-        # ---- hand
-        vext = valve(t, t_end)
-        if t_end is None:
-            rho = rho_of(theta, ny)
-            if theta > THB and rho <= RHO_END + 1e-6:
-                if t_flick is None:
-                    t_flick = t
-                    t_end = t + 0.05
-                    ang = theta
-                    flick_dir = np.array([-math.sin(ang), math.cos(ang)])   # carry on along the circle's tangent
-            omega = min(OMEGA_MAX, RATIO * max(vext, 0.02) / max(rho, 0.012))
-            theta += omega * DT
-            hx, hz = rho * math.cos(theta), rho * math.sin(theta)
+        vext = valve(t, t_close)
+        stick = 0
+        if t_close is None:
+            om = min(OMEGA_MAX, RATIO * max(vext, 0.02) / max(hand.rho, 0.010))
+            hand.advance(om * DT, ny, surf)
+            hx, hz = hand.rho * math.cos(hand.theta), hand.rho * math.sin(hand.theta)
+            if hand.finished:
+                t_close = t
+                hand.close_theta = hand.theta
         else:
-            tf = t - t_flick
-            sp = FLICK_V * min(1.0, tf / 0.15)
-            flick_off += flick_dir * sp * DT
-            hx, hz = rho * math.cos(theta) + flick_off[0], rho * math.sin(theta) + flick_off[1]
-        hand = np.array([hx, hz])
-        hv = (hand - last_hand) / DT
-        last_hand = hand
+            om = min(OMEGA_MAX, 0.12 / max(hand.rho, 0.010))
+            hand.theta += om * DT
+            base = np.array([hand.rho * math.cos(hand.theta), hand.rho * math.sin(hand.theta)])
+            if t_lift is None and t - t_close >= CLOSE_T:
+                t_lift = t
+                tang = np.array([-math.sin(hand.theta), math.cos(hand.theta)])
+                lift_dir = tang
+            if t_lift is not None:
+                tl = t - t_lift
+                if t_release is None:
+                    side += lift_dir * (PEAK_SIDE / (PEAK_LIFT / PEAK_V)) * DT
+                    stick = 1
+                    if tl * PEAK_V >= PEAK_LIFT:
+                        t_release = t
+                        stick = 0
+                else:
+                    side += lift_dir * 0.02 * DT
+            hx, hz = base[0] + side[0], base[1] + side[1]
+        hand_xz = np.array([hx, hz])
+        hv = (hand_xz - last_hand) / DT
+        last_hand = hand_xz
 
-        # ---- nozzle height follows the pile
-        if step % 20 == 0 and n > 0:
-            probe(n, hx, hz, 0.012, ny - 0.006, 0.06, t)
-            surf = top[None]
-            ny_target = surf + GAP
-        if t_flick is not None:
-            ny_target = max(ny_target, ny) + 0.02 + 0.5 * (t - t_flick)
-        rate = LIFT_RATE if t_flick is None else 0.30
-        dy = ny_target - ny
-        ny += max(-0.05 * DT, min(rate * DT, dy)) if t_flick is None else max(0.0, min(rate * DT, dy))
+        # ---- nozzle height follows the pile; after the valve closes it lifts away
+        if t_lift is None:
+            if step % 20 == 0 and n > 0:
+                probe(n, hx, hz, 0.012, ny - 0.006, 0.06, t)
+                surf = top[None]
+                ny_target = surf + GAP
+            dy = ny_target - ny
+            ny += max(-0.05 * DT, min(LIFT_RATE * DT, dy))
+            nvy = (ny - last_ny) / DT
+        else:
+            nvy = PEAK_V if t_release is None else 0.18
+            ny += nvy * DT
+        last_ny = ny
 
         # ---- extrude: a slab each time the paste has travelled one particle spacing
         acc += vext * DT
         while acc >= SP and n + K <= NP:
             acc -= SP
-            emit(n, hx, ny - 0.5 * SP - acc, hz, hv[0], -vext, hv[1], t)
+            emit(n, hx, ny - 0.5 * SP - acc, hz, hv[0], nvy - vext, hv[1], t)
             n += K
 
         # ---- MPM step
         clear_grid()
         p2g(n, DT)
-        grid_op(DT)
+        grid_op(DT, stick, hx, ny, hz, hv[0], nvy, hv[1])
         g2p(n, DT)
         t += DT
         step += 1
@@ -365,9 +433,9 @@ def run():
             hand_log.append((float(hx), float(ny), float(hz), float(vext)))
             next_frame += 1.0 / FPS_OUT
             if len(frames) % 12 == 0:
-                print(f"t={t:5.2f}s  frame {len(frames):4d}  n={n:6d}  hand rho={math.hypot(hx, hz)*1000:5.1f}mm "
+                print(f"t={t:5.2f}s  frame {len(frames):4d}  n={n:6d}  {hand.mode:4s} rho={hand.rho*1000:5.1f}mm "
                       f"ny={ny*1000:5.1f}mm surf={surf*1000:5.1f}mm  {time.time()-t0:6.0f}s elapsed", flush=True)
-        if t_end is not None and done_at is None and vext <= 0.0 and t - t_end > 0.25:
+        if t_release is not None and done_at is None:
             done_at = t
         if done_at is not None and t - done_at > SETTLE_T:
             break
@@ -384,14 +452,14 @@ def run():
             arr[i, len(f):] = np.nan
     np.save(os.path.join(OUT, "frames.npy"), arr)
     np.save(os.path.join(OUT, "tag.npy"), tag.to_numpy()[:n_max].astype(np.uint8))
-    emit_f = []
     # first frame at which each particle exists
     cnt = [len(f) for f in frames]
     meta = {
         "fps": FPS_OUT, "frames": nframes, "particles": int(n_max), "spacing": SP, "dx": DX, "slab": K,
-        "counts": cnt, "hand": hand_log, "valve_close_frame": int((t_end or 0) * FPS_OUT) if t_end else None,
-        "params": {k: globals()[k] for k in ["RHO", "TAU_Y", "MU", "LAM", "ETA", "VE", "GAP", "RATIO", "R0", "N_OUT",
-                                              "D_RHO", "RHO_END", "FLICK_V", "A_NOZ"]},
+        "counts": cnt, "hand": hand_log, "valve_close_frame": int((t_close or 0) * FPS_OUT) if t_close else None,
+        "release_frame": int((t_release or 0) * FPS_OUT) if t_release else None, "hand_phases": hand.log,
+        "params": {k: globals()[k] for k in ["RHO", "TAU_Y", "MU", "LAM", "ETA", "VE", "GAP", "RATIO", "PITCH_FILL",
+                                              "FILL_MARGIN", "D_RHO", "RHO_END", "PEAK_V", "PEAK_LIFT", "PEAK_SIDE", "A_NOZ"]},
         "taichi_dt": DT, "wall_seconds": time.time() - t0,
     }
     with open(os.path.join(OUT, "meta.json"), "w") as fh:

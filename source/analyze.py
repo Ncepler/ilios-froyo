@@ -64,7 +64,32 @@ def field(P, tag, meta, vs, org=(-0.075, 0.0, -0.075), size=(0.15, 0.22, 0.15), 
     s = blur * max(1.0, sp / vs * 1.1)
     dens = ndimage.gaussian_filter(dens, s)
     tg = ndimage.gaussian_filter(tg, s)
+    dens, tg = clip_to_cup(dens, tg, org, vs)
     return dens, tg, org
+
+
+def clip_to_cup(dens, tg, org, vs):
+    """Froyo is pressed against the paper: boost the fill next to the wall and floor so the surface lands on
+    them (no gap), and cut everything beyond so the mesh never pokes through the cup."""
+    sh = dens.shape
+    xs = org[0] + (np.arange(sh[0]) + 0.5) * vs
+    ys = org[1] + (np.arange(sh[1]) + 0.5) * vs
+    zs = org[2] + (np.arange(sh[2]) + 0.5) * vs
+    X, Y, Z = np.meshgrid(xs, ys, zs, indexing="ij")
+    r = np.hypot(X, Z)
+    rin = RB + (np.clip(Y, 0.0015, H_RIM) - 0.0015) * SLOPE - TWALL
+    dw = rin - r                                     # > 0 inside the cup
+    band = 0.0050
+    inside_h = Y < H_RIM
+    gain = np.where(inside_h & (dw > 0), 1.0 + 1.1 * np.clip(1 - dw / band, 0, 1), 1.0)
+    df = Y - ZB
+    gain = np.where((df > 0) & (r < rin), gain * (1.0 + 1.1 * np.clip(1 - df / band, 0, 1)), gain)
+    dens = dens * gain
+    tg = tg * gain
+    cut = (inside_h & (dw < -0.0003)) | (Y < ZB - 0.0003)
+    dens[cut] = 0
+    tg[cut] = 0
+    return dens, tg
 
 
 def mesh_from(dens, tg, org, vs, level=0.5):
@@ -119,11 +144,16 @@ if __name__ == "__main__":
     if a.obj:
         dens, tg, org = field(P, tag, meta, a.vs)
         v, fc, nr, m = mesh_from(dens, tg, org, a.vs)
+        import trimesh
+        tm = trimesh.Trimesh(vertices=v, faces=fc, process=True)
+        trimesh.smoothing.filter_taubin(tm, lamb=0.5, nu=-0.53, iterations=6)
+        tm.fix_normals()
+        if tm.volume < 0:
+            tm.invert()
+        v, fc = np.asarray(tm.vertices), np.asarray(tm.faces)
         with open(a.obj, "w") as fh:
             for p in v:
                 fh.write("v %.5f %.5f %.5f\n" % tuple(p))
-            for nn in nr:
-                fh.write("vn %.4f %.4f %.4f\n" % tuple(nn))
             for t in fc + 1:
-                fh.write("f %d//%d %d//%d %d//%d\n" % (t[0], t[0], t[1], t[1], t[2], t[2]))
+                fh.write("f %d %d %d\n" % (t[0], t[1], t[2]))
         print("wrote", a.obj, len(v), "verts")
