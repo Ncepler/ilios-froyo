@@ -277,10 +277,28 @@ def probe(n: ti.i32, cx: ti.f32, cz: ti.f32, rr: ti.f32, ymax: ti.f32, vthr: ti.
 
 
 # ---------------------------------------------------------------- the hand
+# the dispenser hardware that goes into the cup (see build.py): a star tip of radius R_S whose lobes reach 12.5 mm, and the
+# white cap of radius R_C that sits 16 mm above the tip. The hand may not carry either one into the cup wall.
+R_S, R_C, CAP_H, CLEAR = 0.0113, 0.0168, 0.030, 0.0012
+
+
+def hardware_cap(ny):
+    cap = r_in(max(min(ny, H_RIM), 0.0015)) - R_S - CLEAR
+    yc = ny + CAP_H
+    if yc < H_RIM:
+        cap = min(cap, r_in(max(yc, 0.0015)) - R_C - CLEAR)
+    return max(0.012, cap)
+
+
 def ring_radius(ny):
-    """The hand rides a ring that keeps the rope off the wall: the cup is a cone, so the ring widens as the pile rises."""
+    """The hand rides a ring that keeps the rope off the wall and the nozzle off the cup: the cup is a cone, so the ring
+    widens as the pile rises. Once the tip is above the rim the nozzle may sweep out to the lip."""
     y_dep = min(ny - GAP + 0.55 * A_NOZ, H_RIM)
-    return max(0.014, r_in(y_dep) - 0.92 * A_NOZ)
+    old = max(0.014, r_in(y_dep) - 0.92 * A_NOZ)
+    hw = hardware_cap(ny)
+    u = min(1.0, max(0.0, (ny - (H_RIM + 0.0013)) / 0.010))
+    u = u * u * (3 - 2 * u)
+    return max(0.012, min(old, hw + (old - hw) * u))
 
 
 class Hand:

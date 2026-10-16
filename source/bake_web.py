@@ -18,7 +18,7 @@ import numpy as np
 
 import analyze
 
-KEY = 8
+KEY = 24
 
 
 def deflate(b):
@@ -30,8 +30,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mpm")
     ap.add_argument("out")
-    ap.add_argument("--vs", type=float, default=0.0025)
-    ap.add_argument("--size", type=float, nargs=3, default=(0.15, 0.20, 0.15))
+    ap.add_argument("--vs", type=float, default=0.00125)
+    ap.add_argument("--blur", type=float, default=1.2)
+    ap.add_argument("--size", type=float, nargs=3, default=(0.10, 0.19, 0.10))
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     meta, fr, tag = analyze.load(a.mpm)
@@ -43,13 +44,15 @@ def main():
     total = 0
     for f in range(meta["frames"]):
         P, n = analyze.particles(fr, f, meta)
-        dens, tg, o = analyze.field(P, tag, meta, a.vs, org=org, size=a.size)
-        q = np.clip(dens * 128.0, 0, 255).astype(np.uint8)
+        dens, tg, o = analyze.field(P, tag, meta, a.vs, org=org, size=a.size, blur=a.blur)
+        q = np.clip(dens * 128.0, 0, 112).astype(np.uint8)
         m = np.where(dens > 0.05, np.clip(tg / np.maximum(dens, 1e-3), 0, 1), 0.0)
         mq = (m * 255).astype(np.uint8)
         # store as (z, y, x) so x runs fastest in memory
         qd = np.ascontiguousarray(q.transpose(2, 1, 0)).ravel()
-        qt = np.ascontiguousarray(mq.transpose(2, 1, 0)).ravel()
+        # flavour is smooth: keep it at half resolution (averaged 2x2x2) and let the page interpolate it
+        mh = mq.astype(np.float32).reshape(shape[0] // 2, 2, shape[1] // 2, 2, shape[2] // 2, 2).mean(axis=(1, 3, 5))
+        qt = np.ascontiguousarray(np.round(mh).astype(np.uint8).transpose(2, 1, 0)).ravel()
         key = f % KEY == 0
         if key:
             bd, bt = qd.tobytes(), qt.tobytes()
@@ -57,7 +60,9 @@ def main():
             bd = ((qd.astype(np.int16) - prev_d.astype(np.int16)) & 255).astype(np.uint8).tobytes()
             bt = ((qt.astype(np.int16) - prev_t.astype(np.int16)) & 255).astype(np.uint8).tobytes()
         cd, ct = deflate(bd), deflate(bt)
-        index.append({"key": bool(key), "d": [total, len(cd)], "t": [total + len(cd), len(ct)]})
+        occ = np.nonzero((q > 40).any(axis=(0, 2)))[0]
+        top = int(occ.max()) + 3 if len(occ) else 0
+        index.append({"top": top, "key": bool(key), "d": [total, len(cd)], "t": [total + len(cd), len(ct)]})
         chunks.append(cd)
         chunks.append(ct)
         total += len(cd) + len(ct)
@@ -70,7 +75,7 @@ def main():
     hand = meta["hand"]
     out = {
         "fps": meta["fps"], "frames": meta["frames"], "key": KEY,
-        "vs": a.vs, "shape": list(shape), "org": list(org), "iso": 64,
+        "vs": a.vs, "shape": list(shape), "tshape": [shape[0] // 2, shape[1] // 2, shape[2] // 2], "org": list(org), "iso": 64,
         "hand": [[round(h[0], 5), round(h[1], 5), round(h[2], 5), round(h[3], 4)] for h in hand],
         "valveClose": meta.get("valve_close_frame"), "release": meta.get("release_frame"),
         "index": index,

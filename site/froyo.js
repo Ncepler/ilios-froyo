@@ -13,13 +13,15 @@ const EDGE = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0
 const CORNER = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]];
 
 export class FroyoPour {
-  constructor(meta, buffer, material, maxTris = 60000) {
+  constructor(meta, buffer, material, maxTris = 220000) {
     this.meta = meta;
     this.buf = new Uint8Array(buffer);
     const [NX, NY, NZ] = meta.shape;
     this.NX = NX; this.NY = NY; this.NZ = NZ;
     this.D = new Uint8Array(NX * NY * NZ);
-    this.T = new Uint8Array(NX * NY * NZ);
+    const [TX, TY, TZ] = meta.tshape;
+    this.TX = TX; this.TY = TY; this.TZ = TZ;
+    this.T = new Uint8Array(TX * TY * TZ);
     this.cur = -1;
     this.frames = meta.frames;
     const maxV = maxTris * 3;
@@ -74,16 +76,28 @@ export class FroyoPour {
     let nv = 0;
     const grad = (i, j, k, out, o) => {
       const q = k * sz + j * sy + i;
-      const ix0 = i > 0 ? q - sx : q, ix1 = i < NX - 1 ? q + sx : q;
-      const iy0 = j > 0 ? q - sy : q, iy1 = j < NY - 1 ? q + sy : q;
-      const iz0 = k > 0 ? q - sz : q, iz1 = k < NZ - 1 ? q + sz : q;
-      out[o] = D[ix0] - D[ix1]; out[o + 1] = D[iy0] - D[iy1]; out[o + 2] = D[iz0] - D[iz1];   // points outward
+      const a0 = i > 1 ? 2 : i > 0 ? 1 : 0, a1 = i < NX - 2 ? 2 : i < NX - 1 ? 1 : 0;
+      const b0 = j > 1 ? 2 : j > 0 ? 1 : 0, b1 = j < NY - 2 ? 2 : j < NY - 1 ? 1 : 0;
+      const c0 = k > 1 ? 2 : k > 0 ? 1 : 0, c1 = k < NZ - 2 ? 2 : k < NZ - 1 ? 1 : 0;
+      out[o] = (D[q - a0 * sx] + 0.5 * D[q - a0 * sx + sy] + 0.5 * D[q - a0 * sx - sy]) - (D[q + a1 * sx] + 0.5 * D[q + a1 * sx + sy] + 0.5 * D[q + a1 * sx - sy]);
+      out[o + 1] = (D[q - b0 * sy] + 0.5 * D[q - b0 * sy + sx] + 0.5 * D[q - b0 * sy - sx]) - (D[q + b1 * sy] + 0.5 * D[q + b1 * sy + sx] + 0.5 * D[q + b1 * sy - sx]);
+      out[o + 2] = (D[q - c0 * sz] + 0.5 * D[q - c0 * sz + sx] + 0.5 * D[q - c0 * sz - sx]) - (D[q + c1 * sz] + 0.5 * D[q + c1 * sz + sx] + 0.5 * D[q + c1 * sz - sx]);
     };
     const g0 = new Float32Array(3), g1 = new Float32Array(3);
+    const { TX, TY, TZ } = this, ts = vs * 2;
+    const sampleT = (x, y, z) => {
+      const fx = Math.min(TX - 1.001, Math.max(0, (x - ox) / ts - 0.5)), fy = Math.min(TY - 1.001, Math.max(0, (y - oy) / ts - 0.5)), fz = Math.min(TZ - 1.001, Math.max(0, (z - oz) / ts - 0.5));
+      const x0 = fx | 0, y0 = fy | 0, z0 = fz | 0, tx = fx - x0, ty = fy - y0, tz = fz - z0;
+      const b = z0 * TX * TY + y0 * TX + x0, sy2 = TX, sz2 = TX * TY;
+      const c00 = T[b] + (T[b + 1] - T[b]) * tx, c10 = T[b + sy2] + (T[b + sy2 + 1] - T[b + sy2]) * tx;
+      const c01 = T[b + sz2] + (T[b + sz2 + 1] - T[b + sz2]) * tx, c11 = T[b + sz2 + sy2] + (T[b + sz2 + sy2 + 1] - T[b + sz2 + sy2]) * tx;
+      return ((c00 + (c10 - c00) * ty) + ((c01 + (c11 - c01) * ty) - (c00 + (c10 - c00) * ty)) * tz) / 255;
+    };
     // the cup, so the froyo surface can be pressed onto the paper (no gaps, nothing pokes through the wall)
     const H_RIM = 0.062, RB = 0.034, SLOPE = (0.0455 - 0.034) / (0.062 - 0.0016 - 0.0015), TWALL = 0.00056 * Math.sqrt(1 + SLOPE * SLOPE), ZB = 0.0068;
+    const jTop = Math.min(NY - 1, (this.meta.index[this.cur].top || NY) );
     for (let k = 0; k < NZ - 1; k++) {
-      for (let j = 0; j < NY - 1; j++) {
+      for (let j = 0; j < jTop - 1; j++) {
         let q = k * sz + j * sy;
         for (let i = 0; i < NX - 1; i++, q++) {
           const v0 = D[q];
@@ -117,8 +131,7 @@ export class FroyoPour {
             const nx = g0[0] + (g1[0] - g0[0]) * t, ny = g0[1] + (g1[1] - g0[1]) * t, nz = g0[2] + (g1[2] - g0[2]) * t;
             const l = Math.hypot(nx, ny, nz) || 1;
             en[e * 3] = nx / l; en[e * 3 + 1] = ny / l; en[e * 3 + 2] = nz / l;
-            const ta = T[q + off[a]], tb = T[q + off[b]];
-            em[e] = (ta + (tb - ta) * t) / 255;
+            em[e] = sampleT(ep[e * 3], ep[e * 3 + 1], ep[e * 3 + 2]);
           }
           const base = ci * 16;
           for (let n = 0; triTable[base + n] !== -1 && n < 15; n += 3) {

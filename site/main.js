@@ -107,9 +107,9 @@ scene.add(nicheGlow);
 // ------------------------------------------------------------------ the froyo shader
 // flavours, in handle order (left, centre, right), as on the shop's machine sign
 const FLAVORS = [
-  { name: 'Sweet Harbor Coffee', a: '#b98a5c', b: '#b98a5c', twist: 0, speckA: 0, speckB: 0 },
-  { name: 'Twist', a: '#b98a5c', b: '#f2e8cf', twist: 1, speckA: 0, speckB: 0.8 },
-  { name: 'Organic Vanilla Bean', a: '#f2e8cf', b: '#f2e8cf', twist: 0, speckA: 1, speckB: 1 },
+  { name: 'Sweet Harbor Coffee', a: '#a98c70', b: '#a98c70', twist: 0, speckA: 0, speckB: 0 },
+  { name: 'Twist', a: '#a98c70', b: '#f1e7c8', twist: 1, speckA: 0, speckB: 0.8 },
+  { name: 'Organic Vanilla Bean', a: '#f1e7c8', b: '#f1e7c8', twist: 0, speckA: 1, speckB: 1 },
 ];
 const U = {
   uColA: { value: new THREE.Color(FLAVORS[1].a) }, uColB: { value: new THREE.Color(FLAVORS[1].b) },
@@ -127,6 +127,22 @@ const FLAVOR_GLSL = `
     fc = mix(fc, vec3(0.05, 0.036, 0.028), sp * 0.9);
     diffuseColor.rgb = fc;
   }`;
+// soft-serve is aerated: a fine, even grain of tiny bubbles breaks up the highlights (object-space noise, no seams)
+const BUMP_GLSL = `
+  {
+    vec3 q = vLocal * 900.0;
+    vec3 i0 = floor(q), f0 = fract(q); f0 = f0 * f0 * (3.0 - 2.0 * f0);
+    vec3 g = vec3(0.0);
+    for (int c = 0; c < 3; c++) {
+      float o = float(c) * 17.0;
+      float a = fract(sin(dot(i0 + vec3(0.,0.,0.) + o, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+      float b = fract(sin(dot(i0 + vec3(1.,0.,0.) + o, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+      float d = fract(sin(dot(i0 + vec3(0.,1.,0.) + o, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+      float e = fract(sin(dot(i0 + vec3(1.,1.,0.) + o, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+      g[c] = mix(mix(a, b, f0.x), mix(d, e, f0.x), f0.y) - 0.5;
+    }
+    normal = normalize(normal + 0.07 * g);
+  }`;
 function froyoPatch(mat) {
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
@@ -136,9 +152,18 @@ function froyoPatch(mat) {
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vM;\nvarying vec3 vLocal;\n' +
         'uniform vec3 uColA; uniform vec3 uColB; uniform float uTwist; uniform float uSpeckA; uniform float uSpeckB;')
-      .replace('#include <color_fragment>', '#include <color_fragment>' + FLAVOR_GLSL);
+      .replace('#include <color_fragment>', '#include <color_fragment>' + FLAVOR_GLSL)
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + BUMP_GLSL);
   };
   mat.customProgramCacheKey = () => 'froyo';
+}
+
+function makeFroyoMaterial() {
+  return new THREE.MeshPhysicalMaterial({
+    color: '#f4ecd6', roughness: 0.56, metalness: 0, side: THREE.DoubleSide,
+    sheen: 0.8, sheenRoughness: 0.5, sheenColor: new THREE.Color('#fff2d2'),
+    clearcoat: 0.1, clearcoatRoughness: 0.55,
+  });
 }
 
 // ------------------------------------------------------------------ flavour choice
@@ -225,13 +250,13 @@ Promise.all([
   cup.position.copy(cupBases[1]);
   scene.add(room, machine, cup);
 
-  const pmat = froyoMat.clone();
-  pmat.side = THREE.DoubleSide;
+  const pmat = makeFroyoMaterial();
+  froyoMat = pmat;
   froyoPatch(pmat);
   pour = new FroyoPour(sj, sb, pmat);
   cup.add(pour.mesh);                 // the simulation is in the cup's own frame
 
-  initSpin(gc);
+  setupToppings(gc);
   root.classList.add('ready');
   resize();
   applyMode();
@@ -299,13 +324,36 @@ const POUR_P = [0.18, 0.84];
 const _held = new THREE.Vector3(), _tray = new THREE.Vector3(), _h0 = new THREE.Vector3();
 const lerp = (a, b, t) => a + (b - a) * t;
 
+// The server's hand in the simulation asks for a millimetre more than the dispenser allows in a few frames: the star tip
+// (radius R_S) and the white cap above it (R_C, CAP_H higher) may not touch the cup wall, so the hand is held inside it.
+// Same numbers as the 3D model and as source/clearance.py, which checks the result against the whole machine.
+const R_S = 0.0103, R_C = 0.0168, CAP_H = 0.030, CL = 0.0013;
+const rInCup = y => 0.034 + (Math.max(y, 0.0015) - 0.0015) * 0.19525 - 0.00056;
+function nozzleCap(ny) {
+  let c = rInCup(Math.min(ny, 0.062)) - R_S - CL;
+  if (ny + CAP_H < 0.062) c = Math.min(c, rInCup(ny + CAP_H) - R_C - CL);
+  return Math.max(0.01, c);
+}
+function clampHand(hx, ny, hz, out) {
+  let x = hx, z = hz;
+  if (ny < 0.0685) {            // below the rim's rolled lip the cap is firm; just above it the nozzle is free to swing out
+    const r = Math.hypot(hx, hz), c = nozzleCap(ny);
+    let u = Math.min(1, Math.max(0, (ny - 0.0645) / 0.004)); u = u * u * (3 - 2 * u);
+    const lim = c + (r - c) * u;
+    if (r > lim) { x = hx * lim / r; z = hz * lim / r; }
+  }
+  out.x = x; out.z = z;
+}
+const _ch = { x: 0, z: 0 };
+
 function pose(p) {
   if (!machine) return;
   const meta = pour.meta, last = meta.frames - 1;
   const fr = clamp((p - POUR_P[0]) / (POUR_P[1] - POUR_P[0])) * last;
   const f0 = Math.floor(fr), f1 = Math.min(last, f0 + 1), ft = fr - f0;
   const H0 = meta.hand[f0], H1 = meta.hand[f1];
-  const hx = lerp(H0[0], H1[0], ft), hy = lerp(H0[1], H1[1], ft), hz = lerp(H0[2], H1[2], ft);
+  let hx = lerp(H0[0], H1[0], ft), hy = lerp(H0[1], H1[1], ft), hz = lerp(H0[2], H1[2], ft);
+  clampHand(hx, hy, hz, _ch); hx = _ch.x; hz = _ch.z;
   const N = nozzles[sel];
   const rel = meta.release || last;
 
@@ -539,7 +587,7 @@ new IntersectionObserver(([e]) => {
 document.addEventListener('visibilitychange', () => document.body.classList.toggle('paused', document.hidden));
 
 // test hook: jump straight to a progress value (used by the screenshot harness)
-window.__ilios = { scene, render: () => renderer.render(scene, camera), setP(p) { target = shown = p; loadK = 1; frame(p); }, cam: () => ({ tgt: camTgt.toArray(), dir: camera.getWorldDirection(new THREE.Vector3()).toArray(), pos: camera.position.toArray(), fov: camera.fov, near: camera.near, cup: cup && cup.position.toArray() }), setFlavor };
+window.__ilios = { scene, camera, THREE, render: () => renderer.render(scene, camera), setP(p) { target = shown = p; loadK = 1; frame(p); }, cam: () => ({ tgt: camTgt.toArray(), dir: camera.getWorldDirection(new THREE.Vector3()).toArray(), pos: camera.position.toArray(), fov: camera.fov, near: camera.near, cup: cup && cup.position.toArray() }), setFlavor };
 
 // section entrances
 const io = new IntersectionObserver(es => es.forEach(e => {
@@ -550,74 +598,26 @@ const io = new IntersectionObserver(es => es.forEach(e => {
 }), { threshold: 0.18 });
 document.querySelectorAll('.io').forEach(s => io.observe(s));
 
-// ------------------------------------------------------------------ the spin viewer (same cup model)
-function initSpin(gltf) {
+// ------------------------------------------------------------------ the topping bar
+// Lazy: nothing for it (physics engine, topping models) downloads until the section is near the viewport.
+function setupToppings(gc) {
   const el = $('#spin');
   if (!el || !renderer) return;
-  let r2;
-  try { r2 = new THREE.WebGLRenderer({ canvas: el, antialias: true, alpha: true }); } catch (e) { return; }
-  r2.setPixelRatio(dpr());
-  r2.outputColorSpace = THREE.SRGBColorSpace;
-  r2.toneMapping = THREE.AgXToneMapping;
-  r2.toneMappingExposure = 1.15;
-  r2.shadowMap.enabled = true;
-  r2.shadowMap.type = THREE.PCFSoftShadowMap;
-  const s2 = new THREE.Scene();
-  const pm = new THREE.PMREMGenerator(r2);
-  s2.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-  s2.environmentIntensity = 0.7;
-  const c2 = new THREE.PerspectiveCamera(24, 1, 0.01, 10);
-  c2.position.set(0.16, 0.2, 0.42);
-  const model = gltf.scene.clone(true);
-  model.position.set(0, 0, 0);
-  // the hero scene patches the froyo materials (pour reveal, fill clip); the viewer shows the finished cup
-  const plain = froyoMat.clone();
-  froyoPatch(plain);
-  model.traverse(o => {
-    if (!o.isMesh) return;
-    o.castShadow = !o.material.transparent;
-    o.receiveShadow = true;
-    if (o.name === 'Swirl' || o.name === 'SwirlCore') { o.material = plain; o.customDepthMaterial = undefined; o.visible = true; }
-  });
-  s2.add(model);
-  const k2 = new THREE.DirectionalLight('#fff0db', 2.2);
-  k2.position.set(-0.5, 0.8, 0.6);
-  k2.castShadow = true;
-  k2.shadow.mapSize.set(1024, 1024);
-  Object.assign(k2.shadow.camera, { left: -0.2, right: 0.2, top: 0.25, bottom: -0.1, near: 0.1, far: 2 });
-  k2.shadow.bias = -0.0004;
-  k2.shadow.radius = 6;
-  s2.add(k2, new THREE.HemisphereLight('#fff7ec', '#a59b8e', 0.6));
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(0.4, 64), new THREE.ShadowMaterial({ opacity: 0.22 }));
-  floor.rotation.x = -Math.PI / 2;
-  floor.receiveShadow = true;
-  s2.add(floor);
-  const ctl = new OrbitControls(c2, el);
-  ctl.target.set(0, 0.068, 0);
-  ctl.enableDamping = true;
-  ctl.enablePan = false;
-  ctl.enableZoom = false;
-  ctl.minPolarAngle = 0.35;
-  ctl.maxPolarAngle = 1.5;
-  ctl.autoRotate = !RM.matches;
-  ctl.autoRotateSpeed = 1.1;
-  let visible = false, raf2 = null;
-  const size = () => {
-    const w = el.clientWidth, h = el.clientHeight;
-    r2.setSize(w, h, false);
-    c2.aspect = w / h;
-    c2.updateProjectionMatrix();
+  let started = false;
+  const start = async () => {
+    if (started) return;
+    started = true;
+    try {
+      const [tg, mod] = await Promise.all([load('assets/models/toppings.glb'), import('./toppings.js')]);
+      const fp = new FroyoPour(pour.meta, pour.buf.buffer, pour.mesh.material);
+      fp.setFrame(pour.meta.frames - 1);
+      await mod.initToppings({ canvas: el, cup: gc.scene, toppings: tg.scene, froyo: fp, froyoMaterial: pour.mesh.material, dpr, reduced: RM.matches, chipsEl: $('#topchips') });
+      root.classList.add('top-ready');
+    } catch (e) {
+      console.warn('Topping bar unavailable', e);
+      $('#cup')?.classList.add('top-off');
+    }
   };
-  const loop = () => {
-    ctl.update();
-    r2.render(s2, c2);
-    raf2 = visible && !document.hidden ? requestAnimationFrame(loop) : null;
-  };
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible && raf2 === null) { size(); raf2 = requestAnimationFrame(loop); }
-  }).observe(el);
-  addEventListener('resize', size);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && visible && raf2 === null) raf2 = requestAnimationFrame(loop); });
-  size();
+  new IntersectionObserver(([e]) => { if (e.isIntersecting) start(); }, { rootMargin: '900px 0px' }).observe(el);
+  window.__startToppings = start;
 }

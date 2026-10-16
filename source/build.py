@@ -785,14 +785,14 @@ add(rbox("DoorGasket", (0.352, 0.006, 0.166), (0, FACE_Y - 0.002, 0.498), 0.003,
 for i, x in enumerate(SPOUT_X):
     # a stem from the underside of the door down to each spout, so the cup can rise round them
     add(cyl(f"SpoutStem{i}", 0.0125, 0.026, (x, SPOUT_Y, 0.4155 + 0.0), M["blackgloss"], verts=32, bevel=0.002))
-    add(lathe(f"Spout{i}", [(0.0, 0.040), (0.020, 0.040), (0.0205, 0.030), (0.0185, 0.026), (0.0180, 0.008),
-                            (0.0170, 0.002), (0.0160, 0.0), (0.0, 0.0)], M["whiteplastic"],
+    add(lathe(f"Spout{i}", [(0.0, 0.054), (0.0150, 0.054), (0.0168, 0.050), (0.0165, 0.040), (0.0162, 0.034),
+                            (0.0150, 0.030), (0.0120, 0.030), (0.0, 0.030)], M["whiteplastic"],
               loc=(x, SPOUT_Y, NOZ_Z), segs=64))
 
     def mouth(x=x, i=i):
         m = 72
         verts, faces = [], []
-        for ring, (rr, z) in enumerate([(0.0150, 0.0004), (0.0110, 0.0), (0.0110, 0.028)]):
+        for ring, (rr, z) in enumerate([(0.0102, 0.0004), (0.0089, 0.0), (0.0089, 0.030)]):
             for j in range(m):
                 phi = j / m * 2 * math.pi
                 k = 1 + 0.16 * math.cos(6 * phi) if ring > 0 else 1

@@ -19,6 +19,7 @@
 { "imports": {
   "three": "./vendor/three/three.module.min.js",
   "fflate": "./vendor/fflate.js",
+  "rapier": "./vendor/rapier.es.js",
   "three/addons/": "./vendor/three/addons/"
 } }
 </script>
@@ -166,13 +167,30 @@ section.s{position:relative;padding:clamp(96px,14vw,180px) var(--gutter)}
 .sun.in figure img{transform:none}
 
 /* spin: the interactive model viewer */
-.spin{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);gap:clamp(24px,5vw,80px);align-items:center}
+.spin{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(24px,5vw,80px);align-items:center}
 .viewer{position:relative;aspect-ratio:1/1;border-radius:24px;overflow:hidden;background:radial-gradient(70% 70% at 50% 40%,#c8c0b4,#a39b90)}
 .viewer canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
 .viewer canvas:active{cursor:grabbing}
 .viewer .tag{position:absolute;left:18px;bottom:16px;font:400 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink);
   background:rgba(241,233,214,.8);padding:8px 11px;border-radius:999px}
-.spin p{color:var(--ink-2);max-width:36ch;margin-top:24px;font-size:clamp(17px,1.4vw,20px)}
+.spin .lead{color:var(--ink-2);max-width:40ch;margin-top:22px;font-size:clamp(16px,1.3vw,19px)}
+.spinl .big{font-size:clamp(44px,5.6vw,92px)}
+.topchips{margin-top:26px;display:grid;gap:16px}
+.tgrp h3{font:400 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin-bottom:9px}
+.tchips{display:flex;flex-wrap:wrap;gap:8px}
+.tchip{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:4px 14px 4px 5px;border-radius:999px;border:1px solid rgba(40,34,27,.26);
+  background:rgba(243,236,224,.55);color:var(--ink);font:500 14px/1 var(--body);cursor:pointer;
+  transition:background .3s var(--ease-out),border-color .3s var(--ease-out),transform .3s var(--ease-out)}
+.tchip:hover{background:rgba(243,236,224,.95);transform:translateY(-1px)}
+.tchip[aria-pressed="true"]{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.tchip .ti{width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--tint,#ccc) 16%,#efe6d2) center/118% no-repeat;box-shadow:inset 0 0 0 1px rgba(40,34,27,.12);flex:none}
+.tchip[aria-pressed="true"] .ti{background-color:color-mix(in srgb,var(--tint,#ccc) 26%,#f1e9d6)}
+.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:22px}
+.topbar .btn{min-height:42px;padding:0 18px;font-size:14px}
+#topcount{font:400 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin-left:6px}
+.viewer{aspect-ratio:4/5}
+@media (min-width:821px){.spin .viewer{position:sticky;top:96px;align-self:start}}
+@media (max-width:820px){.viewer{aspect-ratio:1/1}}
 
 /* what's in it: numbered editorial rows on a dark band */
 .inside{background:var(--ink);color:var(--cream)}
@@ -337,13 +355,19 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
   </section>
 
   <section class="s spin io" id="cup">
-    <div>
-      <p class="kicker reveal">The cup</p>
-      <h2 class="big reveal">Go on, turn it around.</h2>
-      <p class="reveal">Drag to spin the cup. This is the same model that pours in the scene above, ready for the site, ads, and the menu board.</p>
+    <div class="spinl">
+      <p class="kicker reveal">Make it yours</p>
+      <h2 class="big reveal">Top it off.</h2>
+      <p class="reveal lead">Everything from the bar, dropped onto your swirl. Tap a topping and watch it land. Drag the cup to turn it.</p>
+      <div class="topchips reveal" id="topchips" role="group" aria-label="Toppings"></div>
+      <div class="topbar reveal">
+        <button type="button" id="topsurprise" class="btn ghost">Surprise me</button>
+        <button type="button" id="topclear" class="btn ghost">Clear</button>
+        <span id="topcount" aria-live="polite">Plain, the way it pours</span>
+      </div>
     </div>
     <div class="viewer reveal">
-      <canvas id="spin" aria-label="Interactive 3D model of an Ilios froyo cup. Drag to rotate."></canvas>
+      <canvas id="spin" aria-label="Interactive 3D cup of froyo. Choose toppings and they drop on. Drag to rotate."></canvas>
       <span class="tag" aria-hidden="true">Drag to rotate</span>
     </div>
   </section>
