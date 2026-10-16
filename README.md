@@ -20,7 +20,8 @@ models/
 site/                                    the scroll-driven hero site (plain HTML + JS, no build step)
 renders/                                 photoreal Cycles renders (product shots, macro, machine)
 source/
-  sim.py                                 the pour: a viscous-rope physics simulation (see below)
+  mpm.py                                 the pour: a yield-stress paste (MLS-MPM) simulation (see below)
+  validate.py / bake_web.py / analyze.py  physics checks, web bake, surface extraction
   tex.py                                 procedural textures: sun emblem, paper, brushed steel, marble, froyo micro-surface
   build.py                               Blender script: builds the cup, swirl, machine, materials; exports GLB + pour path
   render.py                              Cycles product renders
@@ -78,15 +79,19 @@ page settles on the finished cup with directions.
 - Everything is rendered live in WebGL (three.js r169, vendored in `site/vendor/three`, MIT). There is no video file.
 - The flavor is a shader on the froyo: one color, or two-tone stripes that follow the ridges for the twist, with
   tiny dark specks for vanilla bean. The same choice carries into the spin viewer below.
-- The froyo is real physics, baked: `source/sim.py` simulates the soft serve as a viscous rope (position-based
-  dynamics). It is extruded from the star spout at a steady rate; gravity draws the falling column out and it thins
-  (radius follows volume conservation); it bends softly; it collides with the cup and with the rope already in it;
-  pieces that land lying flat set almost at once while upright folds topple first (yield stress); and the server's
-  hand circles the cup, filling it in flat layers and then stepping inward to build the dome, steering by watching
-  where the rope touches down. When the valve closes the tail breaks off and falls onto the top. The site replays
-  the baked frames as one live rope (`pour-sim.bin`, 0.4 MB) as you scroll, forward or back.
-- The downloadable cup's `Swirl` is the simulation's final frame. It still carries a `_reveal` attribute (0 where the
-  rope starts, 1 at the tip), so another site can animate a simple pour with a one-line shader discard.
+- The froyo is a simulated paste, baked. Soft serve is a foam (about 40-60% overrun, ~700 kg/m3) that behaves as a
+  shear-thinning yield-stress solid: it holds its shape until stress passes a yield value, then flows. `source/mpm.py`
+  simulates it with the material point method (Hencky-strain elasticity, von Mises yield with viscous regularization,
+  after Yue et al. 2015 "Continuum Foam" and the PAC-NeRF return map), 4 mm grid, ~31k particles. A server's-hand
+  model runs it: it spirals out and in to fill the cup in layers, turns a ring at the rim, spirals a dome inward,
+  rides the nozzle up with the pile, shrinks the nozzle opening to close the valve and lifts away to pull the peak.
+  Parameters: rho 700, tau_y 650 Pa, mu 8000, lambda 32000, eta 14 Pa s. **tau_y is tuned to give the cone height seen in
+  the shop photos, not measured.** `source/validate.py` writes `physics_report.json`: it comes to rest (p99 speed
+  1.5 mm/s), the stream keeps its thickness, nothing leaves the paper, the 11 cm pile is under the 16 cm
+  self-supporting limit sqrt(3) tau_y/(rho g), and volume is conserved. Some air stays trapped between layers
+  (void fraction ~0.28 inside the cup), as in real soft serve. Not modelled: the star-nozzle ridges.
+  The site replays the baked frames (`pour.bin`, 2.8 MB; voxel fields, keyframe + deltas, deflate) and meshes each
+  frame with marching cubes in the browser, so scrolling scrubs the simulation, forwards or back.
 - The scroll position is eased (frame-rate independent lerp) and the render loop rests once it has caught up.
 - Phones get the same 3D scene with portrait framing. Reduced motion gets the finished frame, with no scrubbing.
   If WebGL fails, the page shows a still render.
@@ -116,9 +121,18 @@ npx gltf-transform optimize /tmp/out/ilios-froyo-cup.glb site/assets/models/ilio
 Keep `--simplify false` (it would re-mesh the swirl) and, for the machine, `--flatten false --join false`
 (they would merge away the three handle pivots).
 
-The pour: `python source/sim.py /tmp/sim` (about 25 s on a laptop CPU), then pass `/tmp/sim` as the third
-argument to `build.py` so the cup's swirl is the simulation's final frame, and copy `pour-sim.json` +
-`pour-sim.bin` into `site/assets/`.
+The pour (about 10 min for 4 mm on 4 cores):
+```
+DX=0.004 MU=8000 LAM=32000 TAU_Y=650 D_RHO=0.011 CLOSE_T=0.24 PEAK_LIFT=0.034 PEAK_SIDE=0.026 python source/mpm.py /tmp/mpm
+python source/validate.py /tmp/mpm
+python source/analyze.py /tmp/mpm last --obj /tmp/mpm/last.obj --vs 0.0014
+python source/bake_web.py /tmp/mpm site/assets
+SWIRL_OBJ=/tmp/mpm/last.obj python source/build.py /tmp/tex /tmp/out   # then compress as above
+```
+`source/sim.py` is the superseded elastic-rope version (it looked like a worm); kept for reference only.
+
+Sources: US 4,452,823 (soft-serve overrun); Herschel-Bulkley ice-cream mixes (agris.fao.org 65dfb43f); Yue et al.
+2015 Continuum Foam; PAC-NeRF (arXiv 2303.05512).
 
 ## Before this goes to the client
 

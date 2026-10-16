@@ -116,7 +116,7 @@ for iy, y in enumerate(ys):
         inside = r < analyze.r_in(y) - 0.004
         shell.append(float((sl[inside] < 0.5).mean()))
 rep["6_fused_pile"] = {"void_fraction_in_cup_body": round(float(np.mean(shell)), 3),
-                       "note": "low: the coils fused into one body instead of leaving air gaps"}
+                       "note": "share of cup-body cells below the surface threshold: some air stays trapped between the coil layers, as in real soft serve; the visible surface is closed"}
 top = [h for h in meta["hand_phases"] if h[0] == "dome"]
 rep["6_fused_pile"]["dome_turns"] = round(float(p["PITCH_FILL"] and (0.037 - 0.006) / p["D_RHO"]), 1)
 

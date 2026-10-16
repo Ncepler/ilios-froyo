@@ -28,12 +28,23 @@ js = js.replace(
     "  .then(t => { const bin = atob(t.trim()); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);\n"
     "    manager.itemStart(url); return new Promise((res, rej) => loader.parse(u.buffer, '', g => { manager.itemEnd(url); res(g); }, rej)); });")
 assert ".b64.txt" in js
-# the pour simulation's binary ships the same way
-js = js.replace(
-    "const loadBin = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer(); });",
+# the pour's binary ships the same way
+old_bin = "const loadBin = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer(); });"
+assert old_bin in js
+js = js.replace(old_bin,
     "const loadBin = url => fetch(url + '.b64.txt').then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.text(); })\n"
     "  .then(t => { const bin = atob(t.trim()); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; });")
-assert "pour-sim" in js and ".b64.txt'" in js
+# froyo.js is inlined ahead of main.js (one module, one THREE import)
+fj = open(f"{site}/froyo.js", encoding="utf8").read()
+fj = fj.replace("import * as THREE from 'three';\n", "").replace("export class", "class")
+assert "import { FroyoPour } from './froyo.js';" in js
+js = js.replace("import { FroyoPour } from './froyo.js';", "")
+js = js.replace("import * as THREE from 'three';", "import * as THREE from 'three';\n" + fj.split("\n// the 12 cube", 1)[0].split("import { edgeTable")[0] + "import { edgeTable, triTable } from 'three/addons/objects/MarchingCubes.js';\n", 1) if False else js
+imports = [l for l in fj.splitlines() if l.startswith("import ")]
+fj = "\n".join(l for l in fj.splitlines() if not l.startswith("import "))
+js = js.replace("import * as THREE from 'three';", "import * as THREE from 'three';\n" + "\n".join(imports), 1)
+js = js + "\n" + fj
+h = h.replace('"fflate": "./vendor/fflate.js"', '"fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"')
 h = h.replace('<script type="module" src="main.js"></script>', '<script type="module">\n' + js + "\n</script>")
 open(out, "w", encoding="utf8").write(h)
 print("wrote", out, len(h))
