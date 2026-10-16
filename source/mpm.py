@@ -71,16 +71,16 @@ RATIO = E("RATIO", 1.0)          # hand speed over the surface / extrusion speed
 PITCH_FILL = E("PITCH_FILL", 0.0125)  # radial step per turn while filling the cup (m)
 FILL_MARGIN = E("FILL_MARGIN", 0.020)  # start the dome when the pile is this far below the rim
 RING_TURNS = E("RING_TURNS", 1.0)      # turns round the wall to seal the rim before the dome
-D_RHO = E("D_RHO", 0.0058)       # inward step per turn of the dome (m)
-RHO_END = E("RHO_END", 0.0035)
+D_RHO = E("D_RHO", 0.0085)       # inward step per turn of the dome (m)
+RHO_END = E("RHO_END", 0.0060)
 RHO_MIN = E("RHO_MIN", 0.012)
 OMEGA_MAX = E("OMEGA_MAX", 8.0)
 LIFT_RATE = E("LIFT_RATE", 0.12)  # fastest the nozzle rises while building (the cup lowers)
-CLOSE_T = E("CLOSE_T", 0.25)     # valve closing time
+CLOSE_T = E("CLOSE_T", 0.16)     # valve closing time (the opening shrinks, so the stream thins to a point)
 PEAK_V = E("PEAK_V", 0.11)       # nozzle lift speed that draws the peak (the paste clings to the spout)
-PEAK_LIFT = E("PEAK_LIFT", 0.040)  # how far it lifts before letting go
-PEAK_SIDE = E("PEAK_SIDE", 0.035)  # sideways drift during the lift: leans the peak
-STICK_R = E("STICK_R", 0.0075)
+PEAK_LIFT = E("PEAK_LIFT", 0.014)  # how far it lifts before letting go
+PEAK_SIDE = E("PEAK_SIDE", 0.012)  # sideways drift during the lift: leans the peak
+STICK_R = E("STICK_R", 0.0045)
 SETTLE_T = E("SETTLE_T", 1.0)
 FPS_OUT = int(E("FPS_OUT", 24))
 MAX_TIME = E("MAX_TIME", 40.0)
@@ -109,6 +109,9 @@ for i in range(-n_side, n_side + 1):
         if px * px + pz * pz <= (A_NOZ - 0.4 * SP) ** 2:
             offs.append((px, pz))
             tags.append(1.0 if px > 0 else 0.0)
+order = sorted(range(len(offs)), key=lambda i: offs[i][0] ** 2 + offs[i][1] ** 2)
+offs = [offs[i] for i in order]
+tags = [tags[i] for i in order]
 K = len(offs)
 slab_vol = K * P_VOL
 est_len = E("EST_LEN", 2.8)
@@ -248,8 +251,8 @@ def g2p(n: ti.i32, dt: ti.f32):
 
 
 @ti.kernel
-def emit(base: ti.i32, nx: ti.f32, ny: ti.f32, nz: ti.f32, vx: ti.f32, vy: ti.f32, vz: ti.f32, tnow: ti.f32):
-    for i in range(K):
+def emit(base: ti.i32, keff: ti.i32, nx: ti.f32, ny: ti.f32, nz: ti.f32, vx: ti.f32, vy: ti.f32, vz: ti.f32, tnow: ti.f32):
+    for i in range(keff):
         p = base + i
         j = (ti.random() - 0.5) * 0.25 * SP
         k = (ti.random() - 0.5) * 0.25 * SP
@@ -340,10 +343,14 @@ class Hand:
 
 
 def valve(t, t_close):
+    """Exit speed (ramps up when the handle is pulled) and the open fraction of the nozzle (closes to a point)."""
     up = min(1.0, t / 0.18)
-    dn = 1.0 if t_close is None else max(0.0, 1.0 - (t - t_close) / CLOSE_T)
-    k = up * dn
-    return VE * k * k * (3 - 2 * k)
+    speed = VE * up * up * (3 - 2 * up)
+    if t_close is None:
+        return speed, 1.0
+    u = min(1.0, (t - t_close) / CLOSE_T)
+    s = 1.0 - u
+    return speed, s * s * (3 - 2 * s)
 
 
 def run():
@@ -367,7 +374,7 @@ def run():
     hx, hz = RHO_MIN, 0.0
     done_at = None
     while True:
-        vext = valve(t, t_close)
+        vext, afrac = valve(t, t_close)
         stick = 0
         if t_close is None:
             om = min(OMEGA_MAX, RATIO * max(vext, 0.02) / max(hand.rho, 0.010))
@@ -377,10 +384,12 @@ def run():
                 t_close = t
                 hand.close_theta = hand.theta
         else:
-            om = min(OMEGA_MAX, 0.12 / max(hand.rho, 0.010))
+            u = min(1.0, (t - t_close) / CLOSE_T)
+            rho_c = hand.rho * (1.0 - 0.65 * u)      # the last turns tighten as the stream thins
+            om = min(OMEGA_MAX, RATIO * VE / max(rho_c, 0.008))
             hand.theta += om * DT
-            base = np.array([hand.rho * math.cos(hand.theta), hand.rho * math.sin(hand.theta)])
-            if t_lift is None and t - t_close >= CLOSE_T:
+            base = np.array([rho_c * math.cos(hand.theta), rho_c * math.sin(hand.theta)])
+            if t_lift is None and t - t_close >= CLOSE_T + 0.02:
                 t_lift = t
                 tang = np.array([-math.sin(hand.theta), math.cos(hand.theta)])
                 lift_dir = tang
@@ -415,10 +424,12 @@ def run():
 
         # ---- extrude: a slab each time the paste has travelled one particle spacing
         acc += vext * DT
+        keff = int(round(K * afrac)) if afrac > 0.025 else 0
         while acc >= SP and n + K <= NP:
             acc -= SP
-            emit(n, hx, ny - 0.5 * SP - acc, hz, hv[0], nvy - vext, hv[1], t)
-            n += K
+            if keff > 0:
+                emit(n, keff, hx, ny - 0.5 * SP - acc, hz, hv[0], nvy - vext, hv[1], t)
+                n += keff
 
         # ---- MPM step
         clear_grid()
