@@ -167,6 +167,50 @@ def card(loc, size, strength):
 
 
 cup = bpy.data.objects["IliosFroyoCup"]
+
+
+def froyo_plain():
+    """Procedural soft-serve: warm white, slightly translucent, satin sheen, fine aeration bump."""
+    m = bpy.data.materials.new("Froyo (sim)")
+    m.use_nodes = True
+    nt = m.node_tree
+    b = nt.nodes["Principled BSDF"]
+    col = os.environ.get("FROYO_COLOR", "#f2ead2")
+    b.inputs["Base Color"].default_value = (*lin(col), 1)
+    b.inputs["Roughness"].default_value = 0.42
+    b.inputs["Coat Weight"].default_value = 0.18
+    b.inputs["Coat Roughness"].default_value = 0.30
+    b.inputs["Sheen Weight"].default_value = 0.35
+    b.inputs["Sheen Roughness"].default_value = 0.35
+    b.inputs["Subsurface Weight"].default_value = 0.35
+    b.inputs["Subsurface Radius"].default_value = (1.0, 0.85, 0.6)
+    b.inputs["Subsurface Scale"].default_value = 0.004
+    n1 = nt.nodes.new("ShaderNodeTexNoise")
+    n1.inputs["Scale"].default_value = 900
+    n1.inputs["Detail"].default_value = 3
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.06
+    bump.inputs["Distance"].default_value = 0.0004
+    nt.links.new(n1.outputs[0], bump.inputs["Height"])
+    nt.links.new(bump.outputs[0], b.inputs["Normal"])
+    return m
+
+
+if os.environ.get("SWIRL_OBJ"):
+    for o in list(bpy.data.objects):
+        if o.name in ("Swirl", "SwirlCore"):
+            bpy.data.objects.remove(o, do_unlink=True)
+    before = set(bpy.data.objects)
+    bpy.ops.wm.obj_import(filepath=os.environ["SWIRL_OBJ"], forward_axis="NEGATIVE_Z", up_axis="Y")
+    new = [o for o in bpy.data.objects if o not in before]
+    for o in new:
+        o.name = "Swirl"
+        o.parent = cup
+        o.data.materials.clear()
+        o.data.materials.append(froyo_plain())
+        bpy.context.view_layer.objects.active = o
+        o.select_set(True)
+        bpy.ops.object.shade_smooth()
 mach = bpy.data.objects["IliosSoftServeMachine"]
 handle = bpy.data.objects["HandleC"]
 room = bpy.data.objects.get("IliosRoom")
