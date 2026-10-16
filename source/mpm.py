@@ -111,7 +111,7 @@ for i in range(-n_side, n_side + 1):
             tags.append(1.0 if px > 0 else 0.0)
 K = len(offs)
 slab_vol = K * P_VOL
-est_len = 1.7
+est_len = E("EST_LEN", 2.8)
 NP = int(est_len / SP * K * 1.15) + 1000
 print(f"dx={DX*1000:.2f}mm spacing={SP*1000:.2f}mm slab={K} particles, <= {NP} particles, dt={DT*1e6:.0f}us "
       f"c={C_WAVE:.1f}m/s yield strain={YIELD_STRAIN:.3f} visc den={VISC_DEN:.1f}", flush=True)
