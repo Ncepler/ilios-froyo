@@ -80,6 +80,8 @@ export class FroyoPour {
       out[o] = D[ix0] - D[ix1]; out[o + 1] = D[iy0] - D[iy1]; out[o + 2] = D[iz0] - D[iz1];   // points outward
     };
     const g0 = new Float32Array(3), g1 = new Float32Array(3);
+    // the cup, so the froyo surface can be pressed onto the paper (no gaps, nothing pokes through the wall)
+    const H_RIM = 0.062, RB = 0.034, SLOPE = (0.0455 - 0.034) / (0.062 - 0.0016 - 0.0015), TWALL = 0.00056 * Math.sqrt(1 + SLOPE * SLOPE), ZB = 0.0068;
     for (let k = 0; k < NZ - 1; k++) {
       for (let j = 0; j < NY - 1; j++) {
         let q = k * sz + j * sy;
@@ -101,6 +103,15 @@ export class FroyoPour {
             ep[e * 3] = ox + (i + ca[0] + (cb[0] - ca[0]) * t + 0.5) * vs;
             ep[e * 3 + 1] = oy + (j + ca[1] + (cb[1] - ca[1]) * t + 0.5) * vs;
             ep[e * 3 + 2] = oz + (k + ca[2] + (cb[2] - ca[2]) * t + 0.5) * vs;
+            {
+              const px = ep[e * 3], py = ep[e * 3 + 1];
+              if (py < H_RIM) {
+                const r = Math.hypot(px, ep[e * 3 + 2]);
+                const rin = RB + (Math.max(py, 0.0015) - 0.0015) * SLOPE - TWALL - 0.00025;
+                if (r > rin) { const sc = rin / r; ep[e * 3] = px * sc; ep[e * 3 + 2] *= sc; }
+                if (py < ZB + 0.0002) ep[e * 3 + 1] = ZB + 0.0002;
+              }
+            }
             grad(i + ca[0], j + ca[1], k + ca[2], g0, 0);
             grad(i + cb[0], j + cb[1], k + cb[2], g1, 0);
             const nx = g0[0] + (g1[0] - g0[0]) * t, ny = g0[1] + (g1[1] - g0[1]) * t, nz = g0[2] + (g1[2] - g0[2]) * t;

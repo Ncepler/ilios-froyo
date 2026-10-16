@@ -782,8 +782,9 @@ add(rbox("Door", (0.340, 0.128, 0.150), (0, FACE_Y - 0.064, 0.498), 0.024, M["bl
 add(rbox("DoorCap", (0.300, 0.100, 0.020), (0, FACE_Y - 0.058, 0.582), 0.008, M["blackgloss"], segs=4))
 add(rbox("DoorParting", (0.344, 0.129, 0.003), (0, FACE_Y - 0.064, 0.452), 0.001, M["blackmatte"], segs=1))
 add(rbox("DoorGasket", (0.352, 0.006, 0.166), (0, FACE_Y - 0.002, 0.498), 0.003, M["blackmatte"], segs=2))
-add(rbox("DoorBridge", (0.300, 0.020, 0.024), (0, SPOUT_Y + 0.004, 0.400), 0.006, M["blackgloss"], segs=3))
 for i, x in enumerate(SPOUT_X):
+    # a stem from the underside of the door down to each spout, so the cup can rise round them
+    add(cyl(f"SpoutStem{i}", 0.0125, 0.026, (x, SPOUT_Y, 0.4155 + 0.0), M["blackgloss"], verts=32, bevel=0.002))
     add(lathe(f"Spout{i}", [(0.0, 0.040), (0.020, 0.040), (0.0205, 0.030), (0.0185, 0.026), (0.0180, 0.008),
                             (0.0170, 0.002), (0.0160, 0.0), (0.0, 0.0)], M["whiteplastic"],
               loc=(x, SPOUT_Y, NOZ_Z), segs=64))
@@ -804,11 +805,11 @@ for i, x in enumerate(SPOUT_X):
     add(mouth())
 for sx in (-1, 1):
     x = sx * 0.050
-    add(cyl(f"StarKnobHub{sx}", 0.010, 0.020, (x, FACE_Y - 0.135, 0.418), M["blackgloss"], rot=(math.pi / 2, 0, 0),
+    add(cyl(f"StarKnobHub{sx}", 0.010, 0.020, (x, FACE_Y - 0.135, 0.462), M["blackgloss"], rot=(math.pi / 2, 0, 0),
             verts=24, bevel=0.002))
     for k in range(4):
         a = k * math.pi / 2 + math.pi / 4
-        add(cyl(f"StarKnobLobe{sx}{k}", 0.0065, 0.018, (x + 0.011 * math.cos(a), FACE_Y - 0.135, 0.418 + 0.011 * math.sin(a)),
+        add(cyl(f"StarKnobLobe{sx}{k}", 0.0065, 0.018, (x + 0.011 * math.cos(a), FACE_Y - 0.135, 0.462 + 0.011 * math.sin(a)),
                 M["blackgloss"], rot=(math.pi / 2, 0, 0), verts=16, bevel=0.002))
 
 # ---- three draw handles: left flavor, twist, right flavor

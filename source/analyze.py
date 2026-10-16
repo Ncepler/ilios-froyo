@@ -150,7 +150,14 @@ if __name__ == "__main__":
         tm.fix_normals()
         if tm.volume < 0:
             tm.invert()
-        v, fc = np.asarray(tm.vertices), np.asarray(tm.faces)
+        v, fc = np.asarray(tm.vertices).copy(), np.asarray(tm.faces)
+        # press onto the paper: nothing may cross the wall or floor
+        r = np.hypot(v[:, 0], v[:, 2])
+        rin = RB + (np.clip(v[:, 1], 0.0015, H_RIM) - 0.0015) * SLOPE - TWALL - 0.00025
+        sc = np.where((v[:, 1] < H_RIM) & (r > rin), rin / np.maximum(r, 1e-9), 1.0)
+        v[:, 0] *= sc
+        v[:, 2] *= sc
+        v[:, 1] = np.where(v[:, 1] < ZB + 0.0002, ZB + 0.0002, v[:, 1])
         with open(a.obj, "w") as fh:
             for p in v:
                 fh.write("v %.5f %.5f %.5f\n" % tuple(p))
