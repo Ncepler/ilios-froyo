@@ -38,7 +38,7 @@ export const BAR = [
 const NONPAREIL = ['#f7f3ea', '#f4a6b8', '#f7d44a', '#7fc4e8', '#9ad07a', '#f08a3c', '#c79be0', '#e5463f'].map(h => new THREE.Color(h));
 
 const SAUCE = {
-  honey: { color: '#cf7d06', emissive: '#7a3a00', rough: 0.05, coat: 1, alpha: 0.96, r: 0.95 * MM, lines: 4, ang: 0.5 },
+  honey: { color: '#b46c00', emissive: '#5a2f00', rough: 0.04, coat: 1, alpha: 1, r: 1.25 * MM, lines: 4, ang: 0.5 },
   nutella: { color: '#321811', emissive: '#000000', rough: 0.2, coat: 0.8, r: 1.45 * MM, lines: 3, ang: 1.45 },
   pistachio: { color: '#96a64f', emissive: '#10140a', rough: 0.32, coat: 0.4, r: 1.5 * MM, lines: 3, ang: 2.4 },
   biscoff: { color: '#a8631f', emissive: '#2a1204', rough: 0.22, coat: 0.7, r: 1.35 * MM, lines: 4, ang: 0.95 },
@@ -76,6 +76,9 @@ export async function initToppings(o) {
   camera.position.set(0.12, 0.2, 0.34);
 
   const model = cup.clone(true);
+  model.position.set(0, 0, 0);
+  model.rotation.set(0, 0, 0);
+  model.scale.set(1, 1, 1);
   model.traverse(ob => {
     if (!ob.isMesh) return;
     if (ob.name === 'Swirl' || ob.name === 'SwirlCore') { ob.visible = false; return; }
@@ -398,7 +401,14 @@ export async function initToppings(o) {
       for (const it of g.items) {
         if (!g.leaving) it.s = Math.min(1, Math.max(0, (g.t + it.born) / 0.06 + 0.001));
         const tr = it.body.translation(), ro = it.body.rotation();
-        if (!it.body.isSleeping()) anyAwake = true;
+        if (!it.body.isSleeping()) {
+          // set into the froyo and quiet: let it sleep (a trimesh contact can jitter forever otherwise)
+          const lv = it.body.linvel();
+          const sp = Math.abs(lv.x) + Math.abs(lv.y) + Math.abs(lv.z);
+          if (it.stuck) it.stuckT = (it.stuckT || 0) + dt;
+          if ((it.stuck && it.stuckT > 0.5 && sp < 0.06) || g.t > 4.5) it.body.sleep();
+          else anyAwake = true;
+        }
         pv.set(tr.x, tr.y, tr.z);
         q.set(ro.x, ro.y, ro.z, ro.w);
         sc.setScalar(it.s);
@@ -423,7 +433,7 @@ export async function initToppings(o) {
       const other = a === froyoCol.handle ? b : b === froyoCol.handle ? a : null;
       if (other === null) return;
       const it = byHandle.get(other);
-      if (it && !it.stuck) { it.stuck = true; it.body.setLinearDamping(14); it.body.setAngularDamping(14); }
+      if (it && !it.stuck) { it.stuck = true; it.body.setLinearDamping(30); it.body.setAngularDamping(30); it.body.setGravityScale(0.05, true); }
     });
   }
 

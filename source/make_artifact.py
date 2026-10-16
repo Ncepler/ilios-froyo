@@ -45,6 +45,9 @@ fj = "\n".join(l for l in fj.splitlines() if not l.startswith("import "))
 js = js.replace("import * as THREE from 'three';", "import * as THREE from 'three';\n" + "\n".join(imports), 1)
 js = js + "\n" + fj
 h = h.replace('"fflate": "./vendor/fflate.js"', '"fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"')
+h = h.replace('"rapier": "./vendor/rapier.es.js"', '"rapier": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js"')
+assert "rapier3d-compat" in h
+# site/toppings.js is published next to the page and imported lazily (it carries its own `import`s, resolved by the map)
 h = h.replace('<script type="module" src="main.js"></script>', '<script type="module">\n' + js + "\n</script>")
 open(out, "w", encoding="utf8").write(h)
 print("wrote", out, len(h))

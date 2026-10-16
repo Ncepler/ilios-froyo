@@ -22,6 +22,8 @@ renders/                                 photoreal Cycles renders (product shots
 source/
   mpm.py                                 the pour: a yield-stress paste (MLS-MPM) simulation (see below)
   validate.py / bake_web.py / analyze.py  physics checks, web bake, surface extraction
+  toppings.py                            Blender: the topping pieces (vertex-painted, one material) -> toppings.glb
+  clearance.py                           proves the cup never touches the dispenser, tray or room
   tex.py                                 procedural textures: sun emblem, paper, brushed steel, marble, froyo micro-surface
   build.py                               Blender script: builds the cup, swirl, machine, materials; exports GLB + pour path
   render.py                              Cycles product renders
@@ -90,13 +92,27 @@ page settles on the finished cup with directions.
   1.5 mm/s), the stream keeps its thickness, nothing leaves the paper, the 11 cm pile is under the 16 cm
   self-supporting limit sqrt(3) tau_y/(rho g), and volume is conserved. Some air stays trapped between layers
   (void fraction ~0.28 inside the cup), as in real soft serve. Not modelled: the star-nozzle ridges.
-  The site replays the baked frames (`pour.bin`, 2.8 MB; voxel fields, keyframe + deltas, deflate) and meshes each
-  frame with marching cubes in the browser, so scrolling scrubs the simulation, forwards or back.
+  The site replays the baked frames (`pour.bin`, 4.7 MB: 1.5 mm voxel fields, flavour at half resolution, keyframe +
+  deltas, deflate) and meshes each frame with marching cubes in the browser (wide-stencil normals, so the surface is
+  smooth, with a fine bubble grain in the shader), so scrolling scrubs the simulation, forwards or back.
+- **Nothing touches.** `source/clearance.py` rebuilds the cup's whole path (all three handles, 401 scroll positions) and
+  tests it against every surface of the machine, tray and room, plus the froyo, with 1 mm of clearance. The nozzle is
+  a 20 mm star tip and a 34 mm white cap 30 mm above it, sized so the simulated hand never carries either into the cup
+  wall; the page also clamps the hand to the same limits (`nozzleCap()` in `site/main.js`). Result: no overlaps.
 - The scroll position is eased (frame-rate independent lerp) and the render loop rests once it has caught up.
 - Phones get the same 3D scene with portrait framing. Reduced motion gets the finished frame, with no scrubbing.
   If WebGL fails, the page shows a still render.
-- Below the hero: the name story (Ilios = Greek for sun), an interactive spin viewer of the same cup model,
-  the flavors on the machine signs, the topping bar, and visit/directions.
+- Below the hero: the name story (Ilios = Greek for sun), **the topping bar** (below), the flavors on the machine
+  signs, and visit/directions.
+- **The topping bar** (`site/toppings.js`, `source/toppings.py`): the finished cup, live, with the 14 items from the
+  shop's bar, built from the photos of it: pistachio kataifi (green cream, golden shreds, crushed pistachio), Biscoff
+  crunch (caramel and cookie shards), cinnamon-roll bites with icing, honey, Nutella, diced strawberry and mango,
+  chopped dates, fig quarters, oat granola clusters, dark chocolate chips, brownie cubes, New York rainbow-cookie
+  slices and nonpareil sprinkles. Solid pieces are rigid bodies in a physics engine (Rapier, WASM): each is a convex
+  hull of its modelled mesh with its own weight and friction, dropped over the swirl in slow motion onto the froyo's
+  own collision mesh (the last frame of the pour), so they land, tumble and set into it (soft serve is cold and tacky:
+  whatever touches it sticks). Sauces are a thread ray-cast onto whatever is under it, froyo and pieces alike, drawn on
+  over a second. Any combination works; the physics is live, not baked, so it never plays the same way twice.
 
 Preview locally (it has to be served; opening `index.html` from disk won't load the models):
 
@@ -128,6 +144,12 @@ python source/validate.py /tmp/mpm
 python source/analyze.py /tmp/mpm last --obj /tmp/mpm/last.obj --vs 0.0014
 python source/bake_web.py /tmp/mpm site/assets
 SWIRL_OBJ=/tmp/mpm/last.obj python source/build.py /tmp/tex /tmp/out   # then compress as above
+```
+Check the dispenser clearance, rebuild the toppings, and compress them:
+```
+python source/clearance.py /tmp/out/ilios-softserve-machine.glb /tmp/out/ilios-room.glb /tmp/out/pour-path.json /tmp/mpm 1
+python source/toppings.py /tmp/top            # add `sheet` as a 2nd argument for a Cycles contact sheet
+npx gltf-transform optimize /tmp/top/toppings.glb site/assets/models/toppings.glb --compress meshopt --simplify false --flatten false --join false
 ```
 `source/sim.py` is the superseded elastic-rope version (it looked like a worm); kept for reference only.
 
