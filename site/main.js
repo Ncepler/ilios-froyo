@@ -66,7 +66,7 @@ function fail(err) {
   root.classList.add('no-gl');
   barFallback();
   $('#poster').style.backgroundImage = "url('assets/img/machine.jpg')";
-  updateBands(1, true);
+  if (renderer) updateBands(1, true); // a failed context is handled at the end of setup, once the bands exist
 }
 
 const scene = new THREE.Scene();

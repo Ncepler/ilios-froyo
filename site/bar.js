@@ -13,7 +13,7 @@
 
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildCup, CUP, RIM_IN } from './cup.js';
+import { buildCup, CUP, RIM_IN, rIn } from './cup.js';
 import { FroyoRope } from './pour.js';
 import * as PC from './bar-pieces.js';
 
@@ -451,6 +451,10 @@ export async function initBar(o) {
           if (rr > RIM_IN * 0.88) { x *= RIM_IN * 0.88 / rr; z *= RIM_IN * 0.88 / rr; break; }
         }
         h = surf.height(x, z);
+        {
+          const lim = rIn(Math.min(CUP.H, h)) - r * 0.9, rr = Math.hypot(x, z);
+          if (h < CUP.H && rr > lim) { x *= lim / rr; z *= lim / rr; h = surf.height(x, z); }
+        }
         surf.normal(x, z, _n);
         if (f.kind === 'dollop') {
           // the scoop is heavy and the froyo is soft: the tip under it is pressed down to about 1.6 cm below its top
@@ -806,6 +810,21 @@ class Surface {
         const m = Math.max(g[c - 1], g[c + 1], g[c - N], g[c + N]);
         if (g[c] < m - 0.0012) h[c] = m - 0.0006;
       }
+    }
+    // the froyo fills the cup out to the paper: any cell inside the rim the mesh did not reach takes its neighbours'
+    // height, so nothing can fall down a crack between the swirl and the cup wall
+    for (let pass = 0; pass < 24; pass++) {
+      let filled = 0;
+      const g = h.slice();
+      for (let k = 1; k < N - 1; k++) for (let i = 1; i < N - 1; i++) {
+        const c = k * N + i;
+        if (g[c] >= 0) continue;
+        const x = O + (i + 0.5) * S, z = O + (k + 0.5) * S;
+        if (x * x + z * z > RIM_IN * RIM_IN) continue;
+        const m = Math.max(g[c - 1], g[c + 1], g[c - N], g[c + N]);
+        if (m >= 0) { h[c] = m - 0.0004; filled++; }
+      }
+      if (!filled) break;
     }
     this.base = h;
     this.reset();
