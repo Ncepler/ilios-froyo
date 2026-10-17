@@ -1,39 +1,47 @@
 {
- "1_rest": {
-  "window_s": 0.38,
-  "p99_movement_in_window_mm": 0.12,
-  "max_movement_in_window_mm": 0.13,
-  "p99_speed_mm_per_s": 1.46,
+  "simulated_in_ms": 413,
+  "nodes": 593,
+  "rope_length_m": 1.245,
+  "duration_s": 8.87,
+  "swirl_starts_s": 5.49,
+  "valve_closes_s": 7.21,
+  "tail_breaks_s": 7.47,
+  "link_stretch_p99": 0.0387,
+  "link_stretch_max": 0.0422,
+  "nodes_outside_paper": 0,
+  "worst_overhang_mm": 0,
+  "nodes_below_floor": 0,
+  "frames_with_cap_in_cup": 0,
+  "nodes_frozen_by_timeout": 10,
+  "peak_above_rim_cm": 5.27,
+  "volume_ml": 287,
+  "cup": {
+    "rim_cm": 9.6,
+    "base_cm": 7.4,
+    "height_cm": 8.4
+  },
+  "params": {
+    "R0": 0.0086,
+    "DS": 0.0021,
+    "VE": 0.17,
+    "FX": 1.16,
+    "FY": 0.84,
+    "FUSE": 0.93,
+    "KB": 0.1,
+    "MU": 0.72,
+    "DRAG": 0.6,
+    "CLEAR": 0.024,
+    "CLEAR_SW": 0.019,
+    "LIFT_MIN": 0.09,
+    "SWIRL_TURNS": 2.25,
+    "RHO_END": 0.005,
+    "PEAK_T": 0.2,
+    "PEAK_RISE": 0.105,
+    "dt": 0.001667,
+    "iters": 6,
+    "rec": 0.004167
+  },
+  "scrub_mismatch_m": 0,
   "pass": true,
-  "note": "a fluid (or a rubber band) would still be flowing or ringing; a yield-stress paste has stopped"
- },
- "2_stream_thickness": {
-  "nozzle_radius_mm": 8.9,
-  "measured_radius_mm_mean": 7.12,
-  "measured_radius_mm_spread": 0.0,
-  "stream_length_before_landing_mm": 13.0,
-  "note": "the cup is held up to the spout, so the paste lands almost at once and keeps its thickness; an elastic rope would thin as it fell"
- },
- "3_stays_in_cup": {
-  "max_wall_penetration_mm": 0.0,
-  "lowest_particle_vs_floor_mm": -1.22,
-  "note": "grid-scale (one cell is 4.0 mm); the surface is pressed onto the paper afterwards"
- },
- "4_height_vs_yield_limit": {
-  "tau_y_Pa": 650.0,
-  "density_kg_m3": 700.0,
-  "self_supporting_column_cm": 16.4,
-  "pile_height_above_cup_floor_cm": 11.2,
-  "peak_above_rim_mm": 50.3,
-  "pass": true
- },
- "5_mass": {
-  "particle_volume_mL": 434.1,
-  "note": "each particle is created by the extruder and never removed, so volume equals the volume pumped"
- },
- "6_fused_pile": {
-  "void_fraction_in_cup_body": 0.277,
-  "note": "low: the coils fused into one body instead of leaving air gaps",
-  "dome_turns": 2.8
- }
+  "failures": []
 }
