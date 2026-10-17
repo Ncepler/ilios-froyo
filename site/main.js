@@ -64,6 +64,7 @@ if (renderer) {
 function fail(err) {
   console.warn('3D unavailable, showing the still.', err);
   root.classList.add('no-gl');
+  barFallback();
   $('#poster').style.backgroundImage = "url('assets/img/machine.jpg')";
   updateBands(1, true);
 }
@@ -107,11 +108,25 @@ nicheGlow.position.set(0, 0.97, 0.05);
 scene.add(nicheGlow);
 
 // ------------------------------------------------------------------ the froyo shader
-// flavours, in handle order (left, centre, right), as on the shop's machine sign
+// The shop's six flavours on three machines (docs/ILIOS-FIELD-NOTES.md): each machine pours its left flavour, a twist
+// of the two, and its right flavour. The station on the page is one machine; picking a flavour puts that machine's
+// sign on it and pulls the matching handle (0 left, 1 twist, 2 right).
+const MACHINES = {
+  tart: [['ORGANIC', 'ORIGINAL TART'], ['ORGANIC', 'ORIGINAL TART']],
+  raspberry: [['', 'RASPBERRY'], ['ORGANIC', 'VANILLA BEAN']],
+  coffee: [['SWEET', 'HARBOR COFFEE'], ['ORGANIC', 'VANILLA BEAN']],
+};
+const C_COFFEE = '#a98c70', C_VANILLA = '#f1e7c8', C_RASP = '#d68a9e', C_TART = '#f8f6f2';
 const FLAVORS = [
-  { name: 'Sweet Harbor Coffee', a: '#a98c70', b: '#a98c70', twist: 0, speckA: 0, speckB: 0 },
-  { name: 'Twist', a: '#a98c70', b: '#f1e7c8', twist: 1, speckA: 0, speckB: 0.8 },
-  { name: 'Organic Vanilla Bean', a: '#f1e7c8', b: '#f1e7c8', twist: 0, speckA: 1, speckB: 1 },
+  { name: 'Sweet Harbor Coffee', machine: 'coffee', handle: 0, a: C_COFFEE, b: C_COFFEE, twist: 0, speckA: 0, speckB: 0 },
+  { name: 'Coffee + Vanilla Bean twist', machine: 'coffee', handle: 1, a: C_COFFEE, b: C_VANILLA, twist: 1, speckA: 0, speckB: 0.8 },
+  { name: 'Organic Vanilla Bean', machine: 'coffee', handle: 2, a: C_VANILLA, b: C_VANILLA, twist: 0, speckA: 1, speckB: 1 },
+  { name: 'Raspberry', machine: 'raspberry', handle: 0, a: C_RASP, b: C_RASP, twist: 0, speckA: 0, speckB: 0 },
+  { name: 'Raspberry + Vanilla Bean twist', machine: 'raspberry', handle: 1, a: C_RASP, b: C_VANILLA, twist: 1, speckA: 0, speckB: 0.8 },
+  { name: 'Organic Original Tart', machine: 'tart', handle: 0, a: C_TART, b: C_TART, twist: 0, speckA: 0, speckB: 0 },
+  { name: 'Organic Vanilla Bean', machine: 'raspberry', handle: 2, a: C_VANILLA, b: C_VANILLA, twist: 0, speckA: 1, speckB: 1, chip: 2 },
+  { name: 'Organic Original Tart', machine: 'tart', handle: 1, a: C_TART, b: C_TART, twist: 0, speckA: 0, speckB: 0, chip: 5 },
+  { name: 'Organic Original Tart', machine: 'tart', handle: 2, a: C_TART, b: C_TART, twist: 0, speckA: 0, speckB: 0, chip: 5 },
 ];
 const U = {
   uColA: { value: new THREE.Color(FLAVORS[1].a) }, uColB: { value: new THREE.Color(FLAVORS[1].b) },
@@ -169,23 +184,66 @@ function makeFroyoMaterial() {
 }
 
 // ------------------------------------------------------------------ flavour choice
-let sel = 1;            // 0 left (coffee), 1 centre (twist), 2 right (vanilla bean)
+let fl = 1;             // which flavour (FLAVORS)
+let sel = 1;            // which handle on the machine: 0 left, 1 twist, 2 right
 const chips = [...document.querySelectorAll('[data-flavor]')];
 const flavorNames = [...document.querySelectorAll('[data-flavor-name]')];
 function setFlavor(i, fromUser) {
   if (scrub && shown > TL.emerge[0] && fromUser) return;   // the cup is already under a spout
-  sel = i;
+  fl = i;
   const f = FLAVORS[i];
+  sel = f.handle;
   U.uColA.value.set(f.a);
   U.uColB.value.set(f.b);
   U.uTwist.value = f.twist;
   U.uSpeckA.value = f.speckA;
   U.uSpeckB.value = f.speckB;
-  chips.forEach(c => c.setAttribute('aria-pressed', String(+c.dataset.flavor === i)));
+  const chip = f.chip ?? i;
+  chips.forEach(c => c.setAttribute('aria-pressed', String(+c.dataset.flavor === chip)));
   flavorNames.forEach(n => { n.textContent = f.name; });
+  setSign(f.machine);
+  const bf = document.getElementById('barflavor');
+  if (bf) bf.textContent = f.name;
   wake();
 }
 chips.forEach(c => c.addEventListener('click', () => setFlavor(+c.dataset.flavor, true)));
+// a handle grabbed on the machine on screen: that machine's flavour for it
+const flavorFor = handle => FLAVORS.findIndex(f => f.machine === FLAVORS[fl].machine && f.handle === handle);
+
+// the machine's header sign, redrawn for each machine on top of the model's own sign texture
+let signMesh = null, signBase = null;
+const signTex = {};
+function setSign(machine) {
+  if (!signMesh || !signBase) return;
+  if (!signTex[machine]) {
+    const img = signBase.image, W = img.width, H = img.height;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    x.drawImage(img, 0, 0);
+    if (machine !== 'coffee') {
+      const [L, R] = MACHINES[machine];
+      x.fillStyle = 'rgb(244,242,237)';
+      x.fillRect(W * 0.01, H * 0.2, W * 0.34, H * 0.58);
+      x.fillRect(W * 0.65, H * 0.2, W * 0.34, H * 0.58);
+      x.fillStyle = 'rgb(128,98,58)';
+      x.textAlign = 'center';
+      x.font = `500 ${Math.round(H * 0.105)}px "Manrope", ui-sans-serif, sans-serif`;
+      if ('letterSpacing' in x) x.letterSpacing = Math.round(H * 0.014) + 'px';
+      for (const [[l1, l2], cx] of [[L, W * 0.18], [R, W * 0.82]]) {
+        if (l1) { x.fillText(l1, cx, H * 0.46); x.fillText(l2, cx, H * 0.64); }
+        else x.fillText(l2, cx, H * 0.56);
+      }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.flipY = signBase.flipY;
+    t.anisotropy = 8;
+    signTex[machine] = t;
+  }
+  signMesh.material.map = signTex[machine];
+  wake();
+}
 
 // ------------------------------------------------------------------ load
 const manager = new THREE.LoadingManager();
@@ -229,6 +287,9 @@ Promise.all([
     }
   });
   handles = path.handles.map(n => machine.getObjectByName(n));
+  signMesh = machine.getObjectByName('SignFace');
+  if (signMesh && signMesh.material.map) { signMesh.material = signMesh.material.clone(); signBase = signMesh.material.map; }
+  document.fonts && document.fonts.ready.then(() => { for (const k in signTex) delete signTex[k]; setSign(FLAVORS[fl].machine); });
   balls = path.handles.map(n => machine.getObjectByName(n + 'Ball'));
   [cupMats.print, cupMats.inside, cupMats.foil].forEach(m => { if (m.map) m.map.anisotropy = 8; });
   // the machine model's cup stack is the old squat cup: swap in a stack of the real ones
@@ -256,7 +317,7 @@ Promise.all([
   pour = new FroyoRope(rec, pmat);
   cup.add(pour.mesh);                 // the simulation is in the cup's own frame
 
-  setupToppings(gc);
+  setupToppings();
   root.classList.add('ready');
   resize();
   applyMode();
@@ -473,6 +534,7 @@ function tick(now) {
 }
 function frame(p) {
   updateBands(p);
+  if (p > 0.72 && window.__startToppings) window.__startToppings();   // get the bar ready while the cup is finishing
   if (railbar) railbar.style.setProperty('--p', p.toFixed(3));
   if (!machine) return;
   pose(p);
@@ -533,7 +595,7 @@ canvas.addEventListener('pointerdown', e => {
   if (!scrub || shown > TL.pull[1] + 0.02) return;
   const hi = hitHandle(e);
   if (hi < 0) return;
-  if (shown < TL.emerge[0]) setFlavor(hi, true);
+  if (shown < TL.emerge[0]) setFlavor(flavorFor(hi), true);
   drag = { y: e.clientY, start: scrollY, id: e.pointerId };
   canvas.setPointerCapture(e.pointerId);
   root.classList.add('grabbing');
@@ -618,23 +680,62 @@ const io = new IntersectionObserver(es => es.forEach(e => {
 document.querySelectorAll('.io').forEach(s => io.observe(s));
 
 // ------------------------------------------------------------------ the topping bar
-// Lazy: nothing for it (physics engine, topping models) downloads until the section is near the viewport.
-function setupToppings(gc) {
-  const el = $('#spin');
-  if (!el || !renderer) return;
-  let started = false;
+// Lazy: nothing for it (topping models, the bar's own scene) loads until the section is near the viewport. It uses the
+// swirl you just poured (same simulation, same flavour material) and the same cup.
+function setupToppings() {
+  const section = $('#bar'), el = $('#barcanvas');
+  if (!section || !el) return;
+  const intro = $('#barintro'), line = [...document.querySelectorAll('#barline li')], end = $('#barend');
+  const list = $('#barlist'), tip = $('#bartip'), stageEl = $('#barstage'), keys = $('#barkeys');
+  let bar = null, started = false;
+  const progress = () => { const r = section.getBoundingClientRect(); return clamp(-r.top / Math.max(1, r.height - innerHeight)); };
+  const ui = {
+    onProgress(p, zone) {
+      intro.classList.toggle('away', p > 0.035);
+      line.forEach(li => li.classList.toggle('on', li.dataset.zone === zone));
+      end.classList.toggle('on', zone === 'pay');
+    },
+    onChange(defs) {
+      list.innerHTML = defs.length ? defs.map(d => `<li>${d.label}</li>`).join('') : '<li class="empty">Just the froyo so far</li>';
+      list.scrollTop = list.scrollHeight;
+      $('#barundo').disabled = $('#barclear').disabled = !defs.length;
+    },
+    onHover(def, e) {
+      if (!def) { tip.classList.remove('on'); return; }
+      const r = stageEl.getBoundingClientRect();
+      tip.innerHTML = `${def.label}<small>${def.note ? def.note + ' · ' : ''}${def.zone === 'warm' ? 'Served warm' : 'Tap to add'}</small>`;
+      tip.style.left = (e.clientX - r.left) + 'px';
+      tip.style.top = (e.clientY - r.top) + 'px';
+      tip.classList.add('on');
+    },
+  };
   const start = async () => {
-    if (started) return;
+    if (started || !rec) return;
     started = true;
     try {
-      const [tg, mod] = await Promise.all([load('assets/models/toppings.glb'), import('./toppings.js')]);
-      void tg; void mod; return;
-      root.classList.add('top-ready');
+      const [tg, mod] = await Promise.all([load('assets/models/toppings.glb'), import('./bar.js')]);
+      bar = await mod.initBar({ canvas: el, froyoRec: rec, froyoMaterial: froyoMat, cupMats, toppingsScene: tg.scene, roomScene: room, dpr, reduced: RM.matches, ui });
+      root.classList.add('bar-on');
+      // keyboard: every topping is a button too
+      keys.innerHTML = mod.BAR.map(d => `<li><button type="button" data-key="${d.key}">Add ${d.label}</button></li>`).join('');
+      keys.addEventListener('click', e => { const b = e.target.closest('button'); if (b) bar.add(b.dataset.key); });
+      $('#barundo').addEventListener('click', () => bar.undo());
+      $('#barclear').addEventListener('click', () => bar.clear());
+      const onScroll = () => bar.setProgress(progress());
+      addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+      window.__bar = bar;
     } catch (e) {
       console.warn('Topping bar unavailable', e);
-      $('#cup')?.classList.add('top-off');
+      barFallback();
     }
   };
-  new IntersectionObserver(([e]) => { if (e.isIntersecting) start(); }, { rootMargin: '900px 0px' }).observe(el);
+  new IntersectionObserver(([e]) => { if (e.isIntersecting) start(); }, { rootMargin: '1200px 0px' }).observe(section);
   window.__startToppings = start;
+}
+
+// without WebGL: the bar as a plain list, in the shop's order
+function barFallback() {
+  root.classList.add('bar-off');
+  import('./bar-list.js').then(m => { $('#barlistall').innerHTML = m.listHTML(); }).catch(() => {});
 }

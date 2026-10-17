@@ -18,8 +18,6 @@
 <script type="importmap">
 { "imports": {
   "three": "./vendor/three/three.module.min.js",
-  "fflate": "./vendor/fflate.js",
-  "rapier": "./vendor/rapier.es.js",
   "three/addons/": "./vendor/three/addons/"
 } }
 </script>
@@ -166,39 +164,51 @@ section.s{position:relative;padding:clamp(96px,14vw,180px) var(--gutter)}
 .sun figure img{width:100%;height:100%;object-fit:cover;transform:scale(1.04);transition:transform 1.6s var(--ease-out)}
 .sun.in figure img{transform:none}
 
-/* spin: the interactive model viewer */
-.spin{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(24px,5vw,80px);align-items:center}
-.viewer{position:relative;aspect-ratio:1/1;border-radius:24px;overflow:hidden;background:radial-gradient(70% 70% at 50% 40%,#c8c0b4,#a39b90)}
-.viewer canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
-.viewer canvas:active{cursor:grabbing}
-.viewer .tag{position:absolute;left:18px;bottom:16px;font:400 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink);
-  background:rgba(241,233,214,.8);padding:8px 11px;border-radius:999px}
-.spin .lead{color:var(--ink-2);max-width:40ch;margin-top:22px;font-size:clamp(16px,1.3vw,19px)}
-.spinl .big{font-size:clamp(44px,5.6vw,92px)}
-.topchips{margin-top:26px;display:grid;gap:16px}
-.tgrp h3{font:400 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin-bottom:9px}
-.tchips{display:flex;flex-wrap:wrap;gap:8px}
-.tchip{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:4px 14px 4px 5px;border-radius:999px;border:1px solid rgba(40,34,27,.26);
-  background:rgba(243,236,224,.55);color:var(--ink);font:500 14px/1 var(--body);cursor:pointer;
-  transition:background .3s var(--ease-out),border-color .3s var(--ease-out),transform .3s var(--ease-out)}
-.tchip:hover{background:rgba(243,236,224,.95);transform:translateY(-1px)}
-.tchip[aria-pressed="true"]{background:var(--ink);color:var(--cream);border-color:var(--ink)}
-.tchip .ti{width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--tint,#ccc) 16%,#efe6d2) center/118% no-repeat;box-shadow:inset 0 0 0 1px rgba(40,34,27,.12);flex:none}
-.tchip[aria-pressed="true"] .ti{background-color:color-mix(in srgb,var(--tint,#ccc) 26%,#f1e9d6)}
-.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:22px}
-.topbar .btn{min-height:42px;padding:0 18px;font-size:14px}
-.topnote{margin-top:16px;font:400 12px/1.5 var(--mono);letter-spacing:.08em;color:var(--ink-2)}
-#topcount{font:400 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin-left:6px}
-.viewer{aspect-ratio:4/5}
-@media (min-width:821px){.spin .viewer{position:sticky;top:96px;align-self:start}}
-@media (max-width:820px){
-  .spin{gap:18px}
-  .spinl{display:contents}
-  .spinh{order:1}
-  .spin .viewer{order:2;aspect-ratio:auto;height:min(46svh,360px);position:sticky;top:66px;z-index:4;margin:0 calc(var(--gutter) * -0.5)}
-  .spinc{order:3}
-  .topchips{margin-top:6px}
-}
+/* the topping bar: a sticky 3D counter you slide your cup along */
+.bar{position:relative;z-index:1;height:900vh;background:#d8cfc0}
+.bar-stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:#d8cfc0}
+.bar-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:pan-y}
+.bar-intro{position:absolute;left:var(--gutter);top:calc(118px + 2vh);max-width:min(460px,40vw);z-index:2;transition:opacity .5s var(--ease-out),transform .5s var(--ease-out)}
+.bar-intro .big{font-size:clamp(44px,5.4vw,88px);margin-top:16px}
+.bar-intro .lede{margin-top:16px;max-width:36ch}
+.bar-intro.away{opacity:0;transform:translateY(-12px);pointer-events:none}
+.bar-line{position:absolute;left:50%;top:78px;transform:translateX(-50%);display:flex;gap:4px;list-style:none;z-index:3;padding:4px;border-radius:999px;
+  background:rgba(241,233,214,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transition:opacity .5s var(--ease-out)}
+.bar-on .bar-line{opacity:1}
+.bar-line li{font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);padding:9px 12px;border-radius:999px;white-space:nowrap;
+  transition:background .35s var(--ease-out),color .35s var(--ease-out)}
+.bar-line li.on{background:var(--ink);color:var(--cream)}
+.bar-cup{position:absolute;left:var(--gutter);bottom:calc(22px + env(safe-area-inset-bottom));z-index:2;width:min(300px,calc(100vw - 2 * var(--gutter)));
+  padding:16px 16px 14px;border-radius:18px;background:rgba(241,233,214,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.bar-cup-h{font:400 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);display:flex;justify-content:space-between;gap:8px}
+.bar-cup ol{list-style:none;margin:10px 0 12px;max-height:min(32vh,240px);overflow:auto;display:flex;flex-wrap:wrap;gap:6px}
+.bar-cup li{font:500 13px/1 var(--body);padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.7);box-shadow:inset 0 0 0 1px rgba(40,34,27,.1);
+  animation:chipin .45s var(--ease-out) both}
+.bar-cup li.empty{background:none;box-shadow:none;padding:4px 0;color:var(--ink-2);font-weight:400;animation:none}
+@keyframes chipin{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+.bar-cup-b{display:flex;gap:8px}
+.btn.sm{min-height:38px;padding:0 14px;font-size:13px;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:default;pointer-events:none}
+.bar-tip{position:absolute;left:0;top:0;z-index:3;pointer-events:none;opacity:0;transform:translate(-50%,-140%);transition:opacity .2s var(--ease-out);
+  font:500 14px/1.2 var(--body);background:var(--ink);color:var(--cream);padding:9px 12px;border-radius:12px;white-space:nowrap}
+.bar-tip small{display:block;font:400 10px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:rgba(241,233,214,.7);margin-top:3px}
+.bar-tip.on{opacity:1}
+.bar-end{position:absolute;right:var(--gutter);top:50%;transform:translateY(-50%);z-index:2;max-width:min(380px,36vw);text-align:right;opacity:0;pointer-events:none;
+  transition:opacity .6s var(--ease-out)}
+.bar-end.on{opacity:1;pointer-events:auto}
+.bar-end .h2{margin:12px 0 12px}
+.bar-end .lede{margin-left:auto}
+.bar-end .btns{justify-content:flex-end}
+.bar-end .eyebrow{justify-content:flex-end}
+.bar-off .bar{height:auto}
+.bar-off .bar-stage{position:relative;height:auto;padding:clamp(96px,14vw,180px) var(--gutter)}
+.bar-off .bar-stage canvas,.bar-off .bar-line,.bar-off .bar-cup,.bar-off .bar-end{display:none}
+.bar-off .bar-intro{position:static;max-width:none}
+.bar-list{display:none}
+.bar-off .bar-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,3vw,40px);margin-top:40px}
+.bar-list h3{font:400 12px/1.4 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--gold);padding-bottom:12px;border-bottom:1px solid rgba(40,34,27,.16)}
+.bar-list ul{list-style:none;margin-top:8px}
+.bar-list li{font:400 clamp(20px,1.8vw,26px)/1.3 var(--display);padding:6px 0;border-bottom:1px solid rgba(40,34,27,.08)}
 
 /* what's in it: numbered editorial rows on a dark band */
 .inside{background:var(--ink);color:var(--cream)}
@@ -206,15 +216,12 @@ section.s{position:relative;padding:clamp(96px,14vw,180px) var(--gutter)}
 .rows{margin-top:clamp(48px,6vw,80px);border-top:1px solid rgba(241,233,214,.18)}
 .rowi{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:baseline;padding:clamp(26px,3vw,40px) 0;border-bottom:1px solid rgba(241,233,214,.18)}
 .big-sw{width:34px;height:34px;border-radius:50%;align-self:center;box-shadow:inset 0 0 0 1px rgba(241,233,214,.25)}
-.sw.tart{background:#f6f3ec}
-.sw.rasp{background:#e3a2b4}
+.sw.tart{background:#f8f6f2}
+.sw.rasp{background:#d68a9e}
+.sw.rotating{background:conic-gradient(#f2d36b 0 120deg,#d68a9e 120deg 240deg,#f8f6f2 240deg)}
+.lead-in{margin-top:22px;max-width:52ch;color:rgba(241,233,214,.75);font-size:clamp(16px,1.3vw,19px)}
+.sw.rtwist{background:conic-gradient(#d68a9e 0 60deg,var(--vanilla) 60deg 120deg,#d68a9e 120deg 180deg,var(--vanilla) 180deg 240deg,#d68a9e 240deg 300deg,var(--vanilla) 300deg)}
 .inside .note{margin-top:28px;font:400 12px/1.6 var(--mono);letter-spacing:.08em;color:rgba(241,233,214,.6)}
-.toppings{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.4fr);gap:clamp(32px,6vw,96px);align-items:start;background:var(--cream)}
-.tgroups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,3vw,40px)}
-.tg h3{font:400 12px/1.4 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--gold);padding-bottom:14px;border-bottom:1px solid rgba(40,34,27,.16)}
-.tg ul{list-style:none;margin-top:10px}
-.tg li{font:400 clamp(22px,2.1vw,30px)/1.25 var(--display);padding:8px 0;border-bottom:1px solid rgba(40,34,27,.08)}
-.tg li small{display:block;font:400 11px/1.5 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin-top:2px}
 .rowi .n{font:400 12px/1 var(--mono);letter-spacing:.16em;color:var(--gold-hi)}
 .rowi h3{font:400 clamp(36px,4.4vw,68px)/1 var(--display)}
 .rowi p{color:rgba(241,233,214,.72);max-width:44ch}
@@ -247,10 +254,19 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
   .h1{font-size:clamp(50px,15vw,84px)}
   .h2{font-size:clamp(38px,11vw,60px)}
   .rail{display:none}
-  .sun,.spin,.visit{grid-template-columns:1fr}
+  .sun,.visit{grid-template-columns:1fr}
   .sun figure{margin-right:calc(var(--gutter) * -1)}
   .rowi{grid-template-columns:44px 1fr}
-  .toppings,.tgroups{grid-template-columns:1fr}
+  .bar-intro{max-width:none;right:var(--gutter);top:calc(78px + env(safe-area-inset-top))}
+  .bar-intro .lede{font-size:15px}
+  .bar-line{top:auto;bottom:calc(14px + env(safe-area-inset-bottom));left:var(--gutter);right:var(--gutter);transform:none;justify-content:space-between;overflow:auto}
+  .bar-line li{padding:8px 9px;font-size:10px;letter-spacing:.1em}
+  .bar-cup{left:var(--gutter);right:var(--gutter);width:auto;bottom:calc(68px + env(safe-area-inset-bottom));padding:12px 12px 10px}
+  .bar-cup ol{max-height:72px}
+  .bar-end{left:var(--gutter);right:var(--gutter);top:calc(78px + env(safe-area-inset-top));transform:none;max-width:none;text-align:left}
+  .bar-end .btns,.bar-end .eyebrow{justify-content:flex-start}
+  .bar-end .lede{margin-left:0}
+  .bar-off .bar-list{grid-template-columns:1fr}
   .rowi p{grid-column:2}
 }
 @media (max-height:560px) and (min-width:821px){.rail,.hint{display:none}}
@@ -282,7 +298,7 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
   </a>
   <div class="nav-links">
     <a href="#sun">The name</a>
-    <a href="#cup">The cup</a>
+    <a href="#bar">Toppings</a>
     <a href="#inside">Flavors</a>
     <a class="cta" href="#visit">Visit us</a>
   </div>
@@ -308,8 +324,11 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
         <p class="lede sub">Organic froyo, pulled fresh at the counter. Choose a flavor, then pull.</p>
         <div class="chips row" role="group" aria-label="Choose a flavor">
           <button type="button" class="chip" data-flavor="0" aria-pressed="false"><i class="sw coffee"></i>Sweet Harbor Coffee</button>
-          <button type="button" class="chip" data-flavor="1" aria-pressed="true"><i class="sw twist"></i>Twist</button>
+          <button type="button" class="chip" data-flavor="1" aria-pressed="true"><i class="sw twist"></i>Coffee twist</button>
           <button type="button" class="chip" data-flavor="2" aria-pressed="false"><i class="sw vanilla"></i>Organic Vanilla Bean</button>
+          <button type="button" class="chip" data-flavor="3" aria-pressed="false"><i class="sw rasp"></i>Raspberry</button>
+          <button type="button" class="chip" data-flavor="4" aria-pressed="false"><i class="sw rtwist"></i>Raspberry twist</button>
+          <button type="button" class="chip" data-flavor="5" aria-pressed="false"><i class="sw tart"></i>Original Tart</button>
         </div>
         <p class="hint row" aria-hidden="true"><i></i>Drag a handle or scroll</p>
       </div>
@@ -322,7 +341,7 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
     </div>
     <div class="band left" data-band="0.37,0.56">
       <div class="inner">
-        <p class="eyebrow" data-flavor-name>Twist</p>
+        <p class="eyebrow" data-flavor-name>Coffee + Vanilla Bean twist</p>
         <h2 class="h2 dd" data-split>Straight from the machine.</h2>
         <p class="lede sub">Organic, clean, and pulled while you watch.</p>
       </div>
@@ -331,7 +350,7 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
       <div class="inner">
         <p class="eyebrow">Next stop, the topping bar</p>
         <h2 class="h2 dd" data-split>Then you make it yours.</h2>
-        <p class="lede sub">Pistachio kataifi, Biscoff crunch, honey, cinnamon rolls, Nutella, and a whole bar of fruit.</p>
+        <p class="lede sub">Warm pistachio kataifi, Nutella and Biscoff, cinnamon rolls in icing, honey, and a whole bar of fresh fruit.</p>
       </div>
     </div>
     <div class="band left final" data-band="0.9,1">
@@ -343,7 +362,7 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
           <a class="btn solid" href="https://www.google.com/maps/search/?api=1&query=Ilios+Froyo+1355+Old+Northern+Blvd+Roslyn+NY+11576" target="_blank" rel="noopener">
             Get directions
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a>
-          <a class="btn ghost" href="#cup">See the cup</a>
+          <a class="btn ghost" href="#bar">Top it off</a>
         </div>
       </div>
     </div>
@@ -352,6 +371,40 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
 </header>
 
 <main id="main" tabindex="-1">
+  <section class="bar" id="bar" aria-labelledby="barh">
+    <div class="bar-stage" id="barstage">
+      <canvas id="barcanvas" aria-hidden="true"></canvas>
+      <div class="bar-intro" id="barintro">
+        <p class="kicker">The topping bar</p>
+        <h2 class="big" id="barh">Top it off.</h2>
+        <p class="lede">Slide your cup down the bar, the way you do in the shop. Tap anything on the counter and it goes on, in the order you pick.</p>
+        <div class="bar-list" id="barlistall"></div>
+      </div>
+      <ol class="bar-line" id="barline" aria-hidden="true">
+        <li data-zone="fruit">Fruit</li><li data-zone="candy">Candy &amp; crunch</li><li data-zone="warm">Warm</li><li data-zone="pay">Pay</li>
+      </ol>
+      <div class="bar-cup" id="barcup">
+        <p class="bar-cup-h"><span>In your cup</span><span id="barflavor"></span></p>
+        <ol id="barlist" aria-live="polite"><li class="empty">Just the froyo so far</li></ol>
+        <div class="bar-cup-b">
+          <button type="button" class="btn ghost sm" id="barundo">Undo</button>
+          <button type="button" class="btn ghost sm" id="barclear">Start over</button>
+        </div>
+      </div>
+      <div class="bar-tip" id="bartip" aria-hidden="true"></div>
+      <div class="bar-end" id="barend">
+        <p class="eyebrow">At the register</p>
+        <h2 class="h2">Paid by weight.</h2>
+        <p class="lede">Hand your cup over the counter by the gold sun. Ilios is open Tuesday to Sunday, 5 to 10 pm.</p>
+        <div class="btns"><a class="btn solid" href="#visit">Find us</a></div>
+      </div>
+      <div class="vh">
+        <h3>Add a topping</h3>
+        <ul id="barkeys"></ul>
+      </div>
+    </div>
+  </section>
+
   <section class="s sun io" id="sun">
     <div>
       <p class="kicker reveal">The name</p>
@@ -362,39 +415,18 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
     <figure class="reveal"><img src="assets/img/cup-macro.jpg" alt="Close-up of the gold foil sun face printed on an Ilios cup" width="1400" height="875" loading="lazy"></figure>
   </section>
 
-  <section class="s spin io" id="cup">
-    <div class="spinl">
-      <div class="spinh">
-        <p class="kicker reveal">Make it yours</p>
-        <h2 class="big reveal">Top it off.</h2>
-        <p class="reveal lead">Everything from the bar, dropped onto your swirl. Tap a topping and watch it land. Drag the cup to turn it.</p>
-      </div>
-      <div class="spinc">
-        <div class="topchips reveal" id="topchips" role="group" aria-label="Toppings"></div>
-        <div class="topbar reveal">
-          <button type="button" id="topsurprise" class="btn ghost">Surprise me</button>
-          <button type="button" id="topclear" class="btn ghost">Clear</button>
-          <span id="topcount" aria-live="polite">Plain, the way it pours</span>
-        </div>
-        <p class="topnote reveal">The bar rotates. Granola is nut free and gluten free.</p>
-      </div>
-    </div>
-    <div class="viewer reveal">
-      <canvas id="spin" aria-label="Interactive 3D cup of froyo. Choose toppings and they drop on. Drag to rotate."></canvas>
-      <span class="tag" aria-hidden="true">Drag to rotate</span>
-    </div>
-  </section>
-
   <section class="s inside io" id="inside">
     <p class="kicker reveal">On the machines</p>
     <h2 class="big reveal">Pull one. Or twist two.</h2>
+    <p class="lead-in reveal">Three machines, six flavors, made in house every day from Greek yogurt and kefir and sweetened with organic cane sugar. The tart and the vanilla are organic; the fruit flavors are made with real fruit.</p>
     <div class="rows">
-      <div class="rowi reveal"><i class="sw vanilla big-sw"></i><h3>Organic Vanilla Bean</h3><p>Organic</p></div>
-      <div class="rowi reveal"><i class="sw tart big-sw"></i><h3>Organic Original Tart</h3><p>Organic</p></div>
-      <div class="rowi reveal"><i class="sw coffee big-sw"></i><h3>Sweet Harbor Coffee</h3><p>Coffee</p></div>
-      <div class="rowi reveal"><i class="sw rasp big-sw"></i><h3>Raspberry</h3><p>Fruit</p></div>
+      <div class="rowi reveal"><i class="sw tart big-sw"></i><h3>Organic Original Tart</h3><p>The classic: bright, clean and properly tangy.</p></div>
+      <div class="rowi reveal"><i class="sw vanilla big-sw"></i><h3>Organic Vanilla Bean</h3><p>Real vanilla bean, specks and all. On two machines, for twists.</p></div>
+      <div class="rowi reveal"><i class="sw rasp big-sw"></i><h3>Raspberry</h3><p>Made with real raspberries. Twist it with the vanilla bean.</p></div>
+      <div class="rowi reveal"><i class="sw coffee big-sw"></i><h3>Sweet Harbor Coffee</h3><p>A coffee froyo, named for Sweet Harbor Coffee in Roslyn Village.</p></div>
+      <div class="rowi reveal"><i class="sw rotating big-sw"></i><h3>Rotating flavors</h3><p>Three of the six change every month. Banana has made an appearance.</p></div>
     </div>
-    <p class="note reveal">Flavors rotate. These are the ones on the machine signs right now.</p>
+    <p class="note reveal">The machines change with the month. Ask at the counter, or check @iliosfroyo for what's pouring now.</p>
   </section>
 
   <section class="s visit io" id="visit">
@@ -404,12 +436,14 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
     </div>
     <div class="card reveal">
       <dl>
-        <dt>Where</dt><dd>Old Northern Blvd, in the heart of Roslyn</dd>
-        <dt>What</dt><dd>Organic froyo and a full topping bar</dd>
+        <dt>Where</dt><dd>Old Northern Blvd, in the heart of Roslyn Village</dd>
+        <dt>Hours</dt><dd>Tuesday to Sunday, 5 to 10 pm<br>Closed Mondays</dd>
+        <dt>What</dt><dd>Organic Greek froyo and a full topping bar, paid by weight</dd>
         <dt>Find us</dt><dd>@iliosfroyo</dd>
       </dl>
       <div class="btns">
         <a class="btn solid" href="https://www.google.com/maps/search/?api=1&query=Ilios+Froyo+1355+Old+Northern+Blvd+Roslyn+NY+11576" target="_blank" rel="noopener">Get directions</a>
+        <a class="btn ghost" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener">Instagram</a>
       </div>
     </div>
   </section>
@@ -417,7 +451,7 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
 
 <footer>
   <span>Ilios Froyo · 1355 Old Northern Blvd, Roslyn, NY 11576</span>
-  <span>Concept site · 3D scene rendered live in your browser</span>
+  <span>Open Tuesday to Sunday, 5 to 10 pm · @iliosfroyo</span>
 </footer>
 
 <script type="module" src="main.js"></script>
