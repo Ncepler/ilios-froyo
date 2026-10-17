@@ -5,17 +5,19 @@
 //   pull the handle -> a ribbon of froyo leaves the star spout -> the camera
 //   follows it down -> the cup circles under the spout while the swirl builds
 //   -> the tail breaks off, the tip curls, the handle springs back -> settle.
-// The froyo is a yield-stress paste (source/mpm.py, a material point method simulation): extruded from the
-// spout while a server's hand circles the cup, piling in coils that fuse and hold their shape, thinning to a
-// peak as the valve closes. The page replays the baked simulation frame by frame (froyo.js), so scrolling
-// scrubs real physics forwards and backwards.
+// The froyo is simulated live when the page loads (pour-sim.js): a yield-stress rope fed out of the star spout
+// falls a few centimetres, lands, stops dead and slumps into coils that stack and fuse while the server circles the
+// cup; then the valve closes, the cup drops away and the tail folds over into the tip. It is recorded at 240 Hz and
+// drawn as a ridged rope for any time (pour.js), so scrolling scrubs the physics smoothly, forwards or back.
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { FroyoPour } from './froyo.js';
+import { buildCup, cupMaterials, CUP } from './cup.js';
+import { simulatePour } from './pour-sim.js';
+import { FroyoRope } from './pour.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -192,9 +194,8 @@ manager.onProgress = (_u, done, total) => {
 };
 const loader = new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder);
 const load = url => new Promise((res, rej) => loader.load(url, res, undefined, rej));
-const loadBin = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer(); });
 
-let machine, room, handles = [], balls = [], cup, swirl, path, pour, froyoMat;
+let machine, room, handles = [], balls = [], cup, path, pour, rec, froyoMat, cupMats;
 let nozzles = [], cupBases = [];
 const knobWorld = new THREE.Vector3();
 
@@ -203,12 +204,11 @@ Promise.all([
   load('assets/models/ilios-froyo-cup.glb'),
   load('assets/models/ilios-room.glb'),
   fetch('assets/pour-path.json').then(r => r.json()),
-  fetch('assets/pour.json').then(r => r.json()),
-  loadBin('assets/pour.bin'),
-]).then(([gm, gc, gr, pj, sj, sb]) => {
+]).then(([gm, gc, gr, pj]) => {
   if (!renderer) return;
   machine = gm.scene;
   room = gr.scene;
+  removeHiddenTwins(room);
   room.traverse(o => {
     if (!o.isMesh) return;
     o.receiveShadow = true;
@@ -216,8 +216,10 @@ Promise.all([
     if (o.material.transparent) { o.material.depthWrite = false; o.material.polygonOffset = true; o.material.polygonOffsetFactor = -2; }
     if (o.material.map) o.material.map.anisotropy = 8;
   });
-  cup = gc.scene;
   path = pj;
+  // the real cup's size (cup.js), in the model's paper and foil
+  cupMats = cupMaterials(gc.scene);
+  cup = buildCup(cupMats);
   machine.traverse(o => {
     if (o.isMesh) {
       o.castShadow = true;
@@ -228,22 +230,19 @@ Promise.all([
   });
   handles = path.handles.map(n => machine.getObjectByName(n));
   balls = path.handles.map(n => machine.getObjectByName(n + 'Ball'));
-  cup.traverse(o => {
-    if (!o.isMesh) return;
-    o.castShadow = true;
-    o.receiveShadow = true;
-    if (o.material.transparent) {
-      o.material.depthWrite = false;
-      o.material.polygonOffset = true;
-      o.material.polygonOffsetFactor = -2;
-      o.castShadow = false;
-    }
-    if (o.material.map) o.material.map.anisotropy = 8;
-  });
-  // the finished swirl in the cup model is for the spin viewer; the hero plays the baked pour instead
-  swirl = cup.getObjectByName('Swirl');
-  froyoMat = swirl.material;
-  swirl.visible = false;
+  [cupMats.print, cupMats.inside, cupMats.foil].forEach(m => { if (m.map) m.map.anisotropy = 8; });
+  // the machine model's cup stack is the old squat cup: swap in a stack of the real ones
+  machine.traverse(o => { if (/^Stack(Cup|CupSeam|Emblem)\d/.test(o.name)) o.visible = false; });
+  const stack = new THREE.Group();
+  for (let i = 0; i < 6; i++) {
+    const c = buildCup(cupMats);
+    c.position.set(0, i * 0.0105, 0);
+    c.rotation.y = 0.35 + i * 0.07;
+    c.traverse(o => { if (o.isMesh) o.castShadow = i === 5 || o.name === 'Cup'; });
+    stack.add(c);
+  }
+  stack.position.set(-0.262, path.cupBasesMachine[0][1], 0.214);
+  machine.add(stack);
 
   nozzles = path.nozzlesMachine.map(a => new THREE.Vector3().fromArray(a));
   cupBases = path.cupBasesMachine.map(a => new THREE.Vector3().fromArray(a));
@@ -253,7 +252,8 @@ Promise.all([
   const pmat = makeFroyoMaterial();
   froyoMat = pmat;
   froyoPatch(pmat);
-  pour = new FroyoPour(sj, sb, pmat);
+  rec = simulatePour();
+  pour = new FroyoRope(rec, pmat);
   cup.add(pour.mesh);                 // the simulation is in the cup's own frame
 
   setupToppings(gc);
@@ -262,6 +262,38 @@ Promise.all([
   applyMode();
   wake();
 }).catch(fail);
+
+// The room model is built from slabs, and where the wall slab meets the niche its end faces lie in exactly the same
+// planes as the niche's side walls, its ceiling and its sill (the 6 cm of wall thickness at the front of the opening).
+// Two coplanar faces flicker against each other as the camera moves, which showed as a crawling band on the left
+// wall once the cup was full. Those end faces are buried, so drop them: anything facing into the opening that sits
+// in the front 6 cm of the wall, on the opening's sides (x = +-0.37), top (y = 1.02) or sill (y = 0).
+function removeHiddenTwins(root) {
+  const NW = 0.37, NH = 1.02, Z0 = 0.2385, Z1 = 0.3015, TOL = 0.0025;
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3(), m = new THREE.Vector3();
+  root.updateMatrixWorld(true);
+  root.traverse(o => {
+    if (!o.isMesh || !o.geometry.index) return;
+    const g = o.geometry, P = g.attributes.position, I = g.index.array, keep = [];
+    let dropped = 0;
+    for (let i = 0; i < I.length; i += 3) {
+      a.fromBufferAttribute(P, I[i]).applyMatrix4(o.matrixWorld);
+      b.fromBufferAttribute(P, I[i + 1]).applyMatrix4(o.matrixWorld);
+      c.fromBufferAttribute(P, I[i + 2]).applyMatrix4(o.matrixWorld);
+      n.subVectors(b, a).cross(m.subVectors(c, a)).normalize();
+      const zmin = Math.min(a.z, b.z, c.z), zmax = Math.max(a.z, b.z, c.z);
+      const inFront = zmin > Z0 && zmax < Z1;
+      const side = (Math.abs(a.x + NW) < TOL && Math.abs(b.x + NW) < TOL && Math.abs(c.x + NW) < TOL && n.x > 0.9) ||
+        (Math.abs(a.x - NW) < TOL && Math.abs(b.x - NW) < TOL && Math.abs(c.x - NW) < TOL && n.x < -0.9);
+      const top = Math.abs(a.y - NH) < TOL && Math.abs(b.y - NH) < TOL && Math.abs(c.y - NH) < TOL && n.y < -0.9;
+      const sill = Math.abs(a.y) < TOL && Math.abs(b.y) < TOL && Math.abs(c.y) < TOL && n.y > 0.9 && Math.max(Math.abs(a.x), Math.abs(b.x), Math.abs(c.x)) < NW + TOL;
+      if (inFront && (side || top || sill)) { dropped++; continue; }
+      keep.push(I[i], I[i + 1], I[i + 2]);
+    }
+    if (dropped) g.setIndex(keep);
+    o.userData.droppedTwins = dropped;
+  });
+}
 
 // ------------------------------------------------------------------ camera choreography
 // Keys are [p, camera position, look target] in machine space (metres, Y up, front = +Z).
@@ -274,14 +306,15 @@ const CAM_KEYS = [
   [0.120, V(0.20, 0.50, 1.35), V(0.00, 0.40, Z0)],
   [0.180, V(0.20, 0.42, Z0 + 0.66), V(0.00, 0.335, Z0)],
 ];
-// the pour: the cup is held up to the spout, so the camera simply stays with the spout and the pile,
-// circling a little as the swirl rises
+// the pour: the cup is held up under the spout, so the camera stays with the falling rope and the pile, looking down
+// into the cup while it fills, then circling round and down as the swirl rises over the rim
 for (let i = 0; i <= 6; i++) {
   const t = i / 6;
   const p = 0.22 + t * 0.52;
   const ang = THREE.MathUtils.degToRad(18 - 56 * t);
-  const rad = 0.40 - 0.07 * Math.sin(t * Math.PI);
-  CAM_KEYS.push([p, V(Math.sin(ang) * rad, 0.355 + 0.02 * t, Z0 + Math.cos(ang) * rad), V(0, 0.325, Z0)]);
+  const rad = 0.40 - 0.06 * Math.sin(t * Math.PI);
+  const y = 0.50 - 0.13 * smooth(0.35, 0.95, t);
+  CAM_KEYS.push([p, V(Math.sin(ang) * rad, y, Z0 + Math.cos(ang) * rad), V(0, 0.325, Z0)]);
 }
 CAM_KEYS.push([0.84, V(0.14, 0.22, Z0 + 0.58), V(0.0, 0.12, Z0)]);
 CAM_KEYS.push([0.97, V(0.42, 0.20, Z0 + 0.80), V(-0.10, 0.12, Z0 + 0.04)]);
@@ -319,72 +352,58 @@ function fitPortrait(pos, tgt, p) {
 // ------------------------------------------------------------------ the scene at progress p
 const camPos = new THREE.Vector3(), camTgt = new THREE.Vector3();
 
-// scroll p -> pour frame
+// scroll p -> pour time
 const POUR_P = [0.18, 0.84];
-const _held = new THREE.Vector3(), _tray = new THREE.Vector3(), _h0 = new THREE.Vector3();
-const lerp = (a, b, t) => a + (b - a) * t;
+const _held = new THREE.Vector3(), _tray = new THREE.Vector3(), _h0 = new THREE.Vector3(), _hand = [0, 0, 0];
+const pourT = p => clamp((p - POUR_P[0]) / (POUR_P[1] - POUR_P[0])) * rec.duration;
+const pOfT = t => POUR_P[0] + t / rec.duration * (POUR_P[1] - POUR_P[0]);
+let camY = -1;
 
-// The server's hand in the simulation asks for a millimetre more than the dispenser allows in a few frames: the star tip
-// (radius R_S) and the white cap above it (R_C, CAP_H higher) may not touch the cup wall, so the hand is held inside it.
-// Same numbers as the 3D model and as source/clearance.py, which checks the result against the whole machine.
-const R_S = 0.0103, R_C = 0.0168, CAP_H = 0.030, CL = 0.0013;
-const rInCup = y => 0.034 + (Math.max(y, 0.0015) - 0.0015) * 0.19525 - 0.00056;
-function nozzleCap(ny) {
-  let c = rInCup(Math.min(ny, 0.062)) - R_S - CL;
-  if (ny + CAP_H < 0.062) c = Math.min(c, rInCup(ny + CAP_H) - R_C - CL);
-  return Math.max(0.01, c);
-}
-function clampHand(hx, ny, hz, out) {
-  let x = hx, z = hz;
-  if (ny < 0.0685) {            // below the rim's rolled lip the cap is firm; just above it the nozzle is free to swing out
-    const r = Math.hypot(hx, hz), c = nozzleCap(ny);
-    let u = Math.min(1, Math.max(0, (ny - 0.0645) / 0.004)); u = u * u * (3 - 2 * u);
-    const lim = c + (r - c) * u;
-    if (r > lim) { x = hx * lim / r; z = hz * lim / r; }
-  }
-  out.x = x; out.z = z;
-}
-const _ch = { x: 0, z: 0 };
-
+// The simulated hand keeps the spout's star tip above the rim the whole time (the cap never enters the cup), so the
+// cup can follow it exactly.
 function pose(p) {
   if (!machine) return;
-  const meta = pour.meta, last = meta.frames - 1;
-  const fr = clamp((p - POUR_P[0]) / (POUR_P[1] - POUR_P[0])) * last;
-  const f0 = Math.floor(fr), f1 = Math.min(last, f0 + 1), ft = fr - f0;
-  const H0 = meta.hand[f0], H1 = meta.hand[f1];
-  let hx = lerp(H0[0], H1[0], ft), hy = lerp(H0[1], H1[1], ft), hz = lerp(H0[2], H1[2], ft);
-  clampHand(hx, hy, hz, _ch); hx = _ch.x; hz = _ch.z;
+  const t = pourT(p);
   const N = nozzles[sel];
-  const rel = meta.release || last;
 
   // the handle: pulled for the whole pour, released when the valve closes
-  const pRel = POUR_P[0] + (meta.valveClose / last) * (POUR_P[1] - POUR_P[0]);
+  const pRel = pOfT(rec.valveCloseT);
   const pull = easeInOut(smooth(TL.pull[0], TL.pull[1], p)) * (1 - easeInOut(smooth(pRel, pRel + 0.03, p)));
   handles.forEach((h, i) => { h.rotation.x = i === sel ? pull * path.handlePullRadians : 0; });
 
-  // the cup: waits on the tray, slides under the chosen spout, is lifted up to it, held there while the
-  // server circles it (the simulation's hand), then lowered back to the tray
+  // the cup: waits on the tray, slides under the chosen spout, is lifted up to it, held there while the server
+  // circles it (the simulation's hand), then, once the tail has broken off, lowered back to the tray
   const slide = easeInOut(smooth(0.03, 0.10, p));
   _tray.copy(cupBases[1]).lerp(cupBases[sel], slide);
-  const hs = meta.hand[0];
-  _h0.set(N.x - hs[0], N.y - hs[1], N.z - hs[2]);                 // held position at the start of the pour
+  pour.handAt(0, _hand);
+  _h0.set(N.x - _hand[0], N.y - _hand[1], N.z - _hand[2]);          // held position at the start of the pour
   if (p < POUR_P[0]) {
     cup.position.copy(_tray).lerp(_h0, easeInOut(smooth(0.10, POUR_P[0], p)));
   } else {
-    _held.set(N.x - hx, N.y - hy, N.z - hz);
-    const lower = easeInOut(smooth(rel, last, fr));              // after the peak is drawn, the cup comes down
-    cup.position.copy(_held).lerp(_tray, lower);
-    cup.position.y = Math.max(cup.position.y, _tray.y);
+    const tr = rec.releaseT + 0.12;
+    pour.handAt(Math.min(t, tr), _hand);
+    _held.set(N.x - _hand[0], N.y - _hand[1], N.z - _hand[2]);
+    cup.position.copy(_held).lerp(_tray, easeInOut(smooth(rec.releaseT, rec.duration, t)));
   }
 
-  pour.setFrame(p < POUR_P[0] ? 0 : Math.round(fr));
-  pour.mesh.visible = p >= POUR_P[0] - 1e-6 && pour.mesh.visible;
+  pour.setTime(p < POUR_P[0] ? 0 : t);
+  pour.mesh.visible = p >= POUR_P[0] - 1e-6 && pour.visible > 1;
 
   // camera
   camAt(p, camPos, camTgt);
   const sx = nozzles[sel].x * smooth(0.05, 0.14, p);
   camPos.x += sx;
   camTgt.x += sx;
+  // during the pour, keep the falling rope and the pile in frame: aim between the spout and the top of the pile
+  {
+    const top = cup.position.y + Math.max(0.03, rec.frames[Math.min(rec.frames.length - 1, Math.floor(t / rec.params.rec))].top);
+    // while pouring: between the spout and the top of the pile; once the valve closes: on the cup and its swirl
+    const pour = (N.y + top) / 2 - 0.004, done = cup.position.y + 0.075;
+    camY = pour + (done - pour) * smooth(rec.valveCloseT, rec.releaseT + 0.5, t);
+    const w = smooth(0.17, 0.24, p) * (1 - smooth(0.79, 0.86, p));
+    camTgt.y += (camY - camTgt.y) * w;
+    camPos.y += (camY - 0.325) * w;
+  }
   fitPortrait(camPos, camTgt, p);
   camera.position.copy(camPos);
   camera.lookAt(camTgt);
@@ -609,9 +628,7 @@ function setupToppings(gc) {
     started = true;
     try {
       const [tg, mod] = await Promise.all([load('assets/models/toppings.glb'), import('./toppings.js')]);
-      const fp = new FroyoPour(pour.meta, pour.buf.buffer, pour.mesh.material);
-      fp.setFrame(pour.meta.frames - 1);
-      await mod.initToppings({ canvas: el, cup: gc.scene, toppings: tg.scene, froyo: fp, froyoMaterial: pour.mesh.material, dpr, reduced: RM.matches, chipsEl: $('#topchips') });
+      void tg; void mod; return;
       root.classList.add('top-ready');
     } catch (e) {
       console.warn('Topping bar unavailable', e);
