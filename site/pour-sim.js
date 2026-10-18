@@ -34,7 +34,7 @@ export const POUR = {
   CLEAR: 0.024,   // the server keeps the spout this far over the pile while filling ...
   CLEAR_SW: 0.019,// ... and this far while building the swirl
   LIFT_MIN: CUP.H + 0.006,  // the spout's cap never goes inside the cup
-  SWIRL_TURNS: 2.25,
+  SWIRL_TURNS: 3.2,
   RHO_END: 0.0050,  // the last turn of the swirl, before the server pulls up into the tip
   PEAK_T: 0.2,      // seconds spent lifting with the valve part open (draws up the peak)
   PEAK_RISE: 0.105, // m/s, about the speed the rope comes out at that flow, so the peak stands rather than buckles

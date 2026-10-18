@@ -18,6 +18,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildCup, cupMaterials, CUP } from './cup.js';
 import { simulatePour } from './pour-sim.js';
 import { FroyoRope } from './pour.js';
+import { FLAVORS, makeFroyoMaterial, setFlavorUniforms } from './froyo.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -107,81 +108,15 @@ const nicheGlow = new THREE.PointLight('#fff1dc', 0.35, 1.2, 1.6);
 nicheGlow.position.set(0, 0.97, 0.05);
 scene.add(nicheGlow);
 
-// ------------------------------------------------------------------ the froyo shader
-// The shop's six flavours on three machines (docs/ILIOS-FIELD-NOTES.md): each machine pours its left flavour, a twist
-// of the two, and its right flavour. The station on the page is one machine; picking a flavour puts that machine's
+// ------------------------------------------------------------------ the froyo
+// The shop's six flavours on three machines (docs/ILIOS-FIELD-NOTES.md, froyo.js): each machine pours its left flavour, a
+// twist of the two, and its right flavour. The station on the page is one machine; picking a flavour puts that machine's
 // sign on it and pulls the matching handle (0 left, 1 twist, 2 right).
 const MACHINES = {
   tart: [['ORGANIC', 'ORIGINAL TART'], ['ORGANIC', 'ORIGINAL TART']],
   raspberry: [['', 'RASPBERRY'], ['ORGANIC', 'VANILLA BEAN']],
   coffee: [['SWEET', 'HARBOR COFFEE'], ['ORGANIC', 'VANILLA BEAN']],
 };
-const C_COFFEE = '#a98c70', C_VANILLA = '#f1e7c8', C_RASP = '#d68a9e', C_TART = '#f8f6f2';
-const FLAVORS = [
-  { name: 'Sweet Harbor Coffee', machine: 'coffee', handle: 0, a: C_COFFEE, b: C_COFFEE, twist: 0, speckA: 0, speckB: 0 },
-  { name: 'Coffee + Vanilla Bean twist', machine: 'coffee', handle: 1, a: C_COFFEE, b: C_VANILLA, twist: 1, speckA: 0, speckB: 0.8 },
-  { name: 'Organic Vanilla Bean', machine: 'coffee', handle: 2, a: C_VANILLA, b: C_VANILLA, twist: 0, speckA: 1, speckB: 1 },
-  { name: 'Raspberry', machine: 'raspberry', handle: 0, a: C_RASP, b: C_RASP, twist: 0, speckA: 0, speckB: 0 },
-  { name: 'Raspberry + Vanilla Bean twist', machine: 'raspberry', handle: 1, a: C_RASP, b: C_VANILLA, twist: 1, speckA: 0, speckB: 0.8 },
-  { name: 'Organic Original Tart', machine: 'tart', handle: 0, a: C_TART, b: C_TART, twist: 0, speckA: 0, speckB: 0 },
-  { name: 'Organic Vanilla Bean', machine: 'raspberry', handle: 2, a: C_VANILLA, b: C_VANILLA, twist: 0, speckA: 1, speckB: 1, chip: 2 },
-  { name: 'Organic Original Tart', machine: 'tart', handle: 1, a: C_TART, b: C_TART, twist: 0, speckA: 0, speckB: 0, chip: 5 },
-  { name: 'Organic Original Tart', machine: 'tart', handle: 2, a: C_TART, b: C_TART, twist: 0, speckA: 0, speckB: 0, chip: 5 },
-];
-const U = {
-  uColA: { value: new THREE.Color(FLAVORS[1].a) }, uColB: { value: new THREE.Color(FLAVORS[1].b) },
-  uTwist: { value: 1 }, uSpeckA: { value: 0 }, uSpeckB: { value: 0.8 },
-};
-// `m` is the share of the paste that came from the second half of the nozzle (a twist's two flavours),
-// carried with the simulation; vanilla bean specks are fixed to the froyo (cup-local position)
-const FLAVOR_GLSL = `
-  {
-    float mm = uTwist * smoothstep(0.35, 0.65, vM);
-    vec3 fc = mix(uColA, uColB, mm);
-    vec3 cell = floor(vLocal * 520.0);
-    float h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-    float sp = mix(uSpeckA, uSpeckB, mm) * step(0.9965, h);
-    fc = mix(fc, vec3(0.05, 0.036, 0.028), sp * 0.9);
-    diffuseColor.rgb = fc;
-  }`;
-// soft-serve is aerated: a fine, even grain of tiny bubbles breaks up the highlights (object-space noise, no seams)
-const BUMP_GLSL = `
-  {
-    vec3 q = vLocal * 900.0;
-    vec3 i0 = floor(q), f0 = fract(q); f0 = f0 * f0 * (3.0 - 2.0 * f0);
-    vec3 g = vec3(0.0);
-    for (int c = 0; c < 3; c++) {
-      float o = float(c) * 17.0;
-      float a = fract(sin(dot(i0 + vec3(0.,0.,0.) + o, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-      float b = fract(sin(dot(i0 + vec3(1.,0.,0.) + o, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-      float d = fract(sin(dot(i0 + vec3(0.,1.,0.) + o, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-      float e = fract(sin(dot(i0 + vec3(1.,1.,0.) + o, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-      g[c] = mix(mix(a, b, f0.x), mix(d, e, f0.x), f0.y) - 0.5;
-    }
-    normal = normalize(normal + 0.07 * g);
-  }`;
-function froyoPatch(mat) {
-  mat.onBeforeCompile = sh => {
-    Object.assign(sh.uniforms, U);
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float m;\nvarying float vM;\nvarying vec3 vLocal;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvM = m;\nvLocal = position;');
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vM;\nvarying vec3 vLocal;\n' +
-        'uniform vec3 uColA; uniform vec3 uColB; uniform float uTwist; uniform float uSpeckA; uniform float uSpeckB;')
-      .replace('#include <color_fragment>', '#include <color_fragment>' + FLAVOR_GLSL)
-      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + BUMP_GLSL);
-  };
-  mat.customProgramCacheKey = () => 'froyo';
-}
-
-function makeFroyoMaterial() {
-  return new THREE.MeshPhysicalMaterial({
-    color: '#f4ecd6', roughness: 0.56, metalness: 0, side: THREE.DoubleSide,
-    sheen: 0.8, sheenRoughness: 0.5, sheenColor: new THREE.Color('#fff2d2'),
-    clearcoat: 0.1, clearcoatRoughness: 0.55,
-  });
-}
 
 // ------------------------------------------------------------------ flavour choice
 let fl = 1;             // which flavour (FLAVORS)
@@ -193,11 +128,7 @@ function setFlavor(i, fromUser) {
   fl = i;
   const f = FLAVORS[i];
   sel = f.handle;
-  U.uColA.value.set(f.a);
-  U.uColB.value.set(f.b);
-  U.uTwist.value = f.twist;
-  U.uSpeckA.value = f.speckA;
-  U.uSpeckB.value = f.speckB;
+  setFlavorUniforms(f);
   const chip = f.chip ?? i;
   chips.forEach(c => c.setAttribute('aria-pressed', String(+c.dataset.flavor === chip)));
   flavorNames.forEach(n => { n.textContent = f.name; });
@@ -312,7 +243,6 @@ Promise.all([
 
   const pmat = makeFroyoMaterial();
   froyoMat = pmat;
-  froyoPatch(pmat);
   rec = simulatePour();
   pour = new FroyoRope(rec, pmat);
   cup.add(pour.mesh);                 // the simulation is in the cup's own frame

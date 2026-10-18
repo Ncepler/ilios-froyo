@@ -1,17 +1,79 @@
 // Draws the simulated pour (pour-sim.js) as soft serve: a star-ridged rope that is round while it falls and slumps
 // into a wider, flatter coil once it has landed, fusing into the coil below. Rebuilt for any time t, so scrolling
 // scrubs the pour smoothly in both directions (nothing is a pre-baked frame).
+//
+// The simulation's nodes sit 2 mm apart and jitter a little where coils press on each other. Drawn as they are, that
+// jitter reads as hairpin bends and folds the surface over itself (the crumpled tip), so the centre line and the
+// radius are smoothed first (Taubin, which does not shrink the coils), and the surface is bent only as far as the
+// smoothed curve really bends. The cross-section is the nozzle's star: rounded lobes with narrow grooves between
+// them. Each ring also carries how much the other coils and the paper shut it in, for the shader's occlusion.
 
 import * as THREE from 'three';
 import { nodesAt, handAt } from './pour-sim.js';
+import { CUP, rIn } from './cup-dims.js';
 
-const RING = 48;            // vertices around the rope
+const RING = 64;            // vertices around the rope (8 per lobe)
 const SUB = 2;              // rings per node spacing (smooth bends)
-const RIDGES = 8;           // the star tip's points
+const LOBES = 8;            // the star tip's points
 const SETTLE = 0.2;         // seconds a landed coil takes to slump into its laid shape
-const TWIST_RATE = 2 * Math.PI / 0.085;   // a twist's two flavours wind once every 8.5 cm of rope
+const EPS = 0.14;           // how sharp the grooves are (smaller is sharper)
+const ABN = Math.sqrt(1 + EPS * EPS) - EPS;
+const SMOOTH_PASSES = 3;    // Taubin pairs; each pass reaches one node along the rope
+const AO_SKIP = 13;         // nodes along the rope that count as the same tube, not as a neighbour
+const AO_R = 0.045;         // how far away a coil still shuts a vertex in
+
+// mean of the (smoothed) crest profile, so the lobes ride on the rope's own radius
+const MU = (() => { let s = 0; for (let i = 0; i < 720; i++) s += (Math.sqrt(Math.sin(i / 720 * Math.PI) ** 2 + EPS * EPS) - EPS) / ABN; return s / 720; })();
+
+// twist: the two halves of a twist spiral round the rope slowly, riding on the star's own pattern
+export const TWIST = { rate: 28 };
+const twistAngle = s => TWIST.rate * s + 0.55 * Math.sin(23 * s + 1.3);
 
 const _v = new THREE.Vector3();
+
+// Taubin smoothing of an interleaved polyline, ends fixed
+function smoothPath(src, n, out, tmp) {
+  out.set(src.subarray(0, n * 3));
+  for (let p = 0; p < SMOOTH_PASSES; p++) for (const f of [0.5, -0.53]) {
+    for (let i = 1; i < n - 1; i++) {
+      const o = i * 3;
+      tmp[o] = f * (0.5 * (out[o - 3] + out[o + 3]) - out[o]);
+      tmp[o + 1] = f * (0.5 * (out[o - 2] + out[o + 4]) - out[o + 1]);
+      tmp[o + 2] = f * (0.5 * (out[o - 1] + out[o + 5]) - out[o + 2]);
+    }
+    for (let i = 1; i < n - 1; i++) { const o = i * 3; out[o] += tmp[o]; out[o + 1] += tmp[o + 1]; out[o + 2] += tmp[o + 2]; }
+  }
+}
+
+// Soft serve is a paste, not wire: it does not fold tighter than its own thickness. Where the smoothed line still
+// curves more sharply than the rope is thick (a kink where it pressed against the paper or a neighbour), relax those
+// nodes toward the chord until the bend is at least about one rope radius, so the surface rounds the corner instead of
+// folding over itself. Menger curvature over a 2-node stencil; Gauss-Seidel, a few passes.
+function limitBends(P, n, rad, fx) {
+  for (let it = 0; it < 16; it++) {
+    let moved = 0;
+    for (let i = 2; i < n - 2; i++) {
+      const o = i * 3, a = o - 6, c = o + 6;
+      const abx = P[o] - P[a], aby = P[o + 1] - P[a + 1], abz = P[o + 2] - P[a + 2];
+      const bcx = P[c] - P[o], bcy = P[c + 1] - P[o + 1], bcz = P[c + 2] - P[o + 2];
+      const acx = P[c] - P[a], acy = P[c + 1] - P[a + 1], acz = P[c + 2] - P[a + 2];
+      const cx = aby * acz - abz * acy, cy = abz * acx - abx * acz, cz = abx * acy - aby * acx;
+      const ab = Math.hypot(abx, aby, abz), bc = Math.hypot(bcx, bcy, bcz), ac = Math.hypot(acx, acy, acz);
+      if (ab * bc * ac < 1e-12) continue;
+      const kr = 2 * Math.hypot(cx, cy, cz) / (ab * bc * ac) * rad[i] * fx;
+      if (kr <= 0.68) continue;
+      const w = Math.min(0.6, (kr - 0.68) * 0.9);
+      // toward the chord, through the near neighbours too (a 2-node stencil alone lets odd and even nodes drift apart)
+      for (let q = 0; q < 3; q++) {
+        const m = 0.25 * (P[a + q] + P[c + q]) + 0.25 * (P[o - 3 + q] + P[o + 3 + q]);
+        P[o + q] += w * (m - P[o + q]);
+      }
+      moved++;
+    }
+    if (!moved) break;
+  }
+}
+
 // forward rotation-minimising frames (double reflection, Wang et al. 2008) over interleaved positions P, from node lo.
 // With `fixed`: nodes landed by time t take the fixed frame, moving ones are carried on from the node before.
 function rmfForward(P, n, out, lo, fixed, frozenT, t) {
@@ -58,12 +120,11 @@ function rmfForward(P, n, out, lo, fixed, frozenT, t) {
 }
 
 function makeTables() {
-  const T = { c: [], s: [], cR: [], sR: [], c2R: [], s2R: [] };
+  const T = { c: [], s: [], c4: [], s4: [] };
   for (let k = 0; k < RING; k++) {
     const ph = k / RING * Math.PI * 2;
     T.c.push(Math.cos(ph)); T.s.push(Math.sin(ph));
-    T.cR.push(Math.cos(RIDGES * ph)); T.sR.push(Math.sin(RIDGES * ph));
-    T.c2R.push(Math.cos(2 * RIDGES * ph)); T.s2R.push(Math.sin(2 * RIDGES * ph));
+    T.c4.push(Math.cos(LOBES / 2 * ph)); T.s4.push(Math.sin(LOBES / 2 * ph));
   }
   return T;
 }
@@ -73,18 +134,24 @@ export class FroyoRope {
     this.rec = rec;
     const n = rec.count;
     this.n = n;
-    this.P = new Float32Array(n * 3);
+    this.P = new Float32Array(n * 3);      // the simulation's nodes at the current time
+    this.Ps = new Float32Array(n * 3);     // ... smoothed, what is drawn
+    this.tmp = new Float32Array(n * 3);
     this.Nf = new Float32Array(n * 3);
     // per-node values for the current time
-    this.rN = new Float32Array(n); this.sN = new Float32Array(n); this.fN = new Uint8Array(n);
+    this.rN = new Float32Array(n); this.rT = new Float32Array(n); this.sN = new Float32Array(n); this.fN = new Uint8Array(n);
     // samples: SUB rings per node spacing
     const ms = (n - 1) * SUB + 1;
     this.ms = ms;
     this.Q = new Float32Array(ms * 3);
+    this.K = new Float32Array(ms * 3);     // curvature vector of the smoothed centre line at each sample
     const nv = ms * RING + 1;
     this.pos = new Float32Array(nv * 3);
     this.nor = new Float32Array(nv * 3);
     this.mm = new Float32Array(nv);
+    this.oc = new Float32Array(nv * 3);    // how much, and from where, the other coils shut the vertex in
+    this.rg = new Float32Array(nv);        // 1 on a lobe's crest, 0 in a groove
+    this.ocRing = new Float32Array(ms * 3);
     const idx = new Uint32Array(RING * 3 + (ms - 1) * RING * 6);
     let o = 0;
     const C = ms * RING;                    // start-cap centre
@@ -95,9 +162,12 @@ export class FroyoRope {
       idx[o++] = b; idx[o++] = d; idx[o++] = c;
     }
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
-    g.setAttribute('normal', new THREE.BufferAttribute(this.nor, 3).setUsage(THREE.DynamicDrawUsage));
-    g.setAttribute('m', new THREE.BufferAttribute(this.mm, 1).setUsage(THREE.DynamicDrawUsage));
+    const dyn = (arr, size) => new THREE.BufferAttribute(arr, size).setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('position', dyn(this.pos, 3));
+    g.setAttribute('normal', dyn(this.nor, 3));
+    g.setAttribute('m', dyn(this.mm, 1));
+    g.setAttribute('oc', dyn(this.oc, 3));
+    g.setAttribute('rg', dyn(this.rg, 1));
     g.setIndex(new THREE.BufferAttribute(idx, 1));
     g.setDrawRange(0, 0);
     this.geometry = g;
@@ -110,7 +180,11 @@ export class FroyoRope {
     this.hand = [0, 0, 0];
     // frames along the finished rope (forward rotation-minimising), so neighbouring sections never twist apart
     this.FF = new Float32Array(n * 3);
-    rmfForward(rec.final, n, this.FF, 0, null);
+    const fs = new Float32Array(n * 3);
+    smoothPath(rec.final, n, fs, this.tmp);
+    limitBends(fs, n, rec.rad, rec.params.FX);
+    rmfForward(fs, n, this.FF, 0, null);
+    this.grid = new Map();
   }
 
   // the nozzle, in the cup's frame, at time t
@@ -121,24 +195,20 @@ export class FroyoRope {
     if (t === this.t) return;
     this.t = t;
     const rec = this.rec, { FX, FY, DS } = rec.params;
-    const P = this.P, Nf = this.Nf;
+    const P = this.P, Ps = this.Ps, Nf = this.Nf;
     const n = nodesAt(rec, t, P);
     this.visible = n;
     if (n < 2) { this.geometry.setDrawRange(0, 0); this.mesh.visible = false; return; }
     this.mesh.visible = true;
+    smoothPath(P, n, Ps, this.tmp);
     const rad = rec.rad, frozenT = rec.frozenT, FF = this.FF;
     const released = rec.releaseT >= 0 && t >= rec.releaseT;
-    // where each node's ridges point: landed rope uses the frames of the finished rope; rope still moving carries
-    // the frame on from the node before it
-    let lo = 0;
-    while (lo < n && frozenT[lo] <= t) lo++;
-    if (lo < n) rmfForward(P, n, Nf, lo, FF, frozenT, t);
-    const rN = this.rN, sN = this.sN, fN = this.fN;
+    const rN = this.rN, sN = this.sN, fN = this.fN, rT = this.rT;
     const settled = i => i < 0 || i >= n || frozenT[i] + SETTLE <= t;
     for (let i = 0; i < n; i++) {
       const o = i * 3;
       const fr = frozenT[i] <= t;
-      if (!fr) { Nf[o] = Nf[o]; } else { Nf[o] = FF[o]; Nf[o + 1] = FF[o + 1]; Nf[o + 2] = FF[o + 2]; }
+      if (fr) { Nf[o] = FF[o]; Nf[o + 1] = FF[o + 1]; Nf[o + 2] = FF[o + 2]; }
       // where the rope is stretched (the cup dropping away at the end) it necks: same volume, thinner
       const la = i > 0 ? Math.hypot(P[o] - P[o - 3], P[o + 1] - P[o - 2], P[o + 2] - P[o - 1]) : DS;
       const lb = i < n - 1 ? Math.hypot(P[o + 3] - P[o], P[o + 4] - P[o + 1], P[o + 5] - P[o + 2]) : DS;
@@ -149,29 +219,68 @@ export class FroyoRope {
         const e = (n - 1 - i) / 9;
         if (e < 1) r *= Math.sqrt(Math.max(0, e)) * 0.92 + 0.02;
       }
-      rN[i] = r;
+      rT[i] = r;
       const sf = fr ? Math.min(1, (t - frozenT[i]) / SETTLE) : 0;
       sN[i] = sf * sf * (3 - 2 * sf);
-      // a coil that has landed and slumped, among landed neighbours, never changes again
-      fN[i] = settled(i) && settled(i - 1) && settled(i + 1) && settled(i - 2) && settled(i + 2) && i > 4 && i < n - 3 &&
-        (!released || n - 1 - i > 11) ? 1 : 0;
     }
-    // samples along the rope (Catmull-Rom between nodes)
-    const ms = (n - 1) * SUB + 1, Q = this.Q, h = DS / SUB;
+    // the radius is smoothed along the rope too (the stretch above is noisy node to node)
+    for (let p = 0; p < 2; p++) {
+      let a = rT[0];
+      for (let i = 1; i < n - 1; i++) { const c = rT[i]; rT[i] = 0.25 * a + 0.5 * c + 0.25 * rT[i + 1]; a = c; }
+    }
+    for (let i = 0; i < n; i++) rN[i] = rT[i];
+    // after the break the tail end is free: smooth the last stretch with the end loose, so the point is not a kink
+    if (released) for (let p = 0; p < 6; p++) {
+      for (let i = Math.max(1, n - 14); i < n; i++) {
+        const o = i * 3, b = i < n - 1 ? o + 3 : o;
+        for (let q = 0; q < 3; q++) Ps[o + q] = 0.5 * Ps[o + q] + 0.25 * (Ps[o - 3 + q] + Ps[b + q]);
+      }
+    }
+    limitBends(Ps, n, rN, FX);
+    // where each node's ridges point: landed rope uses the frames of the finished rope; rope still moving carries
+    // the frame on from the node before it
+    let lo = 0;
+    while (lo < n && frozenT[lo] <= t) lo++;
+    if (lo < n) rmfForward(Ps, n, Nf, lo, FF, frozenT, t);
+    for (let i = 0; i < lo; i++) { const o = i * 3; Nf[o] = FF[o]; Nf[o + 1] = FF[o + 1]; Nf[o + 2] = FF[o + 2]; }
+    // a coil that has landed and slumped, among landed neighbours, never changes again (smoothing and bend limiting
+    // reach a good way along the rope)
+    const far = 16;
+    for (let i = 0; i < n; i++) {
+      let ok = i > 4 && i < n - 3 - far && (!released || n - 1 - i > 11 + far);
+      for (let d = -far; ok && d <= far; d++) if (!settled(i + d)) ok = false;
+      fN[i] = ok ? 1 : 0;
+    }
+    // samples along the rope (Catmull-Rom between smoothed nodes)
+    const ms = (n - 1) * SUB + 1, Q = this.Q, K = this.K, h = DS / SUB;
     for (let j = 0; j < ms; j++) {
       const a = Math.floor(j / SUB), f = (j - a * SUB) / SUB, o = j * 3;
-      if (f === 0) { Q[o] = P[a * 3]; Q[o + 1] = P[a * 3 + 1]; Q[o + 2] = P[a * 3 + 2]; continue; }
+      if (f === 0) { Q[o] = Ps[a * 3]; Q[o + 1] = Ps[a * 3 + 1]; Q[o + 2] = Ps[a * 3 + 2]; continue; }
       const i0 = Math.max(0, a - 1) * 3, i1 = a * 3, i2 = Math.min(n - 1, a + 1) * 3, i3 = Math.min(n - 1, a + 2) * 3;
       const f2 = f * f, f3 = f2 * f;
       const w0 = -0.5 * f3 + f2 - 0.5 * f, w1 = 1.5 * f3 - 2.5 * f2 + 1, w2 = -1.5 * f3 + 2 * f2 + 0.5 * f, w3 = 0.5 * f3 - 0.5 * f2;
-      for (let c = 0; c < 3; c++) Q[o + c] = w0 * P[i0 + c] + w1 * P[i1 + c] + w2 * P[i2 + c] + w3 * P[i3 + c];
+      for (let c = 0; c < 3; c++) Q[o + c] = w0 * Ps[i0 + c] + w1 * Ps[i1 + c] + w2 * Ps[i2 + c] + w3 * Ps[i3 + c];
     }
+    // curvature of the smoothed line, over a stencil of 3 samples each side (a stable second difference)
+    const W = 3, hh = 1 / (W * W * h * h);
+    for (let j = 0; j < ms; j++) {
+      const o = j * 3;
+      if (j < W || j >= ms - W) { K[o] = K[o + 1] = K[o + 2] = 0; continue; }
+      K[o] = (Q[o + 3 * W] - 2 * Q[o] + Q[o - 3 * W]) * hh;
+      K[o + 1] = (Q[o + 3 * W + 1] - 2 * Q[o + 1] + Q[o - 3 * W + 1]) * hh;
+      K[o + 2] = (Q[o + 3 * W + 2] - 2 * Q[o + 2] + Q[o - 3 * W + 2]) * hh;
+    }
+    this._occlusion(n, ms, t);
+
     const cache = this.cache || (this.cache = new Int8Array(this.ms));
-    const pos = this.pos, nor = this.nor, mm = this.mm;
+    const pos = this.pos, nor = this.nor, mm = this.mm, rg = this.rg, oc = this.oc, ocRing = this.ocRing;
     const TB = this.tables || (this.tables = makeTables());
     let written = 0, first = ms;
     for (let j = 0; j < ms; j++) {
       const a = Math.floor(j / SUB), f = (j - a * SUB) / SUB, b = Math.min(n - 1, a + 1), o = j * 3;
+      const base = j * RING;
+      // how much the other coils shut this ring in (cheap, and it changes as later coils land)
+      for (let k = 0; k < RING; k++) { const v = (base + k) * 3; oc[v] = ocRing[o]; oc[v + 1] = ocRing[o + 1]; oc[v + 2] = ocRing[o + 2]; }
       const final = fN[a] && fN[b];
       if (final && cache[j] === 1) continue;
       cache[j] = final ? 1 : 0;
@@ -187,7 +296,9 @@ export class FroyoRope {
       const Bx = ty * Nz - tz * Ny, By = tz * Nx - tx * Nz, Bz = tx * Ny - ty * Nx;
       const r = rN[a] * (1 - f) + rN[b] * f, ss = sN[a] * (1 - f) + sN[b] * f;
       // landed coils slump: wider and lower, flattened along the vertical
-      const flat = ss * (0.35 + 0.65 * (1 - Math.abs(ty)));
+      // (a rope going straight up or down stays round, so the flattening axes never matter where they are undefined)
+      const vert = Math.min(1, Math.max(0, (Math.abs(ty) - 0.7) / 0.25)), iso = vert * vert * (3 - 2 * vert);
+      const flat = ss * (0.35 + 0.65 * (1 - Math.abs(ty))) * (1 - iso);
       const ax = 1 + (FX - 1) * flat, ay = 1 + (FY - 1) * flat;
       let Ux = -ty * tx, Uy = 1 - ty * ty, Uz = -ty * tz;
       let ul = Math.hypot(Ux, Uy, Uz);
@@ -196,31 +307,29 @@ export class FroyoRope {
       const Sx = Uy * tz - Uz * ty, Sy = Uz * tx - Ux * tz, Sz = Ux * ty - Uy * tx;
       const nS = Nx * Sx + Ny * Sy + Nz * Sz, nU = Nx * Ux + Ny * Uy + Nz * Uz;
       const bS = Bx * Sx + By * Sy + Bz * Sz, bU = Bx * Ux + By * Uy + Bz * Uz;
-      const A = 0.08 * (1 - 0.25 * ss), A2 = 0.018;
-      const s = j * h, tw = s * 3.0 * RIDGES, tws = s * TWIST_RATE;
-      const cw = Math.cos(tw), sw = Math.sin(tw), c2w = Math.cos(2 * tw), s2w = Math.sin(2 * tw);
-      const cm0 = Math.cos(tws), sm0 = Math.sin(tws);
+      // the star's lobes fade out as the rope thins to the point of the tip (nothing for a ridge to be on)
+      const thin = Math.min(1, Math.max(0, (r - 0.0022) / 0.0042));
+      const A = 0.15 * (1 - 0.2 * ss) * thin * thin * (3 - 2 * thin);
+      const s = j * h, rw = 12 * s, cw = Math.cos(rw), sw = Math.sin(rw);
+      const tws = twistAngle(s), cm0 = Math.cos(tws), sm0 = Math.sin(tws);
       const px = Q[o], py = Q[o + 1], pz = Q[o + 2];
       // in a bend tighter than the rope is thick, the inside of the bend is squashed instead of folding over
-      let kx = 0, ky = 0, kz = 0, kmax = Infinity;
-      if (j > 0 && j < ms - 1) {
-        kx = (Q[o + 3] - 2 * px + Q[o - 3]) / (h * h); ky = (Q[o + 4] - 2 * py + Q[o - 2]) / (h * h); kz = (Q[o + 5] - 2 * pz + Q[o - 1]) / (h * h);
-        const kl = Math.hypot(kx, ky, kz);
-        if (kl > 1e-6) { kx /= kl; ky /= kl; kz /= kl; kmax = 0.82 / kl; }
-      }
-      const base = j * RING;
+      let kx = K[o], ky = K[o + 1], kz = K[o + 2], kmax = Infinity;
+      const kl = Math.hypot(kx, ky, kz);
+      if (kl > 1e-6) { kx /= kl; ky /= kl; kz /= kl; kmax = 0.9 / kl; }
       for (let k = 0; k < RING; k++) {
         const c = TB.c[k], sn = TB.s[k];
-        // cos(R(ph + tw)) and cos(2R(ph + tw)) from the tables
-        const cr = TB.cR[k] * cw - TB.sR[k] * sw, sr = TB.sR[k] * cw + TB.cR[k] * sw;
-        const c2r = TB.c2R[k] * c2w - TB.s2R[k] * s2w, s2r = TB.s2R[k] * c2w + TB.c2R[k] * s2w;
-        const fr = 1 + A * cr - A2 * c2r, fp = -A * RIDGES * sr + 2 * A2 * RIDGES * s2r;
+        // the star: |sin(4 (phi + 3 s))| with its V rounded off, so lobes are round and the grooves between them narrow
+        const sx = TB.s4[k] * cw + TB.c4[k] * sw, cx = TB.c4[k] * cw - TB.s4[k] * sw;
+        const ab = Math.sqrt(sx * sx + EPS * EPS);
+        const crest = (ab - EPS) / ABN;
+        const fr = 1 + A * (crest - MU), fp = A * (LOBES / 2) * sx * cx / ab / ABN;
         const os = c * nS + sn * bS, ou = c * nU + sn * bU;
         const dos = -sn * nS + c * bS, dou = -sn * nU + c * bU;
         const qs = os * fr * ax * r, qu = ou * fr * ay * r;
-        const v = (base + k) * 3;
+        const vi = base + k, v = vi * 3;
         let ox = qs * Sx + qu * Ux, oy = qs * Sy + qu * Uy, oz = qs * Sz + qu * Uz;
-        const ik = ox * kx + oy * ky + oz * kz, k0 = kmax * 0.55;
+        const ik = ox * kx + oy * ky + oz * kz, k0 = kmax * 0.6;
         if (ik > k0) { const cut = ik - (k0 + (kmax - k0) * Math.tanh((ik - k0) / (kmax - k0))); ox -= kx * cut; oy -= ky * cut; oz -= kz * cut; }
         pos[v] = px + ox;
         pos[v + 1] = py + oy;
@@ -232,9 +341,10 @@ export class FroyoRope {
         const wx = ns * Sx + nu * Ux, wy = ns * Sy + nu * Uy, wz = ns * Sz + nu * Uz;
         const wl = Math.hypot(wx, wy, wz) || 1;
         nor[v] = wx / wl; nor[v + 1] = wy / wl; nor[v + 2] = wz / wl;
+        rg[vi] = crest;
         // twist: the two flavours side by side, winding slowly along the rope
         const cm = c * cm0 - sn * sm0;
-        mm[base + k] = cm > 0.22 ? 1 : cm < -0.22 ? 0 : 0.5 + cm / 0.44;
+        mm[vi] = Math.min(1, Math.max(0, 0.5 + 0.9 * cm));
       }
     }
     this.written = written;
@@ -245,19 +355,69 @@ export class FroyoRope {
       pos[c] = Q[0] - tx / l * rad[0] * 0.3; pos[c + 1] = Q[1] - ty / l * rad[0] * 0.3; pos[c + 2] = Q[2] - tz / l * rad[0] * 0.3;
       nor[c] = -tx / l; nor[c + 1] = -ty / l; nor[c + 2] = -tz / l;
       mm[this.ms * RING] = 0.5;
+      rg[this.ms * RING] = 1;
     }
     const g = this.geometry;
     g.setDrawRange(0, RING * 3 + (ms - 1) * RING * 6);
-    // upload only what changed (the rope still moving sits at the end), plus the cap
-    for (const [name, size] of [['position', 3], ['normal', 3], ['m', 1]]) {
+    // upload only what changed (the rope still moving sits at the end), plus the cap; the occlusion changes anywhere
+    for (const [name, size] of [['position', 3], ['normal', 3], ['m', 1], ['rg', 1]]) {
       const at = g.attributes[name];
       at.clearUpdateRanges();
       if (first < ms) at.addUpdateRange(first * RING * size, (ms - first) * RING * size);
       at.addUpdateRange(this.ms * RING * size, size);
       at.needsUpdate = true;
     }
+    g.attributes.oc.clearUpdateRanges();
+    g.attributes.oc.addUpdateRange(0, ms * RING * 3);
+    g.attributes.oc.needsUpdate = true;
     // the ring-index winding may face either way depending on frame handedness: keep the visible side outward
     if (this._wind === undefined) this._wind = this._checkWinding(n);
+  }
+
+  // Occlusion per ring: the landed coils (and the paper) around it, as one vector whose direction points at them and
+  // whose length is how much of the sky they cover (spheres of the rope's radius: (r / d)^2, summed, the way a cheap
+  // analytic occluder works). The vertex shader dots it with the vertex normal.
+  _occlusion(n, ms, t) {
+    const Ps = this.Ps, rec = this.rec, rad = this.rN, frozenT = rec.frozenT, { FX, FY } = rec.params;  // eslint-disable-line
+    const CELL = 0.03, grid = this.grid, key = (i, j, k) => ((i + 256) * 512 + (j + 256)) * 512 + (k + 256);
+    grid.clear();
+    for (let i = 0; i < n; i++) {
+      if (frozenT[i] > t) continue;
+      const kk = key(Math.floor(Ps[i * 3] / CELL), Math.floor(Ps[i * 3 + 1] / CELL), Math.floor(Ps[i * 3 + 2] / CELL));
+      let a = grid.get(kk); if (!a) grid.set(kk, a = []); a.push(i);
+    }
+    const Q = this.Q, out = this.ocRing, rN = this.rN;
+    for (let j = 0; j < ms; j++) {
+      const o = j * 3, cx = Q[o], cy = Q[o + 1], cz = Q[o + 2], a = j / SUB, rj = rN[Math.min(n - 1, Math.round(a))];
+      let ox = 0, oy = 0, oz = 0;
+      const ci = Math.floor(cx / CELL), cj = Math.floor(cy / CELL), ck = Math.floor(cz / CELL);
+      for (let gi = ci - 1; gi <= ci + 1; gi++) for (let gj = cj - 1; gj <= cj + 1; gj++) for (let gk = ck - 1; gk <= ck + 1; gk++) {
+        const L = grid.get(key(gi, gj, gk)); if (!L) continue;
+        for (let m = 0; m < L.length; m++) {
+          const i = L[m];
+          if (Math.abs(i - a) < AO_SKIP) continue;
+          const dx = Ps[i * 3] - cx, dy = Ps[i * 3 + 1] - cy, dz = Ps[i * 3 + 2] - cz;
+          const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          if (d > AO_R || d < 1e-6) continue;
+          const rq = rad[i], w = Math.min(1, (rq / Math.max(d - rj, 0.7 * rq)) ** 2) * 0.62;
+          ox += dx / d * w; oy += dy / d * w; oz += dz / d * w;
+        }
+      }
+      // the paper: the cup wall shuts in whatever lies against it
+      if (cy < CUP.H) {
+        const rho = Math.hypot(cx, cz);
+        if (rho > 1e-4) {
+          const gap = rIn(cy) - rho - rj * FX;
+          const w = 0.7 * Math.max(0, 1 - gap / (1.3 * rj));
+          ox += cx / rho * w; oz += cz / rho * w;
+        }
+        const gapF = cy - CUP.ZB - rj * FY;
+        oy -= 0.7 * Math.max(0, 1 - gapF / (1.3 * rj));
+      }
+      const l = Math.hypot(ox, oy, oz);
+      if (l > 1.15) { const s = 1.15 / l; ox *= s; oy *= s; oz *= s; }
+      out[o] = ox; out[o + 1] = oy; out[o + 2] = oz;
+    }
   }
 
   _checkWinding(n) {
