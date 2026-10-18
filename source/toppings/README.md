@@ -15,7 +15,7 @@ ellipsoids), chocolate chunks, brownies, cookies, granola.
 lib.py       the kit: noise, SDF primitives, meshing, per-piece AO, GLB writer      (do not change; add helpers to your module)
 fruit.py     fresh fruit            PIECES = { key: dict(fn=, n=, heap=) }
 candy.py     candy
-baked.py     baked / crunchy / warm
+baked.py, baked2.py   baked / crunchy / warm (two files so two people can work at once)
 heap.py      rigid-body heaps (Blender)       heaps.py   picks how many pieces fill a bowl
 ../build_toppings.py                           builds everything / a subset
 ../dev/pieces.mjs                              renders the pieces lab to a PNG

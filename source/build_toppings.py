@@ -19,10 +19,11 @@ import lib  # noqa: E402
 
 def registry():
     import baked
+    import baked2
     import candy
     import fruit
     reg = {}
-    for m in (fruit, candy, baked):
+    for m in (fruit, candy, baked, baked2):
         reg.update(m.PIECES)
     return reg
 
