@@ -334,3 +334,80 @@ export function glbPieces(gltfScene) {
   });
   return out;
 }
+
+// ====================================================================================================================
+// The modelled toppings (source/toppings, build_toppings.py -> toppings.glb). Each piece carries per vertex
+//   color  = albedo (linear rgb) + roughness in alpha
+//   pdata  = (its own ambient occlusion, how translucent it is, specular strength)
+// and one material per class of surface reads them: matte (baked and dry), wet (cut fruit), candy (glazed, hard
+// shells), choc (chocolate), jelly (gummies).
+import { installWrap, NOISE_GLSL } from './shade.js';
+
+const CLASSES = {
+  matte: { cc: 0, ccr: 0.5, spec: 0.45, bump: [850, 0.2] },
+  wet: { cc: 0.55, ccr: 0.1, spec: 0.75, bump: [1400, 0.05] },
+  candy: { cc: 0.95, ccr: 0.04, spec: 1.0, bump: [0, 0] },
+  choc: { cc: 0.5, ccr: 0.2, spec: 0.7, bump: [1100, 0.05] },
+  jelly: { cc: 0.9, ccr: 0.06, spec: 1.0, bump: [600, 0.04] },
+};
+const _mats = {};
+export function toppingMaterial(cls = 'matte') {
+  if (_mats[cls]) return _mats[cls];
+  installWrap();
+  const P = CLASSES[cls] || CLASSES.matte;
+  const m = new THREE.MeshPhysicalMaterial({
+    color: '#ffffff', roughness: 1, metalness: 0, vertexColors: true, specularIntensity: P.spec,
+    clearcoat: P.cc, clearcoatRoughness: P.ccr,
+  });
+  m.defines = { WRAPLIGHT: '' };
+  const uBump = { value: new THREE.Vector2(P.bump[0], P.bump[1]) };
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uBump = uBump;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec3 pdata;\nvarying vec3 vData;\nvarying vec3 vLocal;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvData = pdata; vLocal = position;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vData;\nvarying vec3 vLocal;\nuniform vec2 uBump;\n' + NOISE_GLSL)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        #ifdef USE_COLOR_ALPHA
+          float vRough = vColor.a; diffuseColor.a = 1.0;
+        #else
+          float vRough = 0.6;
+        #endif
+        g_wrap = vData.y * 0.6;
+        g_tint = mix(vec3(1.0), clamp(normalize(diffuseColor.rgb + 0.04) * 1.6, 0.0, 1.8), vData.y);`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = clamp(vRough, 0.04, 1.0);')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        if (uBump.y > 0.0) {
+          vec3 q = vLocal * uBump.x;
+          vec3 g = vec3(vnoise(q) - 0.5, vnoise(q + 19.0) - 0.5, vnoise(q + 43.0) - 0.5);
+          normal = normalize(normal + uBump.y * g);
+        }`)
+      .replace('#include <aomap_fragment>', `#include <aomap_fragment>
+        reflectedLight.indirectDiffuse *= vData.x;
+        reflectedLight.indirectSpecular *= vData.x * vData.z;
+        reflectedLight.directDiffuse *= mix(1.0, vData.x, 0.55);
+        reflectedLight.directSpecular *= vData.z * mix(1.0, vData.x, 0.8);`);
+  };
+  m.customProgramCacheKey = () => 'topping-' + cls;
+  return (_mats[cls] = m);
+}
+
+// the modelled pieces: key -> [{ geo, r, cls, flat, jelly }] (geometry centred, metres)
+export function modelledPieces(gltfScene) {
+  const out = {};
+  gltfScene.updateWorldMatrix(true, true);
+  gltfScene.traverse(ob => {
+    if (!ob.isMesh) return;
+    const m = /^(.*)_(\d+)$/.exec(ob.name);
+    if (!m) return;
+    const g = ob.geometry.clone();
+    g.applyMatrix4(ob.matrixWorld);
+    if (g.attributes._data) { g.setAttribute('pdata', g.attributes._data); g.deleteAttribute('_data'); }
+    if (!g.attributes.pdata) { const n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = 1; a[i * 3 + 2] = 1; } g.setAttribute('pdata', new THREE.BufferAttribute(a, 3)); }
+    g.computeBoundingSphere();
+    const u = ob.userData || {};
+    (out[m[1]] = out[m[1]] || []).push({ geo: g, r: u.r || g.boundingSphere.radius, cls: u.cls || 'matte', flat: !!u.flat, jelly: !!u.jelly, size: u.size });
+  });
+  return out;
+}

@@ -1,2 +1,4 @@
 __pycache__/
 site/_lab.html
+site/_pieces.html
+site/assets/models/_*

@@ -16,12 +16,15 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildCup, CUP, RIM_IN, rIn } from './cup.js';
 import { FroyoRope } from './pour.js';
 import * as PC from './bar-pieces.js';
+import { bowlGeometry, buildHeap } from './bar-heap.js';
+import { Post } from './post.js';
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 const lerp = (a, b, t) => a + (b - a) * t;
+const isTouch = () => matchMedia('(pointer: coarse)').matches;
 
 // ------------------------------------------------------------------ the bar, in line order
 // kind: pieces | sauce | dollop | rolls | oil.  tool: spoon | tongs | scoop | soup | ladle | disher | metal | jar | jug
@@ -80,41 +83,52 @@ const SELF = BAR.filter(b => b.zone !== 'warm');
 const WARM = BAR.filter(b => b.zone === 'warm');
 
 export async function initBar(o) {
-  const { canvas, froyoRec, froyoMaterial, cupMats, toppingsScene, roomScene, dpr, reduced, ui } = o;
+  const { canvas, froyoRec, froyoMaterial, cupMats, toppingsScene, modelledScene, roomScene, dpr, reduced, ui, heaps = {} } = o;
 
   // ------------------------------------------------------------------ renderer and room
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(dpr());
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.AgXToneMapping;
+  // food has to keep its own colours: the neutral tone mapper does not shift hue or wash out saturated albedo
+  renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
   const WALL = new THREE.Color('#d8cfc0');
   scene.background = WALL.clone();
-  scene.fog = new THREE.Fog(WALL, 3.2, 7.5);
+  scene.fog = new THREE.Fog(WALL, 4.2, 9);
   scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.55;
-  const camera = new THREE.PerspectiveCamera(30, 1, 0.02, 12);
+  scene.environmentIntensity = 0.38;
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.03, 8);
 
-  scene.add(new THREE.HemisphereLight('#fff6ea', '#a99c88', 0.62));
-  const key = new THREE.DirectionalLight('#ffe6c4', 2.9);
+  // light: the shop's warm downlights from above and in front, a soft sky, and a cool rim from behind the line that picks
+  // out the edges of the glossy and translucent pieces. Less flat ambient than before: shadows keep their depth.
+  scene.add(new THREE.HemisphereLight('#fff4e6', '#8f8272', 0.42));
+  const key = new THREE.DirectionalLight('#ffe2bd', 3.6);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   Object.assign(key.shadow.camera, { left: -0.85, right: 0.85, top: 0.6, bottom: -0.6, near: 0.2, far: 4 });
-  key.shadow.bias = -0.0004;
-  key.shadow.normalBias = 0.002;
-  key.shadow.radius = 3;
+  key.shadow.bias = -0.0003;
+  key.shadow.normalBias = 0.0015;
+  key.shadow.radius = 3.5;
   scene.add(key, key.target);
-  const fill = new THREE.DirectionalLight('#f2ecff', 0.45);
-  fill.position.set(1.5, 1.2, 2.5);
+  const fill = new THREE.DirectionalLight('#eef0ff', 0.32);
+  fill.position.set(1.5, 1.0, 2.5);
   scene.add(fill);
+  const rim = new THREE.DirectionalLight('#dfe8ff', 0.9);
+  rim.position.set(0.8, 0.9, -1.6);
+  scene.add(rim);
+
+  // ambient occlusion and the tone mapping; the quality drops by itself if the device cannot keep up
+  const post = new Post(renderer, scene, camera, { quality: isTouch() ? 1 : 2 });
+  let ema = 16, slow = 0;
 
   // ------------------------------------------------------------------ materials
   // (built in small slices that give the page back between them: this runs while you are still scrolling the pour)
   const mats = await makeMaterials(roomScene);
   const pieceMat = PC.pieceMaterial(), jellyMat = PC.pieceMaterial({ jelly: true });
+  const matFor = v => v.cls ? PC.toppingMaterial(v.cls) : v.jelly ? jellyMat : pieceMat;
 
   // ------------------------------------------------------------------ layout
   const items = [];
@@ -138,15 +152,18 @@ export async function initBar(o) {
 
   // ------------------------------------------------------------------ bowls, heaps, labels, utensils
   const glb = PC.glbPieces(toppingsScene);
+  const modelled = modelledScene ? PC.modelledPieces(modelledScene) : {};
   const kataifi = glb.kataifi || [];
   const pickables = [];
   let built = 0;
   for (const it of items) {
     if (++built % 3 === 0) await idle();
-    it.variants = variantsFor(it.def, glb);
+    it.variants = variantsFor(it.def, glb, modelled);
+    it.heapData = heaps[it.def.key] && it.variants.length === heaps[it.def.key].variants ? heaps[it.def.key] : null;
     it.group = new THREE.Group();
     it.group.position.set(it.x, 0, it.z);
     scene.add(it.group);
+    it.matFor = matFor;
     buildStation(it, mats, pieceMat, jellyMat);
     it.group.traverse(m => { if (m.isMesh) { m.userData.item = it; pickables.push(m); } });
     it.label = buildLabel(it, mats);
@@ -169,7 +186,7 @@ export async function initBar(o) {
   cup.add(layer);
   const surf = new Surface(froyoRec);
   const froyoPos0 = froyo.pos.slice(), froyoNor0 = froyo.nor.slice();
-  const nFroyoV = froyo.ms * 48 + 1;
+  const nFroyoV = froyo.vertCount;
   surf.fromMesh(froyo.pos, nFroyoV);
   surf.f = surf.base.slice();
   const squashes = [];                       // pistachio scoops pressing the soft tip down: [x, z, r, yTop]
@@ -340,7 +357,7 @@ export async function initBar(o) {
       const which = [];
       for (let i = 0; i < n; i++) { const vi = i % vs.length; which.push(vi); per[vi]++; }
       const ims = vs.map((v, vi) => {
-        const im = new THREE.InstancedMesh(v.geo, v.jelly ? jellyMat : pieceMat, Math.max(1, per[vi]));
+        const im = new THREE.InstancedMesh(v.geo, matFor(v), Math.max(1, per[vi]));
         im.count = per[vi];
         im.castShadow = !def.fine; im.receiveShadow = true; im.frustumCulled = false;
         obj.add(im);
@@ -781,7 +798,12 @@ export async function initBar(o) {
     for (const d of dollops) d.step(dt);
     for (const s of sauces) s.step(dt);
     let moving = Math.abs(target - shown) > 0.00005 || drag.on || glide || Math.abs(coast) > 0.004 || active.length || flying.length || queue.length || dollops.some(d => d.t >= 0 && d.t < 1) || sauces.some(s => s.busy);
-    renderer.render(scene, camera);
+    post.render();
+    // frame governor: a device that cannot hold ~35 fps while the bar moves gives up the occlusion, then the soft shadows
+    if (moving && dt < 0.09) {
+      ema += (dt * 1000 - ema) * 0.08;
+      if (ema > 29 && post.quality > 0 && ++slow > 45) { post.setQuality(post.quality - 1); post.setSize(canvas.clientWidth, canvas.clientHeight); slow = 0; ema = 16; }
+    }
     if (moving && visible) raf = requestAnimationFrame(frame);
     if (version !== shownVersion) { shownVersion = version; ui.onChange && ui.onChange(added.map(a => a.item.def)); }
   }
@@ -792,6 +814,7 @@ export async function initBar(o) {
     if (!w || !h) return;
     renderer.setPixelRatio(dpr());
     renderer.setSize(w, h, false);
+    post.setSize(w, h);
     camera.aspect = w / h;
     camera.fov = w / h < 1 ? 46 : 33;
     camera.updateProjectionMatrix();
@@ -819,8 +842,8 @@ export async function initBar(o) {
     add(key) { add(items.find(i => i.def.key === key)); },
     undo, clear,
     get items() { return items; },
-    scene, camera, render: () => renderer.render(scene, camera),
-    jump(p) { target = shown = clamp(p); place(shown); renderer.render(scene, camera); },
+    scene, camera, post, renderer, render: () => post.render(),
+    jump(p) { target = shown = clamp(p); place(shown); post.render(); },
     get progress() { return shown; },
     get busy() { return active.length + flying.length + queue.length; },
     step(n = 1, dt = 1 / 60) { for (let i = 0; i < n; i++) { active = active.filter(a => a.step(dt)); pump(); stepFlying(dt); dollops.forEach(d => d.step(dt)); sauces.forEach(s => s.step(dt)); } place(shown); if (version !== shownVersion) { shownVersion = version; ui.onChange && ui.onChange(added.map(a => a.item.def)); } },
@@ -1262,49 +1285,11 @@ function buildRoom(scene, M, LEN, W0, afterPans, X_REG, roomScene) {
 }
 
 // ------------------------------------------------------------------ one station: bowl, heap, label
-function variantsFor(def, glb) {
+function variantsFor(def, glb, modelled) {
+  if (modelled[def.key]) return modelled[def.key].map(v => ({ ...v }));
   if (def.glb && glb[def.glb]) return glb[def.glb].map(v => ({ ...v, flat: ['rainbow', 'biscoff', 'nonpareil'].includes(def.glb) }));
   if (def.make) return [1, 2, 3, 4].map(s => def.make(s * 17 + def.key.length));
   return [];
-}
-
-function bowlGeometry(type) {
-  if (type === 'tray') {
-    const g = new THREE.BoxGeometry(0.2, 0.035, 0.14, 4, 1, 4);
-    g.translate(0, 0.0175, 0);
-    return g;
-  }
-  const hob = type === 'hobnail', R = hob ? 0.095 : 0.102, H = hob ? 0.085 : 0.07, base = hob ? 0.055 : 0.06;
-  const prof = [];
-  const N = 22;
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    prof.push(new THREE.Vector2(base + (R - base) * Math.sin(t * Math.PI / 2) ** (hob ? 0.8 : 1.2), t * H));
-  }
-  for (let i = N; i >= 0; i--) {
-    const t = i / N;
-    prof.push(new THREE.Vector2(Math.max(0, base + (R - base) * Math.sin(t * Math.PI / 2) ** (hob ? 0.8 : 1.2) - 0.006), t * H + 0.006 * (1 - t) + (i === 0 ? 0.006 : 0)));
-  }
-  const g = new THREE.LatheGeometry(prof, 72);
-  const p = g.attributes.position, seed = Math.random() * 10;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), a = Math.atan2(z, x), r = Math.hypot(x, z), t = y / H;
-    let dr = 0, dy = 0;
-    if (!hob) {
-      // the organic bowls: a soft, uneven, wavy rim
-      dr = r * 0.06 * Math.sin(a * 3 + seed) * t * t;
-      dy = 0.007 * Math.sin(a * 5 + seed * 2) * t * t;
-    } else if (r > base - 0.001 && t > 0.1 && t < 0.92) {
-      // hobnail: rows of little beads on the outside
-      const rowT = t * 9, row = Math.round(rowT);
-      const col = a * 13 / Math.PI + (row % 2) * 0.5;
-      const d = Math.hypot(rowT - row, (col - Math.round(col)) * 0.9);
-      if (r > (base + (R - base) * Math.sin(t * Math.PI / 2) ** 0.8) - 0.003) dr = Math.max(0, 0.0028 * (1 - d * d * 4));
-    }
-    p.setXYZ(i, x * (1 + dr / r), y + dy, z * (1 + dr / r));
-  }
-  g.computeVertexNormals();
-  return g;
 }
 
 function buildStation(it, M, pieceMat, jellyMat) {
@@ -1407,6 +1392,17 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
   // a heap of pieces: a mound filled in the topping's own colour, and the pieces themselves over it
   const vs = it.variants;
   if (!vs.length) return grp;
+  if (it.heapData) {
+    // settled by physics (bar-heap.js): the pieces rest on a dark, dome-shaped fill whose gaps stay in shadow
+    const d = it.heapData;
+    const base = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 14, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: new THREE.Color(def.heap).multiplyScalar(0.42), roughness: 0.9 }));
+    base.scale.set(d.rw, Math.max(0.004, d.yc - d.ye + 0.004), d.rw);
+    base.position.y = d.ye + 0.002;
+    base.receiveShadow = true;
+    grp.add(base, buildHeap(d, vs, it.matFor));
+    it.heapTop = d.top;
+    return grp;
+  }
   const heapCol = new THREE.Color(def.heap);
   const mound = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 14, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: heapCol, roughness: 0.8 }));
   const MH = H * 0.42;

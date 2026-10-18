@@ -9,6 +9,7 @@
 //   - a fine pore / grain normal
 
 import * as THREE from 'three';
+import { NOISE_GLSL, installWrap } from './shade.js';
 
 // The shop's six flavours on three machines (docs/ILIOS-FIELD-NOTES.md): each machine pours its left flavour, a twist of
 // the two, and its right flavour.
@@ -39,19 +40,11 @@ export function setFlavorUniforms(f) {
 
 const HASH = 'fract(sin(dot(c, vec3(12.9898, 78.233, 37.719))) * 43758.5453)';
 
-// `m` is the share of the paste that came from the second half of the nozzle (a twist's two flavours),
-// carried with the simulation; vanilla bean specks are fixed to the froyo (cup-local position)
 const COMMON_GLSL = `
   varying float vM;
   varying vec3 vLocal;
   varying float vAO;
-  float h31(vec3 c) { return ${HASH}; }
-  float vnoise(vec3 p) {
-    vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(mix(h31(i), h31(i + vec3(1,0,0)), f.x), mix(h31(i + vec3(0,1,0)), h31(i + vec3(1,1,0)), f.x), f.y),
-               mix(mix(h31(i + vec3(0,0,1)), h31(i + vec3(1,0,1)), f.x), mix(h31(i + vec3(0,1,1)), h31(i + vec3(1,1,1)), f.x), f.y), f.z);
-  }
-`;
+` + NOISE_GLSL;
 
 const FLAVOR_GLSL = `
   {
@@ -69,6 +62,7 @@ const FLAVOR_GLSL = `
     float sp = mix(uSpeckA, uSpeckB, mm) * step(0.9965, h);
     fc = mix(fc, vec3(0.05, 0.036, 0.028), sp * 0.9);
     diffuseColor.rgb = fc;
+    g_wrap = 0.45; g_tint = vec3(1.0, 0.86, 0.72);
   }`;
 
 // aerated: a fine, even grain, plus the odd tiny pit where a bubble broke the surface (object-space noise, no seams)
@@ -80,13 +74,6 @@ const BUMP_GLSL = `
     vec3 g2 = vec3(vnoise(q2 + 5.0) - 0.5, vnoise(q2 + 23.0) - 0.5, vnoise(q2 + 61.0) - 0.5);
     normal = normalize(normal + 0.075 * g + 0.045 * g2);
   }`;
-
-// diffuse light wraps past the terminator and picks up a warm, scattered fringe there
-const WRAP_PATCH = `
-  vec3 irradiance = dotNL * directLight.color;
-  float wrapNL = saturate((dot(geometryNormal, directLight.direction) + 0.45) / 1.45);
-  vec3 irradianceD = wrapNL * wrapNL * directLight.color * mix(vec3(1.0, 0.86, 0.72), vec3(1.0), smoothstep(0.0, 0.55, dotNL));
-`;
 
 function patch(mat) {
   mat.onBeforeCompile = sh => {
@@ -112,23 +99,6 @@ function patch(mat) {
   mat.customProgramCacheKey = () => 'froyo2';
 }
 
-// three's physical light function is a shader chunk: add a copy with the diffuse term wrapped, used only by materials
-// that define FROYO (once, before the first compile)
-let wrapped = false;
-function installWrap() {
-  if (wrapped) return;
-  wrapped = true;
-  const k = THREE.ShaderChunk.lights_physical_pars_fragment;
-  const from = '\tvec3 irradiance = dotNL * directLight.color;', diff = 'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );';
-  const a = k.indexOf('void RE_Direct_Physical'), b = k.indexOf('void RE_IndirectDiffuse_Physical');
-  const def = '#define RE_Direct\t\t\t\tRE_Direct_Physical';
-  const fn = k.slice(a, b);
-  if (a < 0 || !fn.includes(from) || !fn.includes(diff) || !k.includes(def)) { console.warn('froyo: three light chunk changed, no subsurface wrap'); return; }
-  const froyoFn = fn.replace('void RE_Direct_Physical', 'void RE_Direct_Froyo').replace(from, WRAP_PATCH).replace(diff, 'reflectedLight.directDiffuse += irradianceD * BRDF_Lambert( material.diffuseColor );');
-  THREE.ShaderChunk.lights_physical_pars_fragment = (k.slice(0, b) + '\n#ifdef FROYO\n' + froyoFn + '#endif\n' + k.slice(b))
-    .replace(def, '#ifdef FROYO\n#define RE_Direct\t\t\t\tRE_Direct_Froyo\n#else\n' + def + '\n#endif');
-}
-
 export function makeFroyoMaterial() {
   installWrap();
   const m = new THREE.MeshPhysicalMaterial({
@@ -136,7 +106,7 @@ export function makeFroyoMaterial() {
     sheen: 0.7, sheenRoughness: 0.55, sheenColor: new THREE.Color('#fff0d0'),
     clearcoat: 0.06, clearcoatRoughness: 0.6,
   });
-  m.defines = { FROYO: '' };
+  m.defines = { WRAPLIGHT: '' };
   patch(m);
   return m;
 }

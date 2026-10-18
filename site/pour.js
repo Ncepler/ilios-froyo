@@ -187,6 +187,8 @@ export class FroyoRope {
     this.grid = new Map();
   }
 
+  get vertCount() { return this.ms * RING + 1; }   // vertices of the rope's surface (and the start cap)
+
   // the nozzle, in the cup's frame, at time t
   handAt(t, out = this.hand) { return handAt(this.rec, t, out); }
 

@@ -648,8 +648,14 @@ function setupToppings() {
     if (started || !rec) return;
     started = true;
     try {
-      const [tg, mod] = await Promise.all([load('assets/models/toppings.glb'), import('./bar.js')]);
-      bar = await mod.initBar({ canvas: el, froyoRec: rec, froyoMaterial: froyoMat, cupMats, toppingsScene: tg.scene, roomScene: room, dpr, reduced: RM.matches, ui });
+      // the modelled pieces (source/toppings) and their settled heaps; the older procedural pieces fill in what is not modelled yet
+      const [tg, tm, heaps, mod] = await Promise.all([
+        load('assets/models/toppings.glb'),
+        load('assets/models/toppings-v2.glb').catch(() => null),
+        fetch('assets/bar-heaps.json').then(r => (r.ok ? r.json() : {})).catch(() => ({})),
+        import('./bar.js'),
+      ]);
+      bar = await mod.initBar({ canvas: el, froyoRec: rec, froyoMaterial: froyoMat, cupMats, toppingsScene: tg.scene, modelledScene: tm && tm.scene, heaps, roomScene: room, dpr, reduced: RM.matches, ui });
       root.classList.add('bar-on');
       // keyboard: every topping is a button too
       keys.innerHTML = mod.BAR.map(d => `<li><button type="button" data-key="${d.key}">Add ${d.label}</button></li>`).join('');
