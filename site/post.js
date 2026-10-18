@@ -17,7 +17,9 @@ class AOPass extends GTAOPass {
   overrideVisibility() {
     super.overrideVisibility();
     this.scene.traverse(o => {
-      if (o.isMesh && o.material && (o.material.transparent || o.material.userData.noAO)) o.visible = false;
+      if (!o.isMesh || !o.material) return;
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      if (ms.every(m => m.transparent || (m.userData && m.userData.noAO))) o.visible = false;
     });
   }
 }
