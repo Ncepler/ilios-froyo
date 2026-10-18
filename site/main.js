@@ -465,6 +465,7 @@ function pose(p) {
     camTgt.y += (camY - camTgt.y) * w;
     camPos.y += (camY - 0.325) * w;
   }
+  if (window.__ilios && window.__ilios.free) return;   // test hook: a camera set from outside stays put
   fitPortrait(camPos, camTgt, p);
   camera.position.copy(camPos);
   camera.lookAt(camTgt);
@@ -689,9 +690,12 @@ function setupToppings() {
   const list = $('#barlist'), tip = $('#bartip'), stageEl = $('#barstage'), keys = $('#barkeys');
   let bar = null, started = false;
   const progress = () => { const r = section.getBoundingClientRect(); return clamp(-r.top / Math.max(1, r.height - innerHeight)); };
+  // phones: you walk the bar by swiping sideways, not by scrolling down (the section is one screen tall)
+  const SW = matchMedia('(pointer: coarse), (max-width: 820px)');
   const ui = {
+    onSwipe() { stageEl.classList.add('swiped'); },
     onProgress(p, zone) {
-      intro.classList.toggle('away', p > 0.035);
+      intro.classList.toggle('away', p > (SW.matches ? 0.008 : 0.035));
       line.forEach(li => li.classList.toggle('on', li.dataset.zone === zone));
       end.classList.toggle('on', zone === 'pay');
     },
@@ -709,6 +713,7 @@ function setupToppings() {
       tip.classList.add('on');
     },
   };
+  root.classList.toggle('bar-swipe', SW.matches);
   const start = async () => {
     if (started || !rec) return;
     started = true;
@@ -721,9 +726,13 @@ function setupToppings() {
       keys.addEventListener('click', e => { const b = e.target.closest('button'); if (b) bar.add(b.dataset.key); });
       $('#barundo').addEventListener('click', () => bar.undo());
       $('#barclear').addEventListener('click', () => bar.clear());
-      const onScroll = () => bar.setProgress(progress());
+      const onScroll = () => { if (!SW.matches) bar.setProgress(progress()); };
       addEventListener('scroll', onScroll, { passive: true });
-      onScroll();
+      const mode = () => { root.classList.toggle('bar-swipe', SW.matches); bar.setSwipe(SW.matches); if (!SW.matches) onScroll(); };
+      SW.addEventListener('change', mode);
+      mode();
+      // the stations in the strip are buttons too
+      line.forEach(li => li.addEventListener('click', () => bar.goTo(li.dataset.zone)));
       window.__bar = bar;
     } catch (e) {
       console.warn('Topping bar unavailable', e);

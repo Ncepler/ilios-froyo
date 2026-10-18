@@ -681,15 +681,72 @@ export async function initBar(o) {
     it.group.traverse(m => { if (m.isMesh && m.material && m.material.emissive && m.userData.glow !== undefined) m.material.emissiveIntensity = on ? 0.18 : 0; });
     if (it.label) it.label.position.y = it.label.userData.y + (on ? 0.004 : 0);
   }
-  canvas.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') setHover(pick(e), e); }, { passive: true });
+  canvas.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !drag.on) setHover(pick(e), e); }, { passive: true });
   canvas.addEventListener('pointerleave', () => setHover(null));
-  let down = null;
-  canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+
+  // ------------------------------------------------------------------ swipe (phones): the cup follows your finger
+  // On touch screens the bar is one screen tall and you move along it by dragging sideways (the way you would walk the
+  // line): the world under your finger moves with it, and a flick coasts. Vertical drags are left to the page
+  // (touch-action: pan-y on the canvas), so scrolling past the bar still works.
+  let swipe = false, swiped = false, down = null;
+  const drag = { id: -1, x: 0, p: 0, lx: 0, lt: 0, v: 0, on: false };
+  let coast = 0, glide = null;                  // inertia (progress per second); an eased jump to a station
+  const GAIN = 1.25;                            // a little faster than 1:1: the line is long
+  const _w0 = new THREE.Vector3(), _w1 = new THREE.Vector3();
+  function pxPerP() {
+    // CSS pixels the counter moves across the screen for one unit of progress, measured at the cup
+    cup.updateMatrixWorld(true);
+    cup.getWorldPosition(_w0); _w1.copy(_w0); _w1.x += 0.1;
+    _w0.project(camera); _w1.project(camera);
+    return Math.max(1, Math.abs(_w1.x - _w0.x) * 0.5 * canvas.clientWidth / 0.1 * (X1 - X0));
+  }
+  function endDrag(e) {
+    if (e.pointerId !== drag.id) return;
+    const was = drag.on;
+    drag.id = -1; drag.on = false;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) { /* already released */ }
+    coast = was && e.timeStamp - drag.lt < 90 ? clamp(drag.v, -2.4, 2.4) : 0;
+    wake();
+  }
+  canvas.addEventListener('pointerdown', e => {
+    down = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (!swipe || !e.isPrimary) return;
+    drag.id = e.pointerId; drag.x = e.clientX; drag.p = target; drag.lx = e.clientX; drag.lt = e.timeStamp; drag.v = 0;
+    drag.on = false; coast = 0; glide = null;
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* touch pointers are captured implicitly */ }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!swipe || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.on) {
+      if (Math.abs(dx) < 7) return;               // not yet a drag: could still be a tap
+      drag.on = true; drag.x = e.clientX; drag.p = target; drag.lx = e.clientX; drag.lt = e.timeStamp;
+      if (!swiped) { swiped = true; ui.onSwipe && ui.onSwipe(); }
+      setHover(null);
+      return;
+    }
+    const now = e.timeStamp, dp = -(e.clientX - drag.lx) * GAIN / pxPerP();
+    const dtm = Math.max(1, now - drag.lt);
+    drag.v = 0.7 * drag.v + 0.3 * (dp / dtm * 1000);
+    drag.lx = e.clientX; drag.lt = now;
+    target = shown = clamp(drag.p - (e.clientX - drag.x) * GAIN / pxPerP());
+    wake();
+  }, { passive: true });
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+  // a sideways trackpad or wheel gesture moves along the bar too
+  canvas.addEventListener('wheel', e => {
+    if (!swipe || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    target = shown = clamp(target + e.deltaX * GAIN / pxPerP());
+    glide = null; coast = 0; wake();
+  }, { passive: false });
+
   canvas.addEventListener('pointerup', e => {
     if (!down) return;
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     down = null;
-    if (moved > 10) return;              // a scroll, not a tap
+    if (moved > 10 || drag.on) return;   // a drag or a scroll, not a tap
     const it = pick(e);
     if (it) add(it);
   });
@@ -701,15 +758,29 @@ export async function initBar(o) {
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
     last = now;
     const k = 1 - Math.pow(1 - 0.12, dt * 60);
-    shown += (target - shown) * k;
-    if (Math.abs(target - shown) < 0.00005) shown = target;
+    if (swipe) {
+      // direct: the cup is where your finger left it; a flick coasts and a station chip glides
+      if (glide) {
+        glide.t = Math.min(1, glide.t + dt / glide.d);
+        target = shown = lerp(glide.from, glide.to, ease(glide.t));
+        if (glide.t >= 1) glide = null;
+      } else if (!drag.on && Math.abs(coast) > 0.004) {
+        target = clamp(target + coast * dt);
+        if (target <= 0 || target >= 1) coast = 0;
+        coast *= Math.exp(-dt / 0.42);
+        shown = target;
+      } else if (!drag.on) { coast = 0; shown = target; }
+    } else {
+      shown += (target - shown) * k;
+      if (Math.abs(target - shown) < 0.00005) shown = target;
+    }
     place(shown);
     active = active.filter(a => a.step(dt));
     pump();
     stepFlying(dt);
     for (const d of dollops) d.step(dt);
     for (const s of sauces) s.step(dt);
-    let moving = Math.abs(target - shown) > 0.00005 || active.length || flying.length || queue.length || dollops.some(d => d.t >= 0 && d.t < 1) || sauces.some(s => s.busy);
+    let moving = Math.abs(target - shown) > 0.00005 || drag.on || glide || Math.abs(coast) > 0.004 || active.length || flying.length || queue.length || dollops.some(d => d.t >= 0 && d.t < 1) || sauces.some(s => s.busy);
     renderer.render(scene, camera);
     if (moving && visible) raf = requestAnimationFrame(frame);
     if (version !== shownVersion) { shownVersion = version; ui.onChange && ui.onChange(added.map(a => a.item.def)); }
@@ -734,12 +805,23 @@ export async function initBar(o) {
   try { await renderer.compileAsync(scene, camera); } catch (e) { /* older three/browsers: compiles on first draw */ }
 
   const api = {
-    setProgress(p) { target = clamp(p); wake(); },
+    setProgress(p) { if (swipe) return; target = clamp(p); wake(); },
+    // swipe mode: horizontal drags move along the bar instead of the page's scroll
+    setSwipe(on) { swipe = !!on; coast = 0; glide = null; drag.id = -1; drag.on = false; if (swipe) shown = target; wake(); },
+    // glide to the start of a station of the line ('fruit' | 'candy' | 'warm' | 'pay')
+    goTo(zone) {
+      const cx = items.find(i => i.def.zone === 'candy').x - 0.1 + 0.02;
+      const x = zone === 'fruit' ? X0 : zone === 'candy' ? cx : zone === 'warm' ? selfEnd - COL * 0.2 + 0.02 : X_REG - 0.45 + 0.02;
+      const to = clamp((x - X0) / (X1 - X0));
+      if (swipe) { glide = { from: shown, to, t: 0, d: 0.9 }; coast = 0; } else target = to;
+      wake();
+    },
     add(key) { add(items.find(i => i.def.key === key)); },
     undo, clear,
     get items() { return items; },
     scene, camera, render: () => renderer.render(scene, camera),
     jump(p) { target = shown = clamp(p); place(shown); renderer.render(scene, camera); },
+    get progress() { return shown; },
     get busy() { return active.length + flying.length + queue.length; },
     step(n = 1, dt = 1 / 60) { for (let i = 0; i < n; i++) { active = active.filter(a => a.step(dt)); pump(); stepFlying(dt); dollops.forEach(d => d.step(dt)); sauces.forEach(s => s.step(dt)); } place(shown); if (version !== shownVersion) { shownVersion = version; ui.onChange && ui.onChange(added.map(a => a.item.def)); } },
     get added() { return added.map(a => a.item.def.key); },

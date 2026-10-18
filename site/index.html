@@ -200,6 +200,24 @@ section.s{position:relative;padding:clamp(96px,14vw,180px) var(--gutter)}
 .bar-end .lede{margin-left:auto}
 .bar-end .btns{justify-content:flex-end}
 .bar-end .eyebrow{justify-content:flex-end}
+/* phones: the bar is one screen tall and you swipe sideways along it */
+.only-swipe{display:none}
+.bar-swipe .only-swipe{display:inline}
+.bar-swipe .only-scroll{display:none}
+.bar-swipe .bar{height:auto}
+.bar-swipe .bar-stage{position:relative;height:100vh;height:100svh}
+.bar-swipe .bar-line{pointer-events:auto}
+.bar-swipe .bar-intro{pointer-events:none}
+.bar-line li{cursor:pointer}
+.bar-swipe-hint{display:none;position:absolute;left:50%;top:calc(34% + 56px);z-index:3;transform:translate(-50%,-50%);pointer-events:none;align-items:center;gap:14px;
+  padding:12px 18px;border-radius:999px;background:rgba(241,233,214,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  font:400 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ink);white-space:nowrap;opacity:0;transition:opacity .5s var(--ease-out)}
+.bar-swipe.bar-on .bar-swipe-hint{display:inline-flex;opacity:1}
+.bar-swipe-hint i{width:9px;height:9px;border-top:1.5px solid var(--gold);border-right:1.5px solid var(--gold);animation:nudge 1.5s var(--ease-io) infinite}
+.bar-swipe-hint i:first-child{transform:rotate(-135deg);animation-name:nudgeL}
+@keyframes nudge{0%,100%{translate:0 0;opacity:.35}50%{translate:5px 0;opacity:1}}
+@keyframes nudgeL{0%,100%{translate:0 0;opacity:.35}50%{translate:-5px 0;opacity:1}}
+.bar-stage.swiped .bar-swipe-hint{opacity:0!important}
 .bar-off .bar{height:auto}
 .bar-off .bar-stage{position:relative;height:auto;padding:clamp(96px,14vw,180px) var(--gutter)}
 .bar-off .bar-stage canvas,.bar-off .bar-line,.bar-off .bar-cup,.bar-off .bar-end{display:none}
@@ -377,9 +395,10 @@ footer{position:relative;z-index:1;padding:40px var(--gutter) 46px;display:flex;
       <div class="bar-intro" id="barintro">
         <p class="kicker">The topping bar</p>
         <h2 class="big" id="barh">Top it off.</h2>
-        <p class="lede">Slide your cup down the bar, the way you do in the shop. Tap anything on the counter and it goes on, in the order you pick.</p>
+        <p class="lede"><span class="only-scroll">Slide your cup down the bar, the way you do in the shop.</span><span class="only-swipe">Swipe along the bar, the way you walk it in the shop.</span> Tap anything on the counter and it goes on, in the order you pick.</p>
         <div class="bar-list" id="barlistall"></div>
       </div>
+      <p class="bar-swipe-hint" aria-hidden="true"><i></i>Swipe to walk the bar<i></i></p>
       <ol class="bar-line" id="barline" aria-hidden="true">
         <li data-zone="fruit">Fruit</li><li data-zone="candy">Candy &amp; crunch</li><li data-zone="warm">Warm</li><li data-zone="pay">Pay</li>
       </ol>
