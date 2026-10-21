@@ -36,8 +36,19 @@ export const POUR = {
   LIFT_MIN: CUP.H + 0.006,  // the spout's cap never goes inside the cup
   SWIRL_TURNS: 3.2,
   RHO_END: 0.0050,  // the last turn of the swirl, before the server pulls up into the tip
-  PEAK_T: 0.2,      // seconds spent lifting with the valve part open (draws up the peak)
+  PEAK_T: 0.12,     // seconds spent lifting with the valve part open (draws up the peak)
   PEAK_RISE: 0.105, // m/s, about the speed the rope comes out at that flow, so the peak stands rather than buckles
+  NECK_T: 0.2,      // then this long pulling away while the flow dies: the rope thins to a neck, and breaks there
+  NECK_R: 0.14,     // the rope's radius at the break, as a fraction of its radius
+  NECK_RISE: 0.13,  // m/s, how fast the spout pulls away during that (the rope comes out slower than that, so it stretches)
+  TAPER: 0.42,      // the last turns of the swirl are laid with less flow (a thinner rope), so the swirl narrows to a cone
+  REST: 1.4,        // seconds recorded after the break (nothing moves; the page lowers the cup in this time)
+  TIP_NODES: 6,     // the last 6 nodes (about 13 mm) of the tail stay soft for TIP_HOLD seconds and curl over; the rest sets sooner
+  TIP_HOLD: 0.42,
+  TAIL_HOLD: 0.05,
+  KB_TAIL: 4,       // the loose tail is stiffer than it looks (yield stress): it bends over instead of folding up
+  TAIL_V: 0.25,     // m/s, the fastest it moves
+  DRAG_TAIL: 8,       // after the break the loose tail is a paste, not a string: it sags slowly over its own weight, it does not snap back
   dt: 1 / 600,
   iters: 6,
   rec: 1 / 240,
@@ -109,7 +120,7 @@ export function simulatePour(opt = {}) {
   // ------------------------------------------------------------------ the server's hand (nozzle in the cup's frame)
   const N = [0, P.LIFT_MIN + 0.002, 0], Nv = [0, 0, 0];
   let mode = 'fill', phi = -0.6, psi = 0, tMode = 0, q = 0, E = 0, swirlPhi0 = 0, swirlR0 = 0, swirlY0 = 0, released = false;
-  let valveCloseT = -1, releaseT = -1, swirlT = -1, closeY0 = 0, lift = 0;
+  let valveCloseT = -1, releaseT = -1, swirlT = -1, closeY0 = 0, lift = 0, neck = 1;
   const tri = u => { const f = u - Math.floor(u); return f < 0.5 ? 1 - 2 * f : 2 * f - 1; };   // 1 -> 0 -> 1
 
   function hand(t) {
@@ -128,8 +139,8 @@ export function simulatePour(opt = {}) {
       ny = Math.max(P.LIFT_MIN, under + P.CLEAR);
       if (fillTop > CUP.H - 0.0075 && t > 1.0) { mode = 'swirl'; tMode = t; swirlPhi0 = phi; swirlT = t; swirlR0 = Math.hypot(nx0, nz0); swirlY0 = ny0; }
     } else if (mode === 'swirl') {
-      q = 1;
       const u = (phi - swirlPhi0) / (Math.PI * 2 * P.SWIRL_TURNS);
+      q = 1 - P.TAPER * smooth(0.3, 1, u);          // less flow as the swirl winds in: a thinner rope, so it narrows to a cone, not a column
       const ring = RIM_IN - FX * R0 * 0.9;
       // ease out to the rim for the first ring, then wind in to the peak
       const ue = Math.pow(Math.min(1, u), 1.1);
@@ -139,16 +150,18 @@ export function simulatePour(opt = {}) {
       ny = Math.max(swirlY0 * (1 - smooth(0, 0.1, u)), under + P.CLEAR_SW);
       if (u >= 1) { mode = 'close'; tMode = t; valveCloseT = t; closeY0 = ny0; lift = 0; }
     } else {
-      // close the valve and drop the cup away: the rope necks and breaks, the tail folds over into the tip
+      // close the valve and drop the cup away: first the server lifts slowly with the valve part open, drawing up the peak;
+      // then pulls away faster while the flow dies, so the rope is stretched thin into a neck, and it breaks there
       const a = t - tMode;
-      // first the server lifts slowly with the valve still part open, drawing up the peak; then closes and pulls away
-      const A1 = P.PEAK_T;
-      q = a < A1 ? 1 - 0.3 * smooth(0, 0.08, a) : 0.7 * (1 - smooth(A1, A1 + 0.1, a));
+      const A1 = P.PEAK_T, TN = P.NECK_T, qEnd = 1 - P.TAPER;
+      const kn = a < A1 ? 0 : smooth(A1, A1 + TN, a);
+      q = a < A1 ? qEnd - (qEnd - 0.7 * qEnd) * smooth(0, 0.08, a) : 0.7 * qEnd * (1 - 0.55 * kn);
+      neck = 1 - (1 - P.NECK_R) * kn * kn;
       rho = Math.hypot(nx0, nz0) * (1 - Math.min(1, dt * 10));
       phi += 2 * Math.PI * 0.35 * dt;
-      lift += (a < A1 ? P.PEAK_RISE : P.PEAK_RISE + 0.45 * smooth(A1, A1 + 0.12, a)) * dt;
+      lift += (a < A1 ? P.PEAK_RISE : P.PEAK_RISE + (P.NECK_RISE - P.PEAK_RISE) * smooth(A1, A1 + TN * 0.7, a)) * dt;
       ny = closeY0 + lift;
-      if (!released && a > A1 + 0.06) { released = true; pinned = false; releaseT = t; }
+      if (!released && a > A1 + TN) { released = true; pinned = false; releaseT = t; }
     }
     // a hand is smooth: low-pass the target
     const tx = rho * Math.cos(phi), tz = rho * Math.sin(phi);
@@ -158,6 +171,9 @@ export function simulatePour(opt = {}) {
     Nv[0] = (N[0] - nx0) / dt; Nv[1] = (N[1] - ny0) / dt; Nv[2] = (N[2] - nz0) / dt;
   }
 
+  // after the break, the tail sets from the base up (a paste under its yield stress holds its shape); only the last couple of
+  // centimetres stay soft a little longer, and sag over into the curl of the tip
+  const tailHold = k => (k <= P.TIP_NODES ? P.TIP_HOLD : Math.max(P.TAIL_HOLD, P.TIP_HOLD - 0.055 * (k - P.TIP_NODES)));
   // ------------------------------------------------------------------ constraints
   const inv = i => (fz[i] || (pinned && i === n - 1)) ? 0 : 1;
   function links() {
@@ -176,7 +192,7 @@ export function simulatePour(opt = {}) {
       const a = i - 1, b = i + 1, wa = inv(a) * 0.5, wb = inv(b) * 0.5;
       const mx = (x[a] + x[b]) * 0.5, my = (y[a] + y[b]) * 0.5, mz = (z[a] + z[b]) * 0.5;
       const ex = x[i] - mx, ey = y[i] - my, ez = z[i] - mz;
-      const w = wi + 0.25 * (wa + wb) * 2, k = KB / w;
+      const w = wi + 0.25 * (wa + wb) * 2, k = (released ? KB * P.KB_TAIL : KB) / w;
       x[i] -= ex * k * wi; y[i] -= ey * k * wi; z[i] -= ez * k * wi;
       x[a] += ex * k * wa; y[a] += ey * k * wa; z[a] += ez * k * wa;
       x[b] += ex * k * wb; y[b] += ey * k * wb; z[b] += ez * k * wb;
@@ -254,14 +270,14 @@ export function simulatePour(opt = {}) {
       E += VE * q * dt;
       while (E >= n * DS && n < MAX) {
         const i = n++;
-        rad[i] = R0 * Math.sqrt(Math.max(q, 0.08));   // less flow, thinner rope (same speed)
+        rad[i] = R0 * Math.sqrt(Math.max(q, 0.08)) * neck;   // less flow, thinner rope (same speed); in the pull-away it necks
         emitT[i] = t;
         x[i] = px[i] = N[0]; y[i] = py[i] = N[1]; z[i] = pz[i] = N[2];
         vx[i] = Nv[0]; vy[i] = Nv[1] - VE * q; vz[i] = Nv[2];
       }
     }
     // predict
-    const damp = Math.exp(-DRAG * dt);
+    const damp = Math.exp(-(released ? P.DRAG_TAIL : DRAG) * dt);
     for (let i = ff; i < n; i++) {
       px[i] = x[i]; py[i] = y[i]; pz[i] = z[i];
       cont[i] = 0;
@@ -273,12 +289,23 @@ export function simulatePour(opt = {}) {
       const h = n - 1, e = Math.max(0, E - h * DS);
       x[h] = N[0]; y[h] = N[1] - e; z[h] = N[2];
     }
-    for (let it = 0; it < iters; it++) {
+    const itn = mode === 'close' ? 36 : iters;       // (pulling the tail up hard against its own length: solve harder, or it stretches and snaps back when it lets go)
+    for (let it = 0; it < itn; it++) {
       links();
       bend();
-      if (it >= iters - 2) for (let i = ff; i < n; i++) collide(i);
+      if (it >= itn - 2) for (let i = ff; i < n; i++) collide(i);
     }
     links();
+    if (released) {
+      // the loose tail is a paste: it creeps and sags, it does not fall at the speed a rope would (a step moves it only so far)
+      const lim = P.TAIL_V * dt;
+      for (let i = ff; i < n; i++) {
+        if (fz[i]) continue;
+        const ddx = x[i] - px[i], ddy = y[i] - py[i], ddz = z[i] - pz[i], d = Math.hypot(ddx, ddy, ddz);
+        if (d > lim) { const k = lim / d; x[i] = px[i] + ddx * k; y[i] = py[i] + ddy * k; z[i] = pz[i] + ddz * k; }
+      }
+      links();
+    }
     for (let i = ff; i < n; i++) {
       if (!inv(i)) { vx[i] = vy[i] = vz[i] = 0; continue; }
       vx[i] = (x[i] - px[i]) / dt; vy[i] = (y[i] - py[i]) / dt; vz[i] = (z[i] - pz[i]) / dt;
@@ -290,7 +317,7 @@ export function simulatePour(opt = {}) {
       if (fz[i]) continue;
       const sp = Math.hypot(vx[i], vy[i], vz[i]);
       still[i] = sp < 0.02 ? still[i] + dt : 0;
-      if ((cont[i] && (sp < 0.03 || contT[i] > 0.05)) || (still[i] > 0.15 && t - emitT[i] > 0.4) || t > settleUntil) {
+      if ((cont[i] && (sp < 0.03 || contT[i] > 0.05)) || (still[i] > 0.15 && t - emitT[i] > 0.4) || t > settleUntil || (released && t - releaseT > tailHold(n - 1 - i))) {
         if (!framed) { packP(); ropeFrames(n, PP, ff, tmpN); framed = true; }
         frN[i * 3] = tmpN[i * 3]; frN[i * 3 + 1] = tmpN[i * 3 + 1]; frN[i * 3 + 2] = tmpN[i * 3 + 2];
         fz[i] = 1; frozenT[i] = t; vx[i] = vy[i] = vz[i] = 0;
@@ -300,7 +327,7 @@ export function simulatePour(opt = {}) {
     while (ff < n && fz[ff]) ff++;
     if (released && settleUntil === Infinity) settleUntil = t + 1.4;
     if (t >= nextRec) { record(t); nextRec += P.rec; }
-    if (ff >= n && released) { record(t); break; }
+    if (ff >= n && released && t >= releaseT + P.REST) { record(t); break; }       // (the hero lowers the cup over this rest, so the record runs on)
     t += dt;
   }
   packP(); ropeFrames(n, PP, ff, tmpN);

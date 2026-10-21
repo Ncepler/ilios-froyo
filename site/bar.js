@@ -160,7 +160,9 @@ export async function initBar(o) {
     if (++built % 3 === 0) await idle();
     it.variants = variantsFor(it.def, glb, modelled);
     it.rods = it.def.jimmies && modelled.jimmy ? modelled.jimmy.map(v => ({ ...v, tint: it.def.jimmies })) : null;
-    it.heapData = heaps[it.def.key] && it.variants.length === heaps[it.def.key].variants ? heaps[it.def.key] : null;
+    const hd = heaps[it.def.key];
+    if (hd && it.rods && it.variants.length + it.rods.length === hd.variants) it.variants = it.variants.concat(it.rods);      // rainbow sprinkles: nonpareils and jimmies in one pile
+    it.heapData = hd && it.variants.length === hd.variants ? hd : null;
     it.group = new THREE.Group();
     it.group.position.set(it.x, 0, it.z);
     scene.add(it.group);
@@ -1339,19 +1341,86 @@ function buildStation(it, M, pieceMat, jellyMat) {
     salt.position.set(0.09, 0.02, 0.03); G.add(salt);
     return;
   }
-  const bowl = new THREE.Mesh(bowlGeometry(def.bowl), def.bowl === 'tray' ? M.white.clone() : M.ceramic.clone());
+  if (def.bowl === 'tray') { buildSauceTray(it, G, M); return; }
+  const bowl = new THREE.Mesh(bowlGeometry(def.bowl, it.heapData && it.heapData.seed), M.ceramic.clone());
   bowl.castShadow = bowl.receiveShadow = true;
   bowl.userData.glow = 1;
-  bowl.rotation.y = R() * Math.PI * 2;
+  bowl.rotation.y = it.heapData && it.heapData.seed !== undefined ? 0 : R() * Math.PI * 2;      // (a heap was settled against the bowl as modelled: not turned)
   G.add(bowl);
-  if (def.bowl === 'tray') {
-    const rim = new THREE.Mesh(new THREE.BoxGeometry(0.212, 0.03, 0.152), M.woodDark);
-    rim.position.y = 0.015; G.add(rim);
-    G.add(contents(def, 0.09, 0.03, M, pieceMat, jellyMat, it));
-    return;
-  }
   const hob = def.bowl === 'hobnail';
   G.add(contents(def, hob ? 0.085 : 0.092, hob ? 0.088 : 0.074, M, pieceMat, jellyMat, it));
+}
+
+// the raspberry sauce: a rounded white dish on a wooden board, filled nearly to the lip with glossy sauce
+function roundedRect(w, d, r, path = new THREE.Shape()) {
+  const x = -w / 2, y = -d / 2;
+  path.moveTo(x + r, y); path.lineTo(x + w - r, y); path.quadraticCurveTo(x + w, y, x + w, y + r);
+  path.lineTo(x + w, y + d - r); path.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+  path.lineTo(x + r, y + d); path.quadraticCurveTo(x, y + d, x, y + d - r);
+  path.lineTo(x, y + r); path.quadraticCurveTo(x, y, x + r, y);
+  return path;
+}
+let sauceMapTex = null;
+function sauceMap(color) {
+  if (sauceMapTex) return sauceMapTex;
+  // pulp and seeds: marbled streaks of lighter and darker sauce, and the little pale seeds
+  const c = document.createElement('canvas'); c.width = 512; c.height = 352;
+  const x = c.getContext('2d');
+  x.fillStyle = color; x.fillRect(0, 0, 512, 352);
+  const rnd = PC.rng(4711);
+  for (let i = 0; i < 90; i++) {
+    const cx = rnd() * 512, cy = rnd() * 352, rx = 30 + rnd() * 90, ry = 4 + rnd() * 14, a = rnd() * Math.PI;
+    x.fillStyle = rnd() < 0.5 ? 'rgba(255,90,110,0.10)' : 'rgba(40,0,10,0.16)';
+    x.beginPath(); x.ellipse(cx, cy, rx, ry, a, 0, 7); x.fill();
+  }
+  for (let i = 0; i < 520; i++) {
+    x.fillStyle = `rgba(${215 + rnd() * 30 | 0},${150 + rnd() * 60 | 0},${120 + rnd() * 50 | 0},${0.35 + rnd() * 0.4})`;
+    x.beginPath(); x.ellipse(rnd() * 512, rnd() * 352, 1.2 + rnd() * 0.8, 0.8 + rnd() * 0.6, rnd() * 3, 0, 7); x.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return (sauceMapTex = t);
+}
+function buildSauceTray(it, G, M) {
+  const s = SAUCE[it.def.sauce];
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.222, 0.012, 0.162), M.woodDark);
+  board.position.y = 0.006; board.castShadow = board.receiveShadow = true;
+  const outer = roundedRect(0.2, 0.14, 0.02);
+  outer.holes.push(roundedRect(0.18, 0.12, 0.013, new THREE.Path()));
+  const bev = { bevelEnabled: true, bevelSize: 0.0016, bevelThickness: 0.0016, bevelSegments: 3, curveSegments: 12 };
+  const wall = new THREE.ExtrudeGeometry(outer, { ...bev, depth: 0.03 }).rotateX(-Math.PI / 2);
+  const bottom = new THREE.ExtrudeGeometry(roundedRect(0.2, 0.14, 0.02), { ...bev, depth: 0.004 }).rotateX(-Math.PI / 2);
+  const dish = new THREE.Mesh(wall, M.ceramic.clone());
+  const dishBottom = new THREE.Mesh(bottom, dish.material);
+  dish.position.y = dishBottom.position.y = 0.012;
+  dish.castShadow = dish.receiveShadow = dishBottom.castShadow = dishBottom.receiveShadow = true;
+  dish.userData.glow = 1; dishBottom.userData.glow = 1;
+  // the sauce: its edge rolls up the dish's wall (a meniscus), its top carries the pulp
+  const pool = roundedRect(0.178, 0.118, 0.012);
+  const poolGeo = new THREE.ExtrudeGeometry(pool, { depth: 0.0006, bevelEnabled: true, bevelSize: 0.0025, bevelThickness: 0.0022, bevelSegments: 4, curveSegments: 12 }).rotateX(-Math.PI / 2);
+  const uv = poolGeo.attributes.uv, pos = poolGeo.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + 0.09) / 0.18, (pos.getZ(i) + 0.06) / 0.12);
+  const sauce = new THREE.Mesh(poolGeo, new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: sauceMap(s.color), roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04, emissive: '#2a0208' }));
+  sauce.position.y = 0.0357; sauce.receiveShadow = true;
+  G.add(board, dish, dishBottom, sauce);
+  it.heapTop = 0.045;
+}
+
+// the dome under a heap of sprinkles: a dark floor flecked with the palette, so the gaps between the pieces are not one flat colour
+const confettiTex = {};
+function confettiMap(palette, tone) {
+  const k = palette.length + ':' + tone;
+  if (confettiTex[k]) return confettiTex[k];
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = `rgb(${tone * 255 * 0.5 | 0},${tone * 255 * 0.42 | 0},${tone * 255 * 0.42 | 0})`; x.fillRect(0, 0, 256, 256);
+  const rnd = PC.rng(99);
+  for (let i = 0; i < 900; i++) {
+    const col = palette[(rnd() * palette.length) | 0];
+    x.fillStyle = `rgb(${col.r * 255 * 0.55 | 0},${col.g * 255 * 0.55 | 0},${col.b * 255 * 0.55 | 0})`;
+    x.save(); x.translate(rnd() * 256, rnd() * 256); x.rotate(rnd() * 3.14); x.fillRect(-4, -1, 8, 2.2); x.restore();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 1.5);
+  return (confettiTex[k] = t);
 }
 
 // what is in a bowl or a pan
@@ -1413,9 +1482,20 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
   if (it.heapData) {
     // settled by physics (bar-heap.js): the pieces rest on a dark, dome-shaped fill whose gaps stay in shadow
     const d = it.heapData;
-    const base = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 14, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: new THREE.Color(def.heap).multiplyScalar(def.baseTone || 0.42), roughness: 0.9 }));   // (darker than the pieces: the gaps between them are in shadow)
-    base.scale.set(d.rw, Math.max(0.004, d.yc - d.ye + 0.004), d.rw);
-    base.position.y = d.ye + 0.002;
+    const baseMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(def.heap).multiplyScalar(def.baseTone || 0.42), roughness: 0.9 });   // (darker than the pieces: the gaps between them are in shadow)
+    let base;
+    if (d.dome) {
+      // the pile's own surface, sunk below the shell of pieces; tiny pieces (sprinkles) sit on a dome that is itself flecked with them
+      const prof = d.dome.map(([r, y]) => new THREE.Vector2(r, y));
+      prof.push(new THREE.Vector2(d.rw, prof[prof.length - 1].y - 0.004), new THREE.Vector2(d.rw, prof[prof.length - 1].y - 0.03));
+      prof.reverse();
+      base = new THREE.Mesh(new THREE.LatheGeometry(prof, 48), baseMat);
+      if (def.tint) { baseMat.color.set('#ffffff'); baseMat.map = confettiMap(def.tint, def.baseTone || 0.42); }
+    } else {
+      base = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 14, 0, Math.PI * 2, 0, Math.PI / 2), baseMat);
+      base.scale.set(d.rw, Math.max(0.004, d.yc - d.ye + 0.004), d.rw);
+      base.position.y = d.ye + 0.002;
+    }
     base.receiveShadow = true;
     grp.add(base, buildHeap(d, vs, it.matFor));
     it.heapTop = d.top;

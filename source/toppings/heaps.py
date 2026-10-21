@@ -3,10 +3,10 @@ import math
 
 import numpy as np
 
-import heap
 
 
 def cavity_volume(kind, y_top):
+    import heap
     pts, H = heap.bowl_inner(kind)
     v = 0.0
     for (r0, y0), (r1, y1) in zip(pts[:-1], pts[1:]):
@@ -27,6 +27,10 @@ def piece_volume(p):
 def make_heap(key, pieces, spec):
     """spec: bowl, over (heap top above the rim, m), phi (packing of the pieces), edge (heap level at the wall / H),
     fast (tiny pieces: skip the rigid-body simulation, which grows with the square of the piece count)"""
+    if not spec.get('rigid'):                          # the default: the whole bowl, filled by height-field deposition (fill.py)
+        import fill
+        return fill.make_heap(key, pieces, spec, spec.get('weights'))
+    import heap                                        # the older thin-layer runs (Blender rigid bodies, needs bpy)
     kind = spec['bowl']
     H = heap.BOWLS[kind]['H']
     vs = [dict(V=p['V'].astype(float), F=p['F'].astype(int), r=float(p['extras']['r']), vol=piece_volume(p)) for p in pieces]

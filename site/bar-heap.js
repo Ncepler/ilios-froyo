@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 
-export function bowlGeometry(type) {
+export function bowlGeometry(type, rimSeed) {
   if (type === 'tray') {
     const g = new THREE.BoxGeometry(0.2, 0.035, 0.14, 4, 1, 4);
     g.translate(0, 0.0175, 0);
@@ -21,7 +21,7 @@ export function bowlGeometry(type) {
     prof.push(new THREE.Vector2(Math.max(0, base + (R - base) * Math.sin(t * Math.PI / 2) ** (hob ? 0.8 : 1.2) - 0.006), t * H + 0.006 * (1 - t) + (i === 0 ? 0.006 : 0)));
   }
   const g = new THREE.LatheGeometry(prof, 72);
-  const p = g.attributes.position, seed = Math.random() * 10;
+  const p = g.attributes.position, seed = rimSeed || Math.random() * 10;      // (a bowl with a settled heap has a fixed rim: its pile was made against it, see source/toppings/heap_geom.py)
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i), a = Math.atan2(z, x), r = Math.hypot(x, z), t = y / H;
     let dr = 0, dy = 0;
@@ -39,6 +39,13 @@ export function bowlGeometry(type) {
     p.setXYZ(i, x * (1 + dr / r), y + dy, z * (1 + dr / r));
   }
   g.computeVertexNormals();
+  // the lathe's seam is two rows of vertices on one line: give them one normal, or it shows as a shading line
+  const nrm = g.attributes.normal, np_ = prof.length;
+  for (let j = 0; j < np_; j++) {
+    const a = j, b = 72 * np_ + j;
+    const x = nrm.getX(a) + nrm.getX(b), y = nrm.getY(a) + nrm.getY(b), z = nrm.getZ(a) + nrm.getZ(b), l = Math.hypot(x, y, z) || 1;
+    nrm.setXYZ(a, x / l, y / l, z / l); nrm.setXYZ(b, x / l, y / l, z / l);
+  }
   return g;
 }
 
@@ -60,7 +67,8 @@ export function buildHeap(data, variants, matFor) {
       im.setMatrixAt(i, m4.compose(p, q, one));
       // each piece is a touch different (ripeness, how the light caught it), darker where the others shut it in
       const k = r[8] * (0.9 + 0.2 * hash(i, vi));
-      im.setColorAt(i, col.setRGB(k, k * (0.97 + 0.06 * hash(vi, i)), k * (0.95 + 0.1 * hash(i + 7, vi))));
+      if (v.tint) im.setColorAt(i, col.copy(v.tint[(hash(i + 3, vi + 11) * v.tint.length) | 0]).multiplyScalar(k));      // sprinkles: modelled white, coloured from the palette
+      else im.setColorAt(i, col.setRGB(k, k * (0.97 + 0.06 * hash(vi, i)), k * (0.95 + 0.1 * hash(i + 7, vi))));
     });
     im.castShadow = false; im.receiveShadow = true;      // piece-on-piece shading is the AO pass's job; skipping them in the shadow pass halves its cost
     im.computeBoundingSphere();

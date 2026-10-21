@@ -530,7 +530,7 @@ def coconut(i):
 
 
 # shreds are 3.6 mm3 each: a full mound is thousands, so it is deposited (fast=True), not simulated
-PIECES['coconut'] = dict(fn=coconut, n=8, heap=dict(bowl='hobnail', over=0.004, phi=0.04, fast=True, layer=0.032, max_n=12000, tries=1, ao_lo=0.88))      # tries=1: shreds stick where they land, they do not roll downhill
+PIECES['coconut'] = dict(fn=coconut, n=8, heap=dict(bowl='hobnail', over=0.016, shape=0.8, depth=2.2, solid=0.014, tilt=2.5, pct=96, tries=4, max_n=9000, ao_lo=0.82))      # a fluffy mound: shreds lie loose on each other (pct 96: they rest on the highest thing under them) and lean a lot
 
 
 # ------------------------------------------------------------------ kataifi nests

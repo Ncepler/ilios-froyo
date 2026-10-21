@@ -205,6 +205,8 @@ export class FroyoRope {
     smoothPath(P, n, Ps, this.tmp);
     const rad = rec.rad, frozenT = rec.frozenT, FF = this.FF;
     const released = rec.releaseT >= 0 && t >= rec.releaseT;
+    // the tail thins to its point over the pull-away (not all at once when it lets go)
+    const neckK = released ? 1 : rec.valveCloseT >= 0 ? Math.min(1, Math.max(0, (t - rec.valveCloseT - rec.params.PEAK_T) / Math.max(1e-3, rec.releaseT - rec.valveCloseT - rec.params.PEAK_T))) ** 2 : 0;
     const rN = this.rN, sN = this.sN, fN = this.fN, rT = this.rT;
     const settled = i => i < 0 || i >= n || frozenT[i] + SETTLE <= t;
     for (let i = 0; i < n; i++) {
@@ -217,9 +219,9 @@ export class FroyoRope {
       let r = rad[i] * Math.min(1, Math.max(0.3, Math.sqrt(DS * 2 / (la + lb + 1e-9))));
       // a rounded start, and after the break a tail that necks down to a soft point
       if (i < 4) r *= 0.62 + 0.38 * Math.sin(Math.min(1, i / 3) * Math.PI / 2);
-      if (released) {
+      if (neckK > 0) {
         const e = (n - 1 - i) / 9;
-        if (e < 1) r *= Math.sqrt(Math.max(0, e)) * 0.92 + 0.02;
+        if (e < 1) r *= 1 + (Math.sqrt(Math.max(0, e)) * 0.92 + 0.02 - 1) * neckK;
       }
       rT[i] = r;
       const sf = fr ? Math.min(1, (t - frozenT[i]) / SETTLE) : 0;

@@ -599,7 +599,7 @@ new IntersectionObserver(([e]) => {
 document.addEventListener('visibilitychange', () => document.body.classList.toggle('paused', document.hidden));
 
 // test hook: jump straight to a progress value (used by the screenshot harness)
-window.__ilios = { scene, camera, THREE, render: () => renderer.render(scene, camera), setP(p) { target = shown = p; loadK = 1; frame(p); }, cam: () => ({ tgt: camTgt.toArray(), dir: camera.getWorldDirection(new THREE.Vector3()).toArray(), pos: camera.position.toArray(), fov: camera.fov, near: camera.near, cup: cup && cup.position.toArray() }), setFlavor };
+window.__ilios = { pOfT, pourInfo: () => ({ duration: rec.duration, valveCloseT: rec.valveCloseT, releaseT: rec.releaseT }), scene, camera, THREE, render: () => renderer.render(scene, camera), setP(p) { target = shown = p; loadK = 1; frame(p); }, cam: () => ({ tgt: camTgt.toArray(), dir: camera.getWorldDirection(new THREE.Vector3()).toArray(), pos: camera.position.toArray(), fov: camera.fov, near: camera.near, cup: cup && cup.position.toArray() }), setFlavor };
 
 // section entrances
 const io = new IntersectionObserver(es => es.forEach(e => {

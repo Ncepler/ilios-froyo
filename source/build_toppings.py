@@ -29,6 +29,27 @@ def registry():
     return reg
 
 
+# bowls whose heap is made of pieces that are not a topping of their own: page key -> (the piece families, in the order the page
+# lists their variants, heap spec).  Rainbow sprinkles are nonpareils and jimmies together; the page tints every instance.
+EXTRA_BOWLS = {
+    'sprinkles': (['nonpareil', 'jimmy'], dict(bowl='organic', over=0.012, depth=1.7, solid=0.0055, tilt=1.3, max_n=16000, tries=6, tint=True, ao_lo=0.55, weights=[2.2, 1, 1, 1])),
+    'jimmies': (['jimmy'], dict(bowl='organic', over=0.012, depth=1.7, solid=0.0055, tilt=1.3, max_n=16000, tries=6, tint=True, ao_lo=0.55)),
+}
+
+
+def bowl_pieces(key):
+    """(pieces, spec) of the bowl with this page key"""
+    if key in EXTRA_BOWLS:
+        parts, spec = EXTRA_BOWLS[key]
+        return [p for k in parts for p in build_pieces(k)], spec
+    return build_pieces(key), registry()[key]['heap']
+
+
+def bowl_keys(keys):
+    reg = registry()
+    return [k for k in keys if reg[k]['heap']] + [k for k in EXTRA_BOWLS if not set(EXTRA_BOWLS[k][0]) - set(keys)]
+
+
 def build_pieces(key):
     reg = registry()
     spec = reg[key]
@@ -38,8 +59,7 @@ def build_pieces(key):
 def _heap_job(key):
     import heaps
     t = time.time()
-    spec = registry()[key]['heap']
-    pcs = build_pieces(key)
+    pcs, spec = bowl_pieces(key)
     h = heaps.make_heap(key, pcs, spec)
     return key, h, time.time() - t
 
@@ -67,14 +87,14 @@ if __name__ == '__main__':
         cache = out + '-heaps'
         os.makedirs(cache, exist_ok=True)
         data, todo = {}, []
-        for k in [k for k in keys if reg[k]['heap']]:
+        for k in bowl_keys(keys):
             f = os.path.join(cache, k + '.json')
             if os.path.exists(f) and '--redo' not in sys.argv:
                 data[k] = json.load(open(f))
                 print(f"heap {k}: cached ({len(data[k]['instances'])} pieces)", flush=True)
             else:
                 todo.append(k)
-        todo.sort(key=lambda k: (2 if reg[k]['heap'].get('fast') else 1 if k != 'granola' else 0))
+        todo.sort(key=lambda k: -bowl_pieces(k)[1].get('max_n', 0))
 
         def done(key, h, dt):
             data[key] = h
