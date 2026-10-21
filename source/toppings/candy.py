@@ -54,7 +54,7 @@ BEAR_COLOURS = ['#d4141c', '#f27a10', '#f6d012', '#5ab52a', '#ef5d92', '#f2efe6'
 
 def gummy_bear(i):
     rng = np.random.default_rng(3000 + i)
-    S = rng.uniform(0.94, 1.14)                    # 15.7 .. 19 mm tall
+    S = rng.uniform(0.92, 1.08)                    # 15 .. 19 mm tall
     hexc = BEAR_COLOURS[i % len(BEAR_COLOURS)]
     base = lin(hexc)
     clear = hexc == '#f2efe6'
@@ -110,7 +110,7 @@ def gummy_bear(i):
 
     lo = np.array([-8.5, -9.5, -4.5]) * MM * S
     hi = np.array([8.5, 10.5, 7.2]) * MM * S
-    deep = base * (0.74 if not clear else 0.93)
+    deep = base * (0.93 if clear else {'#ef5d92': 0.9, '#f6d012': 0.86, '#f27a10': 0.8, '#5ab52a': 0.78}.get(hexc, 0.74))
     glow = np.minimum(mix(base, np.array([1.0, 0.85, 0.6]), 0.22) * (1.18 if not clear else 1.04), 1.0)
 
     def paint(V, N, field):
@@ -137,7 +137,8 @@ def gummy_bear(i):
         rough = 0.1 + 0.025 * fbm(V / (3 * MM), 2, 5 + i) - 0.02 * face
         return col, rough, np.full(len(V), 0.96), np.ones(len(V))
 
-    return piece(f'gummies_{i}', bear, lo, hi, 0.72 * MM, paint, smooth=2, cls='jelly', jelly=True, ao_strength=0.7)
+    voxel = fit_voxel(bear, lo, hi, 0.72 * MM, 3350)
+    return piece(f'gummies_{i}', bear, lo, hi, voxel, paint, smooth=2, cls='jelly', jelly=True, ao_strength=0.7)
 
 
 
@@ -337,7 +338,7 @@ def mm_candy(i):
     gu, gv = glyph_xy(Q)
     on_top = smoothstep(h * 0.45, h * 0.75, Q[:, 1])
     gd = _m_glyph(gu, gv)
-    inkm = smoothstep(0.1, -0.1, gd) * on_top * (np.hypot(gu, gv) < 3.6)
+    inkm = smoothstep(0.17, -0.12, gd) * on_top * (np.hypot(gu, gv) < 3.6)
     # shell: a flat, rich colour, hardly mottled; slightly lighter and glossier where the dome curves
     mott = 0.045 * fbm(Q / 2.6, 2, 21 + i) + 0.02 * fbm(Q / 0.9, 2, 31 + i)
     shell = np.clip(base * (1 + mott[:, None] * 3.0), 0, 1)
@@ -370,6 +371,40 @@ def clip_plane(V, F, n, o, snap):
     flat = out[F].all(1)
     keep = ~(flat & ((fn @ n) <= 1e-12 * np.maximum(area, 1e-30))) & (area > 1e-14)
     return V, F[keep], snap
+
+
+def fill_holes(V, F):
+    """close small boundary loops (left where a clip dropped faces) with a fan to the loop's centre"""
+    d = {}
+    for a, b, c in F:
+        for u, v in ((a, b), (b, c), (c, a)):
+            d[(u, v)] = d.get((u, v), 0) + 1
+    nxt = {}
+    for (u, v) in d:
+        if (v, u) not in d:
+            nxt[u] = v
+    V = [tuple(x) for x in V]
+    F = [tuple(f) for f in F]
+    seen = set()
+    for st in list(nxt):
+        if st in seen:
+            continue
+        loop = [st]
+        seen.add(st)
+        k = nxt.get(st)
+        while k is not None and k != st and k not in seen:
+            loop.append(k)
+            seen.add(k)
+            k = nxt.get(k)
+        if k != st or len(loop) < 3:
+            continue
+        c = np.mean([V[j] for j in loop], axis=0)
+        V.append(tuple(c))
+        ci = len(V) - 1
+        for j in range(len(loop)):
+            a, b = loop[j], loop[(j + 1) % len(loop)]
+            F.append((b, a, ci))
+    return np.array(V), np.array(F, dtype=np.int64)
 
 
 def choc_chip(i):
@@ -408,11 +443,10 @@ def choc_chip(i):
         F.append((last + k, last + nseg, last + (k + 1) % nseg))
     nb = last + nseg + 1
     for k in range(nseg):
-        F.append((nb, (k + 1) % nseg, k))
+        F.append((nb, k, (k + 1) % nseg))
     F = np.array(F, dtype=np.int64)
     # lumpy, as a depositor's drop is: low noise displacement of the whole thing
-    q = V / MM if False else V
-    V = V + 0.12 * np.stack([fbm(q / 2.0, 2, 200 + i), fbm(q / 2.0, 2, 210 + i) * 0.5, fbm(q / 2.0, 2, 220 + i)], 1)
+    V = V + 0.12 * np.stack([fbm(V / 2.0, 2, 200 + i), fbm(V / 2.0, 2, 210 + i) * 0.5, fbm(V / 2.0, 2, 220 + i)], 1)
     V[:nseg, 1] = np.maximum(V[:nseg, 1], 0.0)
     V[nb, 1] = 0.0
     snap = np.zeros(len(V), bool)
@@ -429,6 +463,9 @@ def choc_chip(i):
         snap = snap2
         jag = np.abs(fbm(V / 0.8, 2, 240 + i)) * 0.5
         V[snap] -= jag[snap, None] * 0.9 * np.where(V[snap, 1:2] > 0, 1, 1) * unit([0.3, 1, 0.2])
+    nV0 = len(V)
+    V, F = fill_holes(V, F)
+    snap = np.concatenate([snap, np.ones(len(V) - nV0, bool)])
     V = V * MM
     # drop unused vertices
     used = np.unique(F)
@@ -501,7 +538,8 @@ def choc_chunk(i):
     def field_cube(P):
         Q = (P / MM) @ R2
         sm, ss = sides_field(Q)
-        dy = np.abs(Q @ tiltn) - hh
+        yy = Q @ tiltn
+        dy = np.abs(yy) - hh + np.where(yy > 0, 0.36 * smoothstep(0.9, 1.7, -sm), 0.0)     # the moulded panel: a shallow recess inside a frame
         out = np.full(len(Q), -9.0)
         for s, r in ((sm, 0.85), (ss, 0.2)):
             qx, qy = s + r, dy + r
@@ -621,9 +659,9 @@ def gummy_worm(i):
     Cs, Ts = sample_curve(s_d, C_d, T_d, sv)
     tw = 0.25 * np.sin(2 * math.pi * sv / L * 1.3 + ph[2])
     W, B = frame_along(Ts, tw)
-    period = rng.uniform(3.1, 3.8)
+    period = rng.uniform(3.2, 3.9)
     groove = np.exp(-(((sv / period) % 1.0 - 0.5) / 0.13) ** 2)
-    ridge = 1 - 0.075 * groove
+    ridge = 1 - 0.042 * groove
     wob = 1 + 0.03 * np.sin(2 * math.pi * sv / 17 + ph[0])
     nphi = 16
     phi = np.arange(nphi) * math.tau / nphi
@@ -662,10 +700,9 @@ def gummy_worm(i):
         sel = np.sin(math.tau * su / per + 0.35 * np.sin(pv) + ph[2])
         blend = smoothstep(-0.1, 0.1, sel)
     Q = V
-    thick = 2 * r0 * np.clip(np.minimum(su, L - su) / r0, 0, 1) ** 0.5       # the thin tips glow
     ends = smoothstep(r0 * 0.9, 0.0, np.minimum(su, L - su))
     col = mix(colA, colB, blend)
-    col = mix(col * 0.78, np.minimum(col * 1.15 + 0.03, 1.0), np.clip(ends + 0.35 * (0.5 + 0.5 * np.cos(pv - 1.0)) * 0 + 0.25, 0, 1))
+    col = mix(col * 0.78, np.minimum(col * 1.15 + 0.03, 1.0), np.clip(ends + 0.25, 0, 1))      # the thin tips glow
     col = col * (1 - 0.22 * gr[:, None])                                     # shade in the grooves
     col = col * (1 + 0.05 * fbm(Q / 3.0, 2, 17 + i))[:, None]
     rough = 0.1 + 0.03 * fbm(Q / 2.2, 2, 5 + i) + 0.05 * gr
@@ -693,20 +730,31 @@ def sour_belt(i):
     else:
         tot = rng.uniform(2.2, 3.0) * rng.choice([-1, 1])
         alpha = lambda x: tot * (x / L - 0.5) + 0.25 * np.sin(2 * math.pi * 1.5 * x / L + ph[0])
-    beta = lambda x: 0.16 * np.sin(2 * math.pi * x / L * 1.0 + ph[1]) + 0.07 * np.sin(2 * math.pi * x / L * 2.3 + ph[2])
+    beta = lambda x: 0.1 * np.sin(2 * math.pi * x / L * 1.0 + ph[1]) + 0.05 * np.sin(2 * math.pi * x / L * 2.3 + ph[2])
     s_d, C_d, T_d = curve_from_heading(L, alpha, beta)
     sv = np.linspace(0, L, int(L / 0.72) + 1)
     Cs, Ts = sample_curve(s_d, C_d, T_d, sv)
-    tw = 0.5 * np.sin(2 * math.pi * sv / L * 0.9 + ph[3]) * 0.8 + 0.18 * np.sin(2 * math.pi * sv / L * 2.7 + ph[1])
+    tw = 0.2 * np.sin(2 * math.pi * sv / L * 0.9 + ph[3]) + 0.08 * np.sin(2 * math.pi * sv / L * 2.7 + ph[1])
     W, B = frame_along(Ts, tw)
-    nphi = 28
-    phi = np.arange(nphi) * math.tau / nphi
-    ex = np.sign(np.cos(phi)) * np.abs(np.cos(phi)) ** (2 / 7)
-    ey = np.sign(np.sin(phi)) * np.abs(np.sin(phi)) ** (2 / 6)
+    # the cross-section: a rounded rectangle, resampled evenly by arc length (so the wide faces get their share of vertices)
+    a_h, b_h = 0.5, t / w * 0.5                                    # (unit width)
+    rc = b_h * 0.8
+    cs = []
+    for (cx, cy, a0) in ((a_h - rc, b_h - rc, 0.0), (-(a_h - rc), b_h - rc, math.pi / 2), (-(a_h - rc), -(b_h - rc), math.pi),
+                         (a_h - rc, -(b_h - rc), 1.5 * math.pi)):
+        for th in np.linspace(a0, a0 + math.pi / 2, 7):
+            cs.append((cx + rc * math.cos(th), cy + rc * math.sin(th)))
+    cs = np.array(cs + [cs[0]])
+    seg = np.linalg.norm(np.diff(cs, axis=0), axis=1)
+    arc = np.concatenate([[0], np.cumsum(seg)])
+    nphi = 30
+    q = np.arange(nphi) * arc[-1] / nphi
+    ex = np.interp(q, arc, cs[:, 0]) * 2                          # -1 .. 1 across the width
+    ey = np.interp(q, arc, cs[:, 1]) * 2 * w / t                   # -1 .. 1 through the thickness
+    phi = q
     nu = len(sv)
     wob = 1 + 0.025 * np.sin(2 * math.pi * sv / 9 + ph[2])
-    ring = Cs[:, None, :] + (w / 2 * wob)[:, None, None] * ex[None, :, None] * W[:, None, :] + (t / 2)[..., None] * ey[None, :, None] * B[:, None, :] \
-        if False else Cs[:, None, :] + (w / 2 * wob)[:, None, None] * ex[None, :, None] * W[:, None, :] + (t / 2) * ey[None, :, None] * B[:, None, :]
+    ring = Cs[:, None, :] + (w / 2 * wob)[:, None, None] * ex[None, :, None] * W[:, None, :] + (t / 2) * ey[None, :, None] * B[:, None, :]
     V = ring.reshape(-1, 3)
     F = np.array(ring_faces(nu, nphi), dtype=np.int64)
     # flat square-cut ends: duplicate the end rings with a fan to the centre
@@ -731,9 +779,8 @@ def sour_belt(i):
     N = vertex_normals(V, F)
     # a finer, deliberately rough look: sugar crystals tilt the normal and break the silhouette
     Q = V
-    V = V + N * 0.07 * (vnoise(Q / 0.33, 31) * 0.6 + 0.4 * vnoise(Q / 0.17, 32))[:, None]
-    jit = hash_vec(Q, 0.34, 40 + i) * 0.55 + hash_vec(Q, 0.18, 50 + i) * 0.35
-    N = N + jit * (1.0 - 0.0)
+    jit = hash_vec(Q, 0.55, 40 + i) * 0.2 + hash_vec(Q, 0.3, 50 + i) * 0.16
+    N = N + jit
     N /= np.linalg.norm(N, axis=1, keepdims=True)
     # two-tone
     wob_split = 0.18 * fbm(Q / 2.0, 2, 3 + i)
@@ -748,9 +795,9 @@ def sour_belt(i):
     crystal = smoothstep(0.62, 0.18, f1) * smoothstep(0.18, 0.48, cid + 0.25 * vnoise(Q / 0.5, 3))
     cover = np.clip(patch * (0.55 + 0.7 * crystal), 0, 1)
     sugar = lin('#fbf9f3')
-    pale = mix(base, sugar, 0.42)
-    col = mix(base * 0.95, pale, cover)
-    col = mix(col, sugar, crystal * 0.45)
+    pale = mix(base, sugar, 0.3)
+    col = mix(base * 0.92, pale, cover)
+    col = mix(col, sugar, crystal * 0.5)
     rough = 0.55 - 0.3 * crystal - 0.15 * (1 - cover)
     spec = np.clip(0.55 + 0.7 * crystal + 0.4 * vnoise(Q / 0.25, 9), 0.3, 1.0)
     ao = 1 - 0.12 * np.clip(-bv, 0, 1)
@@ -824,9 +871,9 @@ def jimmy_rod(i):
 def salt_flake(i):
     """a hopper of salt: a thin four-sided shell, point down, open at the top (a pyramid with a hollow middle)"""
     rng = np.random.default_rng(9200 + i)
-    a = [1.0, 1.25, 1.5, 1.8][i % 4] * rng.uniform(0.92, 1.08)       # half the width: 2 .. 3.6 mm
+    a = [0.62, 0.78, 0.93, 1.1][i % 4] * rng.uniform(0.94, 1.06)     # (the flake is about 3.4 a wide): 2 .. 3.9 mm
     d = a * [0.8, 0.62, 0.9, 0.42][i % 4]                             # how deep the hollow goes
-    tw = rng.uniform(0.13, 0.2)                                       # the wall
+    tw = rng.uniform(0.1, 0.15)                                       # the wall
     ang = rng.uniform(0, math.tau)
     corners = []
     for k in range(4):
@@ -894,7 +941,7 @@ def salt_flake(i):
 PIECES = {
     'gummies': dict(fn=gummy_bear, n=8, heap=dict(bowl='organic', over=0.012, phi=0.5, weights=[0.5, 1, 1, 0.5, 1, 1, 0.5, 0.5])),
     'mms': dict(fn=mm_candy, n=8, heap=dict(bowl='organic', over=0.012, phi=0.5, weights=[0.5, 1, 1, 1, 0.5, 1, 0.5, 0.5])),
-    'chips': dict(fn=choc_chip, n=5, heap=dict(bowl='organic', over=0.012, phi=0.5)),
+    'chips': dict(fn=choc_chip, n=5, heap=dict(bowl='organic', over=0.012, phi=0.5, fast=True)),
     'chunks': dict(fn=choc_chunk, n=6, heap=dict(bowl='organic', over=0.012, phi=0.5)),
     'sour': dict(fn=sour_belt, n=5, heap=dict(bowl='organic', over=0.015, phi=0.3)),
     'worms': dict(fn=gummy_worm, n=5, heap=dict(bowl='organic', over=0.015, phi=0.3)),

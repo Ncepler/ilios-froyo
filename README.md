@@ -16,18 +16,25 @@ site/                       the website: plain HTML + ES modules, no build step 
   main.js                   the hero: machine, room, flavor picker, scroll timeline, camera
   pour-sim.js               the pour, simulated in the browser (no three.js, also runs headless)
   pour.js                   draws the simulated rope as star-ridged soft serve, scrubbable both ways
+  froyo.js / shade.js       the six flavours and the soft-serve material (wrapped light, pores, twist, bean specks)
   cup.js / cup-dims.js      the real-size Ilios cup, built in code
-  bar.js                    "Top it off": the topping bar, live
-  bar-pieces.js             the procedural topping pieces (fruit, candy, crunch, icing rolls, salt)
+  bar.js                    "Top it off": the topping bar, live (scene, utensils, physics, sauces, swipe mode)
+  bar-heap.js               the bowls and the settled heaps of pieces in them
+  bar-pieces.js             topping materials, loader for the modelled pieces, procedural fallbacks
+  post.js                   the bar's ambient-occlusion pass and tone mapping
   bar-list.js               plain-text bar list, used when WebGL is off
-  assets/models/            machine, room, cup materials, topping pieces (glTF, meshopt + WebP)
+  assets/models/            machine, room, cup materials, topping-v2 pieces (glTF, meshopt)
+  assets/bar-heaps.json     every bowl's settled pile (piece, position, rotation), from Blender's rigid-body physics
 models/                     the same GLBs for use elsewhere (plus Draco versions)
 renders/                    Cycles product renders
 docs/ILIOS-FIELD-NOTES.md   flavors, toppings, store layout, directions, sources
 source/
+  toppings/                 the topping pieces: a signed-distance modelling kit, one module per family (see its README)
+  build_toppings.py         builds the pieces into a packed GLB, and with --heaps settles every bowl in Blender
+  dev/pieces.mjs            renders the pieces lab (site/_pieces.html) to a PNG, for judging pieces
   validate_pour.mjs         headless checks on the site's pour -> physics_report.json
   build.py / tex.py         Blender: cup, machine, room, materials, textures -> GLB
-  toppings.py               Blender: modelled topping pieces -> toppings.glb
+  toppings.py               the first, simpler topping pieces (toppings.glb, now only a fallback)
   render.py                 Cycles product renders
   clearance.py              dispenser clearance check (written against the earlier baked pour)
   mpm.py, validate.py, bake_web.py, analyze.py, sim.py
@@ -68,15 +75,19 @@ breaks and curls into the tip. Scrolling back runs it backwards exactly.
   away.
 - Recorded at 240 Hz, only the nodes still moving, so any scroll position is an exact state, forwards or back.
 
-**How it's drawn** (`site/pour.js`): an 8-point star cross-section (the 20 mm star tip) swept along the rope with
-rotation-minimising frames, round while it falls and slumping into the wider laid coil after it lands; necking
-where the rope stretches at the break; the twist's two flavors as stripes that wind with the ridges; vanilla bean
-specks in the shader.
+**How it's drawn** (`site/pour.js`, `site/froyo.js`): an 8-point star cross-section (the 20 mm star tip) swept
+along the rope with rotation-minimising frames, round while it falls and slumping into the wider laid coil after it
+lands. The laid coils are blended into each other (no crumpled facets where they overlap), the ridges fade out as
+the rope thins at the break so the tip is a smooth curl, and the swirl runs 3.2 turns to a proper peak. The material
+is soft serve rather than plastic: matte and creamy, with wrapped diffuse light that glows warm at the terminator
+(a cheap stand-in for light scattering inside the foam), fine pores, narrow dark valleys between coils (ambient
+occlusion written per vertex by the renderer), the twist's two flavors as soft-edged stripes that wind with the
+ridges, and vanilla bean specks.
 
 **Checks:** `node source/validate_pour.mjs physics_report.json` runs the same code and fails if the rope stretches
 over 5%, any coil ends up outside the paper or under the floor, the spout's cap enters the cup, the pour doesn't
-come to rest by itself, the swirl height is off, or scrubbing isn't exact. Current result: 593 nodes, 1.25 m of
-rope, link stretch p99 3.9%, nothing outside the paper, cap never in the cup, peak 5.3 cm over the rim, pass.
+come to rest by itself, the swirl height is off, or scrubbing isn't exact. Current result: 652 nodes, 1.37 m of
+rope, link stretch p99 3.4%, nothing outside the paper, cap never in the cup, peak 7.3 cm over the rim, pass.
 
 **The cup** (`site/cup.js`): the shop's white paper food cup at its real size, measured against hands, spouts and the
 drip-tray drains in the shop's videos: 9.6 cm across the rim, 7.4 cm across the base, 8.4 cm tall (16 oz), with the
@@ -101,7 +112,24 @@ you are.
   jug). Click and it dips into the bowl, lifts a serving, carries it over the cup and tips it in.
 - **In order.** Toppings go on in the order you click, on top of what's already there. Nothing is redone: a
   drizzle added last runs over the toppings already on.
-- **Physics:** pieces fall onto the froyo's real surface (a height map of the simulated swirl), slide off steep
+- **The food is modelled, not decorated boxes** (`source/toppings/`, 29 families, 183 pieces). Each piece is a signed
+  distance field meshed with marching cubes, so every vertex knows its depth below the original skin and is coloured
+  by it: a strawberry is a whole seeded berry cut by planes (dice, wedges, halves, slices), with red flesh and a pale
+  core on the cut faces; kiwi shows its core, rays and a ring of seeds; gummy bears are smooth unions of ellipsoids
+  with glossy translucent jelly; M&M's carry the printed "m"; rainbow cookies have their seven layers; the cinnamon
+  rolls have a spiral and pooled icing; kataifi and coconut are swept strands and ribbons. Every variant of a family
+  is different (size, cut, ripeness). One shader per surface class (matte, wet fruit, candy shell, chocolate, jelly)
+  adds gloss, a micro bump and light passing through thin or translucent parts.
+- **Bowls are filled by physics.** Blender's rigid-body engine drops each topping into its bowl (about @NPIECES@
+  pieces in all, 60 to 3,000 per bowl) and the settled pile is stored in `assets/bar-heaps.json`; the page draws
+  it as instanced meshes with decimated copies of the pieces (they are 25 to 40 px on screen), so the whole line is
+  a few million triangles. Servings and everything in the cup use the full meshes. The pieces come as one
+  @GLB@ MB file, quantised and meshopt-compressed (`source/toppings/pack.py`; the same data as float32 is 17 MB).
+- **Lighting:** one warm key light with a soft shadow, a cool rim from behind, a little sky and room reflection, and a
+  screen-space ambient-occlusion pass (`site/post.js`) for the contact shadows in every crease. The glass guard is a
+  reflection-only layer: clear glass has no body colour, and it used to veil the bowls behind it. Weak devices drop
+  the AO, then the soft shadows, by themselves.
+- **Physics in the cup:** pieces fall onto the froyo's real surface (a height map of the simulated swirl), slide off steep
   spots, never perch on another piece's tip, and stay inside the paper. Sauces are laid along the spoon's path,
   sag between high points under gravity and run down where the swirl is steep, with drips. The pistachio dollop
   presses the swirl's tip down and slumps over it. Undo and Start over rebuild the surface.
@@ -114,8 +142,10 @@ visit card with the address, hours (Tuesday to Sunday, 5 to 10 pm), directions a
 
 - Rendered live in WebGL (three.js r169, vendored in `site/vendor/three`, MIT). No video files.
 - Scroll is eased (frame-rate independent) and the render loop rests once it catches up.
-- Phones get the same scenes with portrait framing. Reduced motion gets the finished frame with no scrubbing.
-  If WebGL fails, the hero shows a still render and the bar shows its list.
+- Phones get the same scenes with portrait framing. On a phone the topping bar is one screen tall and you move along
+  it by swiping left and right (the counter follows your finger and coasts), the way you'd walk the line, instead of
+  scrolling down to go right; the station strip jumps between sections. Reduced motion gets the finished frame with
+  no scrubbing. If WebGL fails, the hero shows a still render and the bar shows its list.
 
 ## Using the models elsewhere
 
@@ -147,8 +177,14 @@ python source/build.py /tmp/tex /tmp/out
 python source/render.py /tmp/tex /tmp/out cup_hero 128 1600     # also: cup_top, cup_macro, machine, machine_pull
 npx gltf-transform optimize /tmp/out/ilios-softserve-machine.glb site/assets/models/ilios-softserve-machine.glb \
     --compress meshopt --texture-compress webp --texture-size 2048 --simplify false --flatten false --join false
-python source/toppings.py /tmp/top
-npx gltf-transform optimize /tmp/top/toppings.glb site/assets/models/toppings.glb --compress meshopt --simplify false --flatten false --join false
+```
+
+The toppings (about 20 minutes on 4 cores; needs `scikit-image meshoptimizer` and `bpy` for the heaps, see
+`source/toppings/README.md`):
+
+```
+python source/build_toppings.py /tmp/full --heaps --jobs 3
+cp /tmp/full.glb site/assets/models/toppings-v2.glb && cp /tmp/full-heaps.json site/assets/bar-heaps.json
 ```
 
 Keep `--flatten false --join false` for the machine (they would merge away the handle pivots). The pour needs no

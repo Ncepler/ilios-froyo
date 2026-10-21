@@ -221,72 +221,53 @@ def mango(i):
 
 # ------------------------------------------------------------------ pineapple
 def pineapple(i):
-    """a chunk of pineapple: cuboids and wedges cut from a ring, fibres along y, some with the pale woody core on one face,
-    two with the scalloped pits (eyes) of the peeled outside"""
+    """a chunk of pineapple: cuboids and wedges cut from a ring (a domed outer face), fibres along y, some with the pale
+    woody core along one face"""
     rng = np.random.default_rng(3000 + i)
-    kinds = ['cube', 'wedge', 'core', 'eyes', 'cube', 'wedge', 'core', 'tri']
+    kinds = ['cube', 'wedge', 'core', 'wedge', 'cube', 'wedge', 'core', 'tri']
     kind = kinds[i % len(kinds)]
     L = rng.uniform(11, 15) * MM
     half = L / 2 * np.array([rng.uniform(0.82, 1.0), 1.0, rng.uniform(0.62, 0.92)])
-    half = half[[0, 1, 2]]
-    taper = {'wedge': rng.uniform(0.18, 0.3), 'core': rng.uniform(0.08, 0.2), 'eyes': rng.uniform(0.1, 0.22)}.get(kind, rng.uniform(0, 0.05))
+    taper = {'wedge': rng.uniform(0.18, 0.3), 'core': rng.uniform(0.08, 0.2)}.get(kind, rng.uniform(0, 0.05))
     n_cham = {'tri': 2, 'cube': 3}.get(kind, 2)
     ns, ds = _cut_block(rng, half, tilt=rng.uniform(0.04, 0.1), n_cham=n_cham, cham=(1.2, 3.0) if kind == 'tri' else (0.9, 2.4), taper=taper)
-    k = rng.uniform(0.9, 1.3) * MM
+    k = rng.uniform(0.6, 0.9) * MM
     fa = _unit([rng.uniform(-0.12, 0.12), 1, rng.uniform(-0.12, 0.12)])
     core = kind == 'core'
-    eyes = kind == 'eyes'
+    domed = kind in ('wedge', 'core', 'tri')
     zf = half[2]
     cw = rng.uniform(2.6, 4.2) * MM
-    cell = 5.4 * MM
-    th_e = rng.uniform(0, 3)
-
-    def eye(P):
-        c, s = math.cos(th_e), math.sin(th_e)
-        x = (c * P[:, 0] - s * P[:, 1]) / cell
-        y = (s * P[:, 0] + c * P[:, 1]) / cell
-        u = x + 0.5 * np.floor(y + 0.5)
-        fx = u - np.floor(u + 0.5)
-        fy = y - np.floor(y + 0.5)
-        r = np.hypot(fx, fy * 0.9)
-        pit = smoothstep(0.42, 0.12, r)
-        return pit * smoothstep(zf - 2.8 * MM, zf - 0.7 * MM, P[:, 2])
 
     def f(P):
-        d = _poly(P, ns, ds, k) + 0.09 * MM * _aniso(P, fa, 0.8 * MM, 7 * MM, 90 + i, 2) + 0.12 * MM * fbm(P / (6 * MM), 2, 100 + i)
-        if eyes:
-            d = d + 0.8 * MM * eye(P)
+        d = _poly(P, ns, ds, k) + 0.065 * MM * _aniso(P, fa, 0.9 * MM, 7 * MM, 90 + i, 2) + 0.1 * MM * fbm(P / (6 * MM), 2, 100 + i)
+        if domed:
+            d = d - 0.9 * MM * np.clip(1 - (P[:, 0] / half[0]) ** 2, 0, 1) * smoothstep(zf - 3 * MM, zf, P[:, 2])
         return d
 
-    light, mid, pale, dark = lin('#f8e684'), lin('#f3d548'), lin('#fcf1ad'), lin('#e9c33a')
+    light, mid, pale, dark = lin('#f9ec96'), lin('#f4dc5c'), lin('#fdf6c6'), lin('#ebc940')
     corec, coredk = lin('#f7efc2'), lin('#e8d890')
     ext = half.max() * 1.45 + 2 * MM
 
     def paint(V, N, field):
-        fib = _aniso(V, fa, 0.75 * MM, 7 * MM, 120 + i, 3)
+        fib = _aniso(V, fa, 1.0 * MM, 7 * MM, 120 + i, 2)
         fib2 = _aniso(V, fa, 2.6 * MM, 12 * MM, 150 + i)
         edge = smoothstep(120, 700, _convex(field, V, 0.6 * MM))
-        t = 0.5 + 0.45 * fib + 0.45 * fib2
+        t = 0.5 + 0.5 * fib + 0.45 * fib2
         col = mix(mid, light, smoothstep(0.15, 0.95, t))
-        col = mix(col, pale, smoothstep(0.4, 0.9, fib) * 0.45)
-        col = mix(col, dark, smoothstep(-0.3, -0.85, fib) * 0.35)
-        rough = 0.25 + 0.09 * fib + 0.05 * (1 - edge)
+        col = mix(col, pale, smoothstep(0.3, 0.8, fib) * 0.55)
+        col = mix(col, dark, smoothstep(-0.2, -0.75, fib) * 0.45)
+        rough = 0.25 + 0.1 * fib + 0.05 * (1 - edge)
         if core:
             cz = smoothstep(-zf + cw + 0.9 * MM, -zf + cw - 1.1 * MM, V[:, 2] + 0.9 * MM * fbm(V / (4 * MM), 2, 5 + i))
-            wood = 0.5 + 0.5 * _aniso(V, fa, 0.55 * MM, 5 * MM, 170 + i, 2)
-            cc = mix(corec, coredk, 0.55 * smoothstep(0.35, 0.8, wood))
+            wood = 0.5 + 0.5 * _aniso(V, fa, 0.9 * MM, 5 * MM, 170 + i, 2)
+            cc = mix(corec, coredk, 0.6 * smoothstep(0.3, 0.8, wood))
             col = mix(col, cc, cz)
             rough = rough + 0.14 * cz
-        if eyes:
-            e = eye(V)
-            col = mix(col, lin('#d2a032'), smoothstep(0.35, 0.9, e) * 0.85)
-            col = mix(col, lin('#f1cd3a'), smoothstep(0.1, 0.5, e) * (1 - smoothstep(0.4, 0.9, e)) * 0.5)
-            rough = rough + 0.22 * smoothstep(0.2, 0.9, e)
         col = mix(col, light, edge * 0.35)
         sss = 0.5 + 0.3 * edge
         return col, rough, sss, 0.8 + 0.2 * edge
 
-    return _mk(f'pineapple_{i}', f, np.full(3, -ext), np.full(3, ext), 0.62 * MM, paint, smooth=2, cls='wet', ao_strength=0.8)
+    return _mk(f'pineapple_{i}', f, np.full(3, -ext), np.full(3, ext), 0.62 * MM, paint, smooth=1, cls='wet', ao_strength=0.8)
 
 
 # ------------------------------------------------------------------ honeydew
@@ -312,26 +293,27 @@ def honeydew(i):
         d = d + 0.16 * MM * fbm(P / (4.5 * MM), 2, 200 + i)
         d = smax(d, P @ s - sd, 1.8 * MM)
         if half_ball:
-            d = smax(d, P @ cut_n - cut_d, 0.5 * MM)
-        return d
+            d = smax(d, P @ cut_n - cut_d, 1.0 * MM)
+        return d + 0.07 * MM * vnoise(P / (0.9 * MM), 240 + i)
 
-    green, cream, deep = lin('#d3e5a4'), lin('#eaf2c5'), lin('#c6de92')
+    green, cream, deep = lin('#d3e5a4'), lin('#eef4cd'), lin('#bfda86')
     ext = R * 1.15
 
     def paint(V, N, field):
         r = np.linalg.norm(V, axis=-1)
-        t = (V @ g) / R * 0.5 + 0.5 + 0.2 * fbm(V / (5 * MM), 2, 210 + i)
-        col = mix(cream, green, smoothstep(0.35, 0.95, t))
-        col = mix(col, deep, smoothstep(-0.2, 1.0, t) * 0.3 * smoothstep(0.55, 1.0, r / R))
+        t = (V @ g) / R * 0.5 + 0.5 + 0.3 * fbm(V / (5.5 * MM), 2, 210 + i)
+        col = mix(cream, green, smoothstep(0.3, 0.9, t))
+        col = mix(col, deep, smoothstep(0.4, 1.1, t) * 0.55 * smoothstep(0.5, 1.0, r / R))
         # faint radial fibres in the cut faces and a paler flat spot
         fib = _aniso(V, g, 1.6 * MM, 6 * MM, 220 + i)
         col = mix(col, cream, np.clip(0.5 * fib, 0, 0.4))
         ang = np.arccos(np.clip((V / np.maximum(r, 1e-9)[:, None]) @ s, -1, 1))
         col = mix(col, cream, 0.35 * smoothstep(0.55, 0.15, ang))
         rough = 0.10 + 0.04 * fbm(V / (3 * MM), 2, 230 + i)
-        cutf = smoothstep(0.7 * MM, 0.0, np.abs(V @ cut_n - cut_d)) if half_ball else 0.0
-        rough = rough + 0.06 * cutf
-        sss = 0.78 * np.ones(len(V))
+        cutf = smoothstep(0.9 * MM, 0.2 * MM, np.abs(V @ cut_n - cut_d)) if half_ball else 0.0
+        col = mix(col, mix(lin('#f1f6d6'), lin('#dcebb0'), smoothstep(0.2, 0.9, 0.5 + 0.5 * fib)), cutf * 0.85)
+        rough = rough + 0.08 * cutf
+        sss = (0.78 - 0.3 * cutf) * np.ones(len(V))
         return col, rough, sss, np.ones(len(V))
 
     return _mk(f'honeydew_{i}', f, np.full(3, -ext), np.full(3, ext), 0.7 * MM, paint, smooth=2, cls='wet', ao_strength=0.6)
@@ -381,8 +363,8 @@ def _kiwi_color(Q, Rk, seed, ex=1.0, ez=0.88):
     dy = y - ycen
     sr = float(np.clip(0.14 * Rk, 0.75 * MM, 1.25 * MM))
     q = (dr / sr) ** 2 + (dt / (0.6 * sr)) ** 2 + (dy / (1.05 * sr)) ** 2
-    seeds = smoothstep(1.05, 0.45, q)
-    col = mix(col, lin('#17140a'), seeds * 0.95)
+    seeds = smoothstep(1.7, 0.3, q)
+    col = mix(col, lin('#1a170b'), seeds * 0.95)
     return col, seeds, core
 
 
@@ -546,7 +528,7 @@ def grape(i):
         return d
 
     g1, g2, gc = lin('#bddb66'), lin('#dfeb96'), lin('#dfeaa8')
-    flesh, flesh2, rim = lin('#e3efb3'), lin('#cde48c'), lin('#a8c850')
+    flesh, flesh2, rim = lin('#f0f7d0'), lin('#dcec9c'), lin('#a8c850')
     ext = a * 1.1
     lo, hi = np.array([-ext, -a - 2 * MM, -ext]), np.array([ext, a + 3 * MM, ext])
 
@@ -584,6 +566,7 @@ def grape(i):
             cc = mix(cc, rim, smoothstep(1.3 * MM, 0.2 * MM, dsk) * 0.8)
             col = mix(col, cc, cf)
             rough = rough + 0.08 * cf
+            sss = sss * (1 - 0.5 * cf)
         return col, rough, sss, spec
 
     return _mk(f'grapes_{i}', f, lo, hi, 0.7 * MM, paint, smooth=2, cls='jelly', ao_strength=0.6)
@@ -623,12 +606,12 @@ def date(i):
 
     c0 = rng.uniform(-3.5, 3.5) * MM                            # where the crosswise cut falls
     th = rng.uniform(9.5, 12.5) * MM                            # thickness of a round
-    tx = np.array([1.0, rng.uniform(-0.06, 0.06), rng.uniform(-0.06, 0.06)])
-    tx = tx / np.linalg.norm(tx)
+    tx = _unit([1.0, rng.uniform(-0.06, 0.06), rng.uniform(-0.06, 0.06)])
     roll_n = np.array([0, math.cos(roll), math.sin(roll)])
     roll_m = np.array([0, -math.sin(roll), math.cos(roll)])
+    off0, off1 = rng.uniform(-1.6, 1.6, 2) * MM
     if kind == 'end':
-        c0 = a - th * 0.62
+        c0 = a - 11.5 * MM
     pits_on = kind != 'chunk' or rng.random() < 0.4
 
     if kind == 'chunk':
@@ -641,21 +624,17 @@ def date(i):
     else:
         def cutf(P):
             x = P @ tx
-            d = smax(x - (c0 + th / 2), -x + (c0 - th / 2), 0.5 * MM) if kind != 'strip' else 0 * x
-            if kind == 'end':
-                d = x - (c0 + th)               # the tip: cut off the end of the date only on the inner side
-                d = -x + c0 if False else (c0 - x)
-            if kind in ('half', 'end'):
-                d = smax(d, P @ roll_n - rng_off[0], 0.5 * MM)
-            elif kind == 'quarter':
-                d = smax(d, P @ roll_n - rng_off[0], 0.5 * MM)
-                d = smax(d, P @ roll_m - rng_off[1], 0.5 * MM)
-            elif kind == 'strip':
-                xs = P @ tx
-                d = smax(smax(xs - (c0 + 7.5 * MM), -xs + (c0 - 7.5 * MM), 0.5 * MM), P @ roll_n - rng_off[0], 0.5 * MM)
-                d = smax(d, P @ roll_m - rng_off[1], 0.5 * MM)
+            if kind == 'end':                       # the tip of the date, halved
+                d = smax(c0 - x, P @ roll_n - off0, 0.5 * MM)
+            elif kind == 'strip':                   # a lengthwise quarter, 15 mm long
+                d = smax(x - (c0 + 7.5 * MM), -x + (c0 - 7.5 * MM), 0.5 * MM)
+                d = smax(smax(d, P @ roll_n - off0, 0.5 * MM), P @ roll_m - off1, 0.5 * MM)
+            else:                                   # a crosswise round, halved or quartered
+                d = smax(x - (c0 + th / 2), -x + (c0 - th / 2), 0.5 * MM)
+                d = smax(d, P @ roll_n - off0, 0.5 * MM)
+                if kind == 'quarter':
+                    d = smax(d, P @ roll_m - off1, 0.5 * MM)
             return d
-    rng_off = rng.uniform(-1.6, 1.6, 2) * MM
 
     def f(P):
         d, _ = skin_field(P)
@@ -665,14 +644,14 @@ def date(i):
         return d
 
     skin_d, skin_l, skin_b = lin('#2a1409'), lin('#5e3316'), lin('#6c4424')
-    cara, cara_d, cara_l = lin('#9a6030'), lin('#6d3b1a'), lin('#bb8445')
+    cara, cara_d, cara_l = lin('#835023'), lin('#52290f'), lin('#b07a3c')
     ext_hi = np.array([a + 2 * MM, b + abs(bend) + 2 * MM, c + 2 * MM])
     lo, hi = -ext_hi, ext_hi
 
     def paint(V, N, field):
         sd, gr = skin_field(V)
         depth = -sd                                           # below the (wrinkled) skin
-        fib = _aniso(V, [1, 0.05, 0.03], 0.75 * MM, 5 * MM, 730 + i, 3)
+        fib = _aniso(V, [1, 0.05, 0.03], 1.3 * MM, 6 * MM, 730 + i, 2)
         fib2 = _aniso(V, [1, 0.05, 0.03], 2.4 * MM, 9 * MM, 740 + i)
         skin = smoothstep(0.55 * MM, 0.1 * MM, depth)
         crest = np.clip(1 - gr, 0, 1) * smoothstep(0.1, 0.6, fbm(V / (2.2 * MM), 2, 750 + i) + 0.55)
@@ -680,8 +659,8 @@ def date(i):
         sugar = smoothstep(0.35, 0.65, fbm(V / (4 * MM), 3, 760 + i)) * 0.55
         sk = mix(sk, skin_b, sugar * crest)
         flesh = mix(cara_d, cara, smoothstep(0.0, 2.4 * MM, depth))
-        flesh = mix(flesh, cara_l, smoothstep(0.25, 0.85, 0.5 * fib + 0.45 * fib2) * 0.7)
-        flesh = mix(flesh, cara_d, smoothstep(-0.2, -0.8, fib) * 0.5)
+        flesh = mix(flesh, cara_l, smoothstep(0.1, 0.7, 0.55 * fib + 0.45 * fib2) * 0.85)
+        flesh = mix(flesh, cara_d, smoothstep(-0.1, -0.6, fib) * 0.7)
         if pits_on:
             pd = pit(V)
             lum = smoothstep(0.6 * MM, 0.0, pd) * (1 - skin)
@@ -689,10 +668,10 @@ def date(i):
         else:
             lum = 0.0
         col = mix(flesh, sk, skin)
-        rough = np.where(skin > 0.5, 0.26 + 0.2 * sugar * crest + 0.08 * (1 - crest), 0.2 + 0.1 * fib2)
+        rough = np.where(skin > 0.5, 0.36 + 0.25 * sugar * crest + 0.08 * (1 - crest), 0.22 + 0.1 * fib2)
         rough = rough + 0.25 * lum
-        sss = np.where(skin > 0.5, 0.1, 0.35)
-        return col, rough, sss, np.ones(len(V))
+        sss = np.where(skin > 0.5, 0.08, 0.15)
+        return col, rough, sss, np.where(skin > 0.5, 0.85, 1.0)
 
     return _mk(f'dates_{i}', f, lo, hi, 0.7 * MM, paint, smooth=2, cls='wet', ao_strength=0.8)
 
@@ -700,9 +679,9 @@ def date(i):
 # ------------------------------------------------------------------ figs
 def _fig(P, R, H, seed):
     """a whole black mission fig, calyx (stem) end up the y axis, base at the origin"""
-    bulb = sd_ellipsoid(P, (0, 0.38 * H, 0), (R, 0.38 * H, R))
-    neck = sd_ellipsoid(P, (0, 0.72 * H, 0), (0.5 * R, 0.3 * H, 0.5 * R))
-    d = smin(bulb, neck, 0.45 * R)
+    bulb = sd_ellipsoid(P, (0, 0.40 * H, 0), (R, 0.40 * H, R))
+    neck = sd_ellipsoid(P, (0, 0.76 * H, 0), (0.68 * R, 0.25 * H, 0.68 * R))
+    d = smin(bulb, neck, 0.55 * R)
     d = smax(d, P[:, 1] - 0.97 * H, 1.5 * MM)
     stem = sd_capsule(P, (0, 0.95 * H, 0), (0, 1.03 * H, 0), 1.6 * MM)
     d = smin(d, stem, 1.0 * MM)
@@ -716,8 +695,8 @@ def fig(i):
     rng = np.random.default_rng(9000 + i)
     kinds = ['quarter', 'quarter', 'low', 'quarter', 'high', 'low', 'quarter', 'eighth']
     kind = kinds[i % 8]
-    R = rng.uniform(10.5, 12.2) * MM
-    H = rng.uniform(24, 28) * MM
+    R = rng.uniform(10.8, 12.4) * MM
+    H = rng.uniform(22, 26) * MM
     whole = lambda P: _fig(P, R, H, 800 + i)
     ca = rng.uniform(-0.2, 0.2)
     n1 = _unit([-math.cos(ca), 0, -math.sin(ca)])
@@ -739,11 +718,11 @@ def fig(i):
         return d
 
     skin_a, skin_b, bloomc = lin('#2b1230'), lin('#4a2548'), lin('#9a8fb0')
-    rind, pink, red, mag, seedc, deepm = lin('#e9dcc8'), lin('#e0707e'), lin('#c8404f'), lin('#8d2158'), lin('#e6c67c'), lin('#6f1a48')
+    rind, pink, red, mag, seedc, deepm = lin('#eadfcb'), lin('#e5667a'), lin('#c93a4d'), lin('#8d1f55'), lin('#e8c878'), lin('#6a1744')
     lo, hi = np.array([-MM, ylo - 2 * MM if ylo else -2 * MM, -MM]), np.array([R + 2 * MM, yhi + 3 * MM, R + 2 * MM])
     lo[0] = lo[2] = -R * 0.4 if kind == 'eighth' else -1.5 * MM
     lo[0] = lo[2] = -1.5 * MM
-    vox = 0.8 * MM
+    vox = 0.7 * MM
 
     def paint(V, N, field):
         x, y, z = V[:, 0], V[:, 1], V[:, 2]
@@ -752,21 +731,21 @@ def fig(i):
         rn = rr / np.maximum(rr + np.maximum(d, 0), 1e-6)
         ang = np.arctan2(z, x)
         fib = vnoise(np.stack([np.cos(ang) * 5.0, np.sin(ang) * 5.0, y / (5 * MM)], 1), 3)
-        skin = smoothstep(0.55 * MM, 0.15 * MM, d)
+        skin = smoothstep(0.95 * MM, 0.05 * MM, d)
         # flesh from the pale rind in, through pink and red, to the dark magenta centre
-        fl = mix(mag, red, smoothstep(0.1, 0.5, rn + 0.08 * fib))
-        fl = mix(fl, pink, smoothstep(0.55, 0.9, rn + 0.06 * fib) * 0.9)
-        fl = mix(fl, deepm, smoothstep(0.28, 0.0, rn) * 0.6)
+        fl = mix(mag, red, smoothstep(0.2, 0.62, rn + 0.1 * fib))
+        fl = mix(fl, pink, smoothstep(0.68, 0.95, rn + 0.06 * fib) * 0.9)
+        fl = mix(fl, deepm, smoothstep(0.34, 0.0, rn) * 0.7)
         fl = mix(fl, rind, smoothstep(2.0 * MM, 0.9 * MM, d))
-        fl = mix(fl, rind, np.clip(fib * 0.35, 0, 1) * smoothstep(0.85, 0.5, rn) * 0.4)
-        f1, f2, cid = worley(V / (1.2 * MM), 17 + i)
-        seeds = smoothstep(0.3, 0.17, f1) * smoothstep(1.8 * MM, 2.6 * MM, d) * smoothstep(0.02, 0.1, rn)
-        fl = mix(fl, seedc, seeds * 0.9)
+        fl = mix(fl, pink, np.clip(fib * 0.6, 0, 1) * smoothstep(0.9, 0.25, rn) * 0.6)
+        f1, f2, cid = worley(V / (1.3 * MM), 17 + i)
+        seeds = smoothstep(0.4, 0.14, f1) * smoothstep(1.8 * MM, 2.8 * MM, d) * smoothstep(0.02, 0.1, rn)
+        fl = mix(fl, seedc, seeds * 0.85)
         # skin: purple-black, ribbed lighter lines, patches of pale bloom
         bl = smoothstep(0.0, 0.5, fbm(V / (2.6 * MM), 3, 820 + i) + 0.2)
         rib = vnoise(np.stack([np.cos(ang) * 3.2, np.sin(ang) * 3.2, y / (9 * MM)], 1), 830 + i)
         sk = mix(skin_a, skin_b, 0.5 + 0.5 * fbm(V / (4 * MM), 2, 840 + i) + 0.25 * rib)
-        sk = mix(sk, bloomc, bl * 0.4)
+        sk = mix(sk, bloomc, bl * 0.55)
         sk = mix(sk, lin('#6e6a3a'), smoothstep(H * 0.92, H * 1.0, y) * 0.8)
         col = mix(fl, sk, skin)
         rough = np.where(skin > 0.5, 0.4 + 0.25 * bl, 0.13 + 0.06 * fib)
@@ -775,7 +754,7 @@ def fig(i):
         spec = np.where(skin > 0.5, 1.0 - 0.4 * bl, 1.0)
         return col, rough, sss, spec
 
-    return _mk(f'figs_{i}', f, lo, hi, vox, paint, smooth=2, cls='wet', ao_strength=0.9)
+    return _mk(f'figs_{i}', f, lo, hi, vox, paint, budget=3400, smooth=2, cls='wet', ao_strength=0.9)
 
 
 # key (the bar's topping key) -> piece builder, how many variants, how its heap is laid (None: scattered by the page)

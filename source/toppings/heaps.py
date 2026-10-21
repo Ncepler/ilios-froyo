@@ -25,7 +25,8 @@ def piece_volume(p):
 
 
 def make_heap(key, pieces, spec):
-    """spec: bowl, over (heap top above the rim, m), phi (packing of the pieces), edge (heap level at the wall / H)"""
+    """spec: bowl, over (heap top above the rim, m), phi (packing of the pieces), edge (heap level at the wall / H),
+    fast (tiny pieces: skip the rigid-body simulation, which grows with the square of the piece count)"""
     kind = spec['bowl']
     H = heap.BOWLS[kind]['H']
     vs = [dict(V=p['V'].astype(float), F=p['F'].astype(int), r=float(p['extras']['r']), vol=piece_volume(p)) for p in pieces]
@@ -38,6 +39,12 @@ def make_heap(key, pieces, spec):
     y_e_top = H * spec.get('edge', 0.78)
     y_c, y_e = top - T, y_e_top - T
     n = int(math.pi * (0.8 * R) ** 2 * T * spec['phi'] / vmean)
+    if spec.get('fast'):                               # tiny pieces: height-field deposition, not rigid bodies (heap.simulate_fast)
+        inst = heap.simulate_fast(kind, vs, w, top, y_c, y_e, seed=7, max_n=spec.get('max_n', 4500), tries=spec.get('tries', 8), min_n=spec.get('min_n', 0))
+        res, st = heap.finish(kind, inst, vs, y_c, y_e)
+        print(f"  {key}: fast, {len(inst)} dropped, {len(res)} kept, top={st['top'] * 1000:.0f} mm (want {top * 1000:.0f}) cover={st['cover']:.2f}", flush=True)
+        return dict(instances=res, top=st['top'], n=len(inst), bowl=kind, variants=len(vs), yc=round(y_c, 5), ye=round(y_e, 5),
+                    rw=round(heap.wall_radius(kind, y_e), 5), cover=round(st['cover'], 3))
     best = None
     for it in range(4):
         inst = heap.simulate(kind, vs, w, n, y_c, y_e, seed=7 + it)

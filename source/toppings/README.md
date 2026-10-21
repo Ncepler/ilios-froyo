@@ -16,15 +16,18 @@ lib.py       the kit: noise, SDF primitives, meshing, per-piece AO, GLB writer  
 fruit.py     fresh fruit            PIECES = { key: dict(fn=, n=, heap=) }
 candy.py     candy
 baked.py, baked2.py   baked / crunchy / warm (two files so two people can work at once)
+pack.py      writes the quantised, meshopt-coded GLB the site loads
 heap.py      rigid-body heaps (Blender)       heaps.py   picks how many pieces fill a bowl
 ../build_toppings.py                           builds everything / a subset
 ../dev/pieces.mjs                              renders the pieces lab to a PNG
 ```
 
 `key` is the topping's key in `site/bar.js` (`BAR`): strawberry, mango, granola, dates, figs, kiwi, blueberries, grapes,
-honeydew, coconut, pineapple, gummies, mms, sprinkles, brownies, rainbow, chips, jimmies, krispies, oreo, cookies,
-biscoffbits, dough, sour, worms, chunks, cinnamon. A piece builder is `fn(i) -> piece(...)` for variant `i`; the
-mesh is named `<key>_<i>`.
+honeydew, coconut, pineapple, gummies, mms, brownies, rainbow, chips, krispies, oreo, cookies, biscoffbits, dough,
+sour, worms, chunks, cinnamon. Four more families are not toppings of their own: `nonpareil` and `jimmy` (the sprinkle
+pieces: modelled white, the page tints each instance from the bar's palette), `salt` (the flakes over the olive oil)
+and `kataifi` (the nests laid over the pistachio). A piece builder is `fn(i) -> piece(...)` for variant `i`; the
+mesh is named `<key>_<i>`. 29 families, 183 pieces in all.
 
 ## Writing a piece
 
@@ -60,18 +63,28 @@ fraction (0.5 for chunky, 0.3 for strands/shreds/crumbs, 0.55 for spheres). `wei
 
 ## Workflow
 
+Needs Python 3.11 with `numpy scipy scikit-image meshoptimizer` and, for the heaps, `bpy==4.2.0` (Blender as a module).
+`PY` below is that interpreter.
+
 ```bash
-VENV=/tmp/claude-0/-home-user-ilios-froyo/4e98f785-43c7-4414-a5d7-8a63e5d05cfb/scratchpad/venv/bin/python
-cd /home/user/ilios-froyo
+cd <repo>
 # 1. the pieces (seconds):
-$VENV source/build_toppings.py site/assets/models/_dev-mine --only mango,pineapple
-# 2. see them (the site must be served: cd site && python3 -m http.server 8080, already running)
+$PY source/build_toppings.py site/assets/models/_dev-mine --only mango,pineapple
+# 2. see them (serve the site first: cd site && python3 -m http.server 8080)
 node source/dev/pieces.mjs /tmp/x.png "src=assets/models/_dev-mine.glb&keys=mango&scale=4&wrap=0.5" "0,0.28,0.45|0,0.02,0|30" 1400 700    # big, to judge shape and colour
 node source/dev/pieces.mjs /tmp/y.png "src=assets/models/_dev-mine.glb&keys=mango&scale=1" "0,0.17,0.30|0,0.0,0|30" 1400 400            # life size at the bar's distance
 # 3. a heap (minutes; run it once the pieces look right):
-$VENV source/build_toppings.py site/assets/models/_dev-mine --only mango --heaps
+$PY source/build_toppings.py site/assets/models/_dev-mine --only mango --heaps
 node source/dev/pieces.mjs /tmp/z.png "src=assets/models/_dev-mine.glb&keys=mango&heaps=assets/models/_dev-mine-heaps.json" "0,0.28,0.38|0,0.05,0|30"
+# 4. everything, for the site (about 20 minutes on 4 cores): writes toppings-v2.glb and bar-heaps.json
+$PY source/build_toppings.py /tmp/full --heaps --jobs 3
+cp /tmp/full.glb site/assets/models/toppings-v2.glb && cp /tmp/full-heaps.json site/assets/bar-heaps.json
 ```
+
+Files named `site/assets/models/_*` are scratch and gitignored. The output is `pack.py`'s format: positions int16 under a node
+scale, int8 normals, uint8 sqrt(albedo) + roughness, uint8 occlusion/translucency/specular, uint16 indices, all
+meshopt-coded (4.1 MB for the 183 pieces; the same data as plain float32 is 17 MB, `--plain` writes that).
+`bar-pieces.js` (`modelledPieces`) turns either layout back into float arrays, so a plain GLB works in the lab too.
 
 View the PNGs with the Read tool. Judge honestly against a photograph of the real thing in your head: silhouette,
 proportions, the way the colour changes across a surface, where it is glossy and where matte, what the cut face

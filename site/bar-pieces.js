@@ -393,21 +393,57 @@ export function toppingMaterial(cls = 'matte') {
   return (_mats[cls] = m);
 }
 
-// the modelled pieces: key -> [{ geo, r, cls, flat, jelly }] (geometry centred, metres)
+// the modelled pieces: key -> [{ geo, r, cls, flat, jelly }] (geometry centred, metres).
+// The GLB is either plain float32 (source/toppings/lib.py) or quantised and meshopt-compressed (pack.py: int16 positions
+// under a node scale, int8 normals, uint8 sqrt(albedo) + roughness, uint8 data); both end up as the same float arrays.
 export function modelledPieces(gltfScene) {
-  const out = {};
+  const out = {}, byName = {}, lods = {};
   gltfScene.updateWorldMatrix(true, true);
+  const v = new THREE.Vector3();
   gltfScene.traverse(ob => {
     if (!ob.isMesh) return;
+    if (/_\d+_lod$/.test(ob.name)) { lods[ob.name.slice(0, -4)] = ob.geometry.index; return; }   // same vertices, fewer triangles
     const m = /^(.*)_(\d+)$/.exec(ob.name);
     if (!m) return;
-    const g = ob.geometry.clone();
-    g.applyMatrix4(ob.matrixWorld);
-    if (g.attributes._data) { g.setAttribute('pdata', g.attributes._data); g.deleteAttribute('_data'); }
-    if (!g.attributes.pdata) { const n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = 1; a[i * 3 + 2] = 1; } g.setAttribute('pdata', new THREE.BufferAttribute(a, 3)); }
+    const src = ob.geometry, A = src.attributes, mw = ob.matrixWorld, n = A.position.count;
+    const P = new Float32Array(n * 3), N = new Float32Array(n * 3), C = new Float32Array(n * 4), D = new Float32Array(n * 3);
+    const gamma = !!(A.color && A.color.normalized);          // quantised albedo is stored as sqrt
+    const dat = A._data || A.pdata;
+    for (let i = 0; i < n; i++) {
+      v.fromBufferAttribute(A.position, i).applyMatrix4(mw);
+      P[i * 3] = v.x; P[i * 3 + 1] = v.y; P[i * 3 + 2] = v.z;
+      if (A.normal) {
+        v.fromBufferAttribute(A.normal, i).normalize();
+        N[i * 3] = v.x; N[i * 3 + 1] = v.y; N[i * 3 + 2] = v.z;
+      }
+      if (A.color) {
+        const r = A.color.getX(i), g = A.color.getY(i), b = A.color.getZ(i);
+        C[i * 4] = gamma ? r * r : r; C[i * 4 + 1] = gamma ? g * g : g; C[i * 4 + 2] = gamma ? b * b : b;
+        C[i * 4 + 3] = A.color.itemSize > 3 ? A.color.getW(i) : 0.6;
+      } else { C[i * 4] = C[i * 4 + 1] = C[i * 4 + 2] = 0.8; C[i * 4 + 3] = 0.6; }
+      if (dat) { D[i * 3] = dat.getX(i); D[i * 3 + 1] = dat.getY(i); D[i * 3 + 2] = dat.getZ(i); }
+      else { D[i * 3] = 1; D[i * 3 + 2] = 1; }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(C, 4));
+    g.setAttribute('pdata', new THREE.BufferAttribute(D, 3));
+    if (src.index) g.setIndex(src.index);
     g.computeBoundingSphere();
     const u = ob.userData || {};
-    (out[m[1]] = out[m[1]] || []).push({ geo: g, r: u.r || g.boundingSphere.radius, cls: u.cls || 'matte', flat: !!u.flat, jelly: !!u.jelly, size: u.size });
+    const piece = { geo: g, lod: null, r: u.r || g.boundingSphere.radius, cls: u.cls || 'matte', flat: !!u.flat, jelly: !!u.jelly, size: u.size };
+    byName[ob.name] = piece;
+    (out[m[1]] = out[m[1]] || []).push(piece);
   });
+  for (const name in lods) {
+    const full = byName[name];
+    if (!full || !lods[name]) continue;
+    const gl = new THREE.BufferGeometry();
+    for (const k in full.geo.attributes) gl.setAttribute(k, full.geo.attributes[k]);
+    gl.setIndex(lods[name]);
+    gl.boundingSphere = full.geo.boundingSphere;
+    full.lod = gl;
+  }
   return out;
 }

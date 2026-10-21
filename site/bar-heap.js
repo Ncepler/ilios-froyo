@@ -45,7 +45,7 @@ export function bowlGeometry(type) {
 
 const hash = (i, j) => { let h = Math.imul(i * 374761393 + j * 668265263, 1274126177); h ^= h >>> 15; return ((h >>> 0) % 10000) / 10000; };
 
-// data.instances: [variant, x, y, z, qx, qy, qz, qw, ao] in the bowl's frame; variants: [{ geo, cls }]
+// data.instances: [variant, x, y, z, qx, qy, qz, qw, ao] in the bowl's frame; variants: [{ geo, lod?, cls }]
 export function buildHeap(data, variants, matFor) {
   const grp = new THREE.Group();
   const per = variants.map(() => []);
@@ -54,7 +54,7 @@ export function buildHeap(data, variants, matFor) {
   variants.forEach((v, vi) => {
     const rows = per[vi];
     if (!rows.length) return;
-    const im = new THREE.InstancedMesh(v.geo, matFor(v), rows.length);
+    const im = new THREE.InstancedMesh(v.lod || v.geo, matFor(v), rows.length);     // settled piles are seen small: the decimated mesh
     rows.forEach((r, i) => {
       p.set(r[1], r[2], r[3]); q.set(r[4], r[5], r[6], r[7]);
       im.setMatrixAt(i, m4.compose(p, q, one));

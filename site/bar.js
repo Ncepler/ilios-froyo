@@ -45,11 +45,11 @@ export const BAR = [
   // candy and crunch
   { key: 'gummies', label: 'Gummy Bears', zone: 'candy', tool: 'tongs', make: PC.gummyBear, n: 9, heap: '#ef7a2a', chalk: true },
   { key: 'mms', label: "M&M's", zone: 'candy', tool: 'scoop', make: PC.mm, n: 18, heap: '#d6261f', chalk: true },
-  { key: 'sprinkles', label: 'Rainbow Sprinkles', zone: 'candy', tool: 'spoon', glb: 'nonpareil', jimmies: PC.RAINBOW_JIMMIES, n: 260, heap: '#e9a0a8', fine: true, chalk: true },
+  { key: 'sprinkles', label: 'Rainbow Sprinkles', zone: 'candy', tool: 'spoon', glb: 'nonpareil', model: 'nonpareil', tint: PC.RAINBOW_JIMMIES, jimmies: PC.RAINBOW_JIMMIES, n: 260, heap: '#e9a0a8', fine: true, chalk: true },
   { key: 'brownies', label: 'Brownie Bites', zone: 'candy', tool: 'tongs', glb: 'brownie', n: 6, heap: '#4a2815', chalk: true },
   { key: 'rainbow', label: 'Rainbow Cookies', zone: 'candy', tool: 'tongs', glb: 'rainbow', n: 4, heap: '#5da345', chalk: true },
   { key: 'chips', label: 'Chocolate Chips', zone: 'candy', tool: 'spoon', glb: 'chip', n: 34, heap: '#24120b', chalk: true },
-  { key: 'jimmies', label: 'Chocolate Sprinkles', zone: 'candy', tool: 'soup', make: s => PC.jimmy(s, PC.CHOC_JIMMIES), n: 160, heap: '#3b2216', fine: true, chalk: true },
+  { key: 'jimmies', label: 'Chocolate Sprinkles', zone: 'candy', tool: 'soup', make: s => PC.jimmy(s, PC.CHOC_JIMMIES), model: 'jimmy', tint: PC.CHOC_JIMMIES, n: 160, heap: '#3b2216', fine: true, chalk: true },
   { key: 'krispies', label: 'Rice Krispies Treats', zone: 'candy', tool: 'tongs', make: PC.krispie, n: 5, heap: '#e1c189', chalk: true },
   { key: 'oreo', label: 'Oreo Crumble', zone: 'candy', tool: 'tongs', make: PC.oreo, n: 14, heap: '#1d1514', chalk: true },
   { key: 'cookies', label: 'Mini Cookies', zone: 'candy', tool: 'tongs', make: PC.miniCookie, n: 5, heap: '#c08440', chalk: true },
@@ -69,11 +69,11 @@ export const BAR = [
 BAR.forEach(b => { b.kind = b.kind || 'pieces'; b.bowl = b.bowl || (b.zone === 'warm' ? 'skillet' : 'organic'); });
 
 const SAUCE = {
-  raspberry: { color: '#a3101f', rough: 0.12, coat: 0.9, r: 0.0019, opacity: 1, sheen: 0 },
+  raspberry: { color: '#a3101f', rough: 0.12, coat: 0.9, r: 0.0016, opacity: 1, sheen: 0 },
   nutella: { color: '#3a1d10', rough: 0.22, coat: 0.8, r: 0.0024, opacity: 1 },
   biscoff: { color: '#a5621f', rough: 0.2, coat: 0.8, r: 0.0023, opacity: 1 },
   icing: { color: '#f6f0e2', rough: 0.3, coat: 0.5, r: 0.0026, opacity: 1 },
-  honey: { color: '#c47c08', rough: 0.05, coat: 1, r: 0.0017, opacity: 0.86, emissive: '#5a2f00' },
+  honey: { color: '#c47c08', rough: 0.05, coat: 1, r: 0.0014, opacity: 0.86, emissive: '#5a2f00' },
   oil: { color: '#b9a531', rough: 0.03, coat: 1, r: 0.0012, opacity: 0.7, emissive: '#2a2600' },
 };
 
@@ -91,7 +91,7 @@ export async function initBar(o) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   // food has to keep its own colours: the neutral tone mapper does not shift hue or wash out saturated albedo
   renderer.toneMapping = THREE.NeutralToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 0.88;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
@@ -99,13 +99,13 @@ export async function initBar(o) {
   scene.background = WALL.clone();
   scene.fog = new THREE.Fog(WALL, 4.2, 9);
   scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.38;
+  scene.environmentIntensity = 0.26;
   const camera = new THREE.PerspectiveCamera(30, 1, 0.03, 8);
 
   // light: the shop's warm downlights from above and in front, a soft sky, and a cool rim from behind the line that picks
   // out the edges of the glossy and translucent pieces. Less flat ambient than before: shadows keep their depth.
-  scene.add(new THREE.HemisphereLight('#fff4e6', '#8f8272', 0.42));
-  const key = new THREE.DirectionalLight('#ffe2bd', 3.6);
+  scene.add(new THREE.HemisphereLight('#fff4e6', '#8f8272', 0.26));
+  const key = new THREE.DirectionalLight('#ffe2bd', 3.3);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   Object.assign(key.shadow.camera, { left: -0.85, right: 0.85, top: 0.6, bottom: -0.6, near: 0.2, far: 4 });
@@ -151,14 +151,15 @@ export async function initBar(o) {
   buildRoom(scene, mats, LEN, W0, afterPans, X_REG, roomScene);
 
   // ------------------------------------------------------------------ bowls, heaps, labels, utensils
-  const glb = PC.glbPieces(toppingsScene);
+  const glb = toppingsScene ? PC.glbPieces(toppingsScene) : {};        // the older procedural-era pieces: only a fallback now
   const modelled = modelledScene ? PC.modelledPieces(modelledScene) : {};
-  const kataifi = glb.kataifi || [];
+  const kataifi = modelled.kataifi || glb.kataifi || [];
   const pickables = [];
   let built = 0;
   for (const it of items) {
     if (++built % 3 === 0) await idle();
     it.variants = variantsFor(it.def, glb, modelled);
+    it.rods = it.def.jimmies && modelled.jimmy ? modelled.jimmy.map(v => ({ ...v, tint: it.def.jimmies })) : null;
     it.heapData = heaps[it.def.key] && it.variants.length === heaps[it.def.key].variants ? heaps[it.def.key] : null;
     it.group = new THREE.Group();
     it.group.position.set(it.x, 0, it.z);
@@ -200,9 +201,11 @@ export async function initBar(o) {
         // the scoop's underside: a shallow bowl; soft serve above it is pressed down under it and bulges out a bit
         const yb = y0 - 0.010 * (d / R) ** 2, y = P[v * 3 + 1];
         if (y <= yb) continue;
+        // full press under the middle of the scoop, easing to none at its rim (a hard edge there cut the coils into a zigzag)
+        const t = d / R, u = t <= 0.5 ? 0 : (t - 0.5) / 0.5, w = 1 - u * u * (3 - 2 * u);
         const over = y - yb;
-        P[v * 3 + 1] = yb - over * 0.08;
-        const sp = 1 + Math.min(0.25, over * 8) * (1 - d / R);
+        P[v * 3 + 1] = y - over * 0.92 * w;
+        const sp = 1 + Math.min(0.25, over * 8) * w * (1 - 0.5 * t);
         P[v * 3] = x0 + dx * sp; P[v * 3 + 2] = z0 + dz * sp;
       }
     }
@@ -350,8 +353,8 @@ export async function initBar(o) {
       bodies.push({ kind: 'dollop', mesh: d.mesh, dollop: d, r: 0.012, p: new THREE.Vector3(), q: new THREE.Quaternion() });
     } else {
       const n = def.kind === 'rolls' ? 2 : def.n;
-      let vs = def.kind === 'rolls' ? [PC.miniRoll(3), PC.miniRoll(7)] : item.variants.slice();
-      if (def.jimmies) vs = vs.concat([1, 2, 3].map(k => PC.jimmy(k, def.jimmies)));
+      let vs = def.kind === 'rolls' ? (item.variants.length ? item.variants.slice(0, 2) : [PC.miniRoll(3), PC.miniRoll(7)]) : item.variants.slice();
+      if (def.jimmies) vs = vs.concat(item.rods || [1, 2, 3].map(k => PC.jimmy(k, def.jimmies)));
       const R = PC.rng(1000 + added.length * 31);
       const per = vs.map(() => 0);
       const which = [];
@@ -370,9 +373,10 @@ export async function initBar(o) {
         const b = { kind: 'piece', im, idx, v, r: v.r, flat: !!v.flat || def.kind === 'rolls', p: new THREE.Vector3(Math.cos(a) * d, (R() * 0.6 + 0.2) * rr * 0.7, Math.sin(a) * d * 0.8), q: new THREE.Quaternion().setFromEuler(new THREE.Euler(R() * 6.3, R() * 6.3, R() * 6.3)) };
         if (def.kind === 'rolls') b.q.identity();
         im.setMatrixAt(idx, _mt.compose(b.p, b.q, _s.set(1, 1, 1)));
+        if (v.tint) im.setColorAt(idx, v.tint[(R() * v.tint.length) | 0]);
         bodies.push(b);
       }
-      ims.forEach(im => { im.instanceMatrix.needsUpdate = true; entry.objects.push(im); });
+      ims.forEach(im => { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; entry.objects.push(im); });
     }
     obj.scale.setScalar(0.001);
     return { obj, bodies };
@@ -546,18 +550,25 @@ export async function initBar(o) {
   }
   function sprinkleSalt(entry) {
     const R = PC.rng(91 + added.length);
-    const v = PC.saltFlake(3), n = 26;
-    const im = new THREE.InstancedMesh(v.geo, pieceMat, n);
-    im.frustumCulled = false;
-    layer.add(im);
-    entry.objects.push(im);
+    const vsalt = modelled.salt && modelled.salt.length ? modelled.salt : [PC.saltFlake(3)], n = 26;
+    const cnt = vsalt.map(() => 0);
+    for (let i = 0; i < n; i++) cnt[i % vsalt.length]++;
+    const ims = vsalt.map((v, vi) => {
+      const im = new THREE.InstancedMesh(v.geo, v.cls ? PC.toppingMaterial(v.cls) : pieceMat, cnt[vi]);
+      im.frustumCulled = false;
+      layer.add(im);
+      entry.objects.push(im);
+      return im;
+    });
+    const used = vsalt.map(() => 0);
     for (let i = 0; i < n; i++) {
+      const vi = i % vsalt.length, v = vsalt[vi], im = ims[vi], idx = used[vi]++;
       const a = R() * Math.PI * 2, d = Math.sqrt(R()) * 0.024;
-      const b = { kind: 'piece', im, idx: i, v, r: v.r, flat: true, p: new THREE.Vector3(Math.cos(a) * d, surf.top + 0.05 + R() * 0.03, Math.sin(a) * d), q: new THREE.Quaternion(), vx: 0, vz: 0, vy: 0, spin: new THREE.Vector3(), sink: 0.1, delay: 0.25 + R() * 0.45, entry };
-      im.setMatrixAt(i, _mt.compose(b.p, b.q, _s.set(1, 1, 1)));
+      const b = { kind: 'piece', im, idx, v, r: v.r, flat: true, p: new THREE.Vector3(Math.cos(a) * d, surf.top + 0.05 + R() * 0.03, Math.sin(a) * d), q: new THREE.Quaternion(), vx: 0, vz: 0, vy: 0, spin: new THREE.Vector3(), sink: 0.1, delay: 0.25 + R() * 0.45, entry };
+      im.setMatrixAt(idx, _mt.compose(b.p, b.q, _s.set(1, 1, 1)));
       flying.push(b);
     }
-    im.instanceMatrix.needsUpdate = true;
+    ims.forEach(im => { im.instanceMatrix.needsUpdate = true; });
   }
 
   // the pistachio kataifi: a heavy dollop from the disher that slumps and drapes over the swirl
@@ -587,7 +598,7 @@ export async function initBar(o) {
       const R = PC.rng(dollops.length * 7 + 5);
       for (let i = 0; i < 7; i++) {
         const v = kataifi[i % kataifi.length];
-        const sh = new THREE.Mesh(v.geo, pieceMat);
+        const sh = new THREE.Mesh(v.geo, v.cls ? PC.toppingMaterial(v.cls) : pieceMat);
         const a = R() * Math.PI * 2, d = R() * 0.6;
         sh.userData.dir = [Math.cos(a) * d, Math.sin(a) * d];
         sh.scale.setScalar(0.55 + R() * 0.25);
@@ -1188,8 +1199,11 @@ async function makeMaterials(roomScene) {
   M.steel = new THREE.MeshStandardMaterial({ color: '#d9d9d6', roughness: 0.22, metalness: 1 });
   M.blackPlastic = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.4 });
   M.clear = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.08, transparent: true, opacity: 0.35, depthWrite: false });
-  M.glass = new THREE.MeshPhysicalMaterial({ color: '#e6f4f1', roughness: 0.04, metalness: 0, transparent: true, opacity: 0.07, clearcoat: 1, depthWrite: false, side: THREE.DoubleSide });
-  M.glassEdge = new THREE.MeshStandardMaterial({ color: '#8cc9be', roughness: 0.15, transparent: true, opacity: 0.6, depthWrite: false });
+  // clear glass has no body colour: all it does is reflect a few percent of the room. It used to be lit like a pale surface at
+  // 7% alpha (HDR bright, clamped on the canvas but not in the post pass's float buffer), which veiled every bowl behind it.
+  // Black plus additive blending leaves only the reflection and neither dims nor fogs what is behind.
+  M.glass = new THREE.MeshPhysicalMaterial({ color: '#000000', roughness: 0.06, metalness: 0, transparent: true, blending: THREE.AdditiveBlending, opacity: 1, specularIntensity: 1, depthWrite: false, side: THREE.FrontSide });
+  M.glassEdge = new THREE.MeshStandardMaterial({ color: '#9fcfc6', roughness: 0.15, transparent: true, opacity: 0.26, depthWrite: false });
   M.travertine = new THREE.MeshStandardMaterial({ color: '#d9cbb3', roughness: 0.8 });
   M.white = new THREE.MeshStandardMaterial({ color: '#f7f6f2', roughness: 0.5 });
   M.induction = new THREE.MeshPhysicalMaterial({ color: '#f1efe9', roughness: 0.3, clearcoat: 0.6 });
@@ -1286,7 +1300,9 @@ function buildRoom(scene, M, LEN, W0, afterPans, X_REG, roomScene) {
 
 // ------------------------------------------------------------------ one station: bowl, heap, label
 function variantsFor(def, glb, modelled) {
-  if (modelled[def.key]) return modelled[def.key].map(v => ({ ...v }));
+  // modelled pieces (source/toppings); sprinkles are modelled white and tinted per instance from the def's palette
+  const m = modelled[def.model || def.key];
+  if (m) return m.map(v => ({ ...v, tint: def.tint || null }));
   if (def.glb && glb[def.glb]) return glb[def.glb].map(v => ({ ...v, flat: ['rainbow', 'biscoff', 'nonpareil'].includes(def.glb) }));
   if (def.make) return [1, 2, 3, 4].map(s => def.make(s * 17 + def.key.length));
   return [];
@@ -1378,8 +1394,8 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
     if (def.kind === 'rolls') {
       // the little cinnamon rolls soaking in the icing
       for (let i = 0; i < 7; i++) {
-        const v = PC.miniRoll(i * 3 + 1);
-        const r = new THREE.Mesh(v.geo, pieceMat);
+        const v = it.variants.length ? it.variants[i % it.variants.length] : PC.miniRoll(i * 3 + 1);
+        const r = new THREE.Mesh(v.geo, v.cls ? it.matFor(v) : pieceMat);
         const a = i / 7 * Math.PI * 2 + 0.3, d = i ? 0.052 : 0;
         r.position.set(Math.cos(a) * d, H - 0.001, Math.sin(a) * d);
         r.rotation.set((Math.random() - 0.5) * 0.3, Math.random() * 6, (Math.random() - 0.5) * 0.3);
@@ -1417,7 +1433,7 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
   const dummy = new THREE.Object3D();
   const jelly = vs[0].jelly;
   vs.forEach((v, vi) => {
-    const im = new THREE.InstancedMesh(v.geo, jelly ? jellyMat : pieceMat, per);
+    const im = new THREE.InstancedMesh(v.geo, v.cls ? it.matFor(v) : jelly ? jellyMat : pieceMat, per);
     im.castShadow = !def.fine; im.receiveShadow = true;
     for (let i = 0; i < per; i++) {
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * R * 0.86;
@@ -1427,20 +1443,22 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
       if (v.flat) dummy.rotation.set((rnd() - 0.5) * 0.8, rnd() * 6.3, (rnd() - 0.5) * 0.8);
       dummy.updateMatrix();
       im.setMatrixAt(i, dummy.matrix);
+      if (v.tint) im.setColorAt(i, v.tint[(rnd() * v.tint.length) | 0]);
     }
     grp.add(im);
   });
   if (def.jimmies) {
     // rainbow sprinkles are nonpareils and jimmies together
-    const js = [1, 2, 3].map(s => PC.jimmy(s, def.jimmies));
+    const js = it.rods || [1, 2, 3].map(s => PC.jimmy(s, def.jimmies));
     js.forEach(v => {
-      const n = 160, im = new THREE.InstancedMesh(v.geo, pieceMat, n);
+      const n = 160, im = new THREE.InstancedMesh(v.geo, v.cls ? it.matFor(v) : pieceMat, n);
       for (let i = 0; i < n; i++) {
         const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * R * 0.86;
         dummy.position.set(Math.cos(a) * d, H * 0.62 + MH * Math.sqrt(Math.max(0, 1 - (d / (R * 0.9)) ** 2)) + 0.0008, Math.sin(a) * d);
         dummy.rotation.set((rnd() - 0.5) * 0.6, rnd() * 6.3, (rnd() - 0.5) * 0.6);
         dummy.updateMatrix();
         im.setMatrixAt(i, dummy.matrix);
+        if (v.tint) im.setColorAt(i, v.tint[(rnd() * v.tint.length) | 0]);
       }
       grp.add(im);
     });

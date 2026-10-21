@@ -80,7 +80,6 @@ def biscoffbits(i):
         for j in range(K):
             th = th0 + j * 2 * math.pi / K + rng.uniform(-0.38, 0.38)
             add_plane(th, r0 * (1 + 0.32 * math.cos(2 * (th - th0))) * rng.uniform(0.85, 1.1))
-    yaw = rng.uniform(0, 6.28)
     tone = rng.uniform(-1, 1)
     # a couple of crumbs that cling to the snapped edges, and loose ones near by
     crumbs = []
@@ -177,7 +176,7 @@ def _surface_along(f, u, rmax):
 
 def dough(i):
     rng = np.random.default_rng(8000 + i)
-    R = rng.uniform(10.0, 11.8) * MM
+    R = rng.uniform(10.6, 12.2) * MM
     squash = rng.uniform(0.9, 1.08, 3)
     blobs = [(np.zeros(3), 0.7 * R)]
     for _ in range(int(rng.integers(5, 8))):
@@ -265,7 +264,7 @@ def dough(i):
 
     ext = R * 1.15
     lo, hi = np.array([-ext] * 3), np.array([ext] * 3)
-    return piece(f'dough_{i}', f, lo, hi, 1.02 * MM, paint, smooth=2, cls='matte', ao_strength=1.0)
+    return piece(f'dough_{i}', f, lo, hi, 1.08 * MM, paint, smooth=2, cls='matte', ao_strength=1.0)
 
 
 PIECES['dough'] = dict(fn=dough, n=5, heap=dict(bowl='hobnail', over=0.012, phi=0.5))
@@ -274,7 +273,7 @@ PIECES['dough'] = dict(fn=dough, n=5, heap=dict(bowl='hobnail', over=0.012, phi=
 # ------------------------------------------------------------------ mini cinnamon rolls
 def cinnamon(i):
     rng = np.random.default_rng(9000 + i)
-    R = rng.uniform(12.0, 14.0) * MM
+    R = rng.uniform(13.2, 14.6) * MM
     H = rng.uniform(12.0, 15.0) * MM
     pitch = rng.uniform(4.1, 4.6) * MM
     rho = 0.56 * pitch                                  # tube radius: neighbouring turns overlap, leaving a groove
@@ -288,6 +287,7 @@ def cinnamon(i):
     drip2 = drip + rng.choice([-1, 1]) * rng.uniform(0.9, 1.5)
     has2 = rng.random() < 0.6
     seed = 200 + i
+    bake = rng.uniform(0.0, 0.2)                          # how well this one is baked
 
     def arm(P):
         """in-plane distance to the nearest arm of the spiral, and the position between arms (0 on a ridge, 1 in a groove)"""
@@ -369,8 +369,8 @@ def cinnamon(i):
         fine = fbm(V / (1.2 * MM), 2, seed + 9)
         up = np.clip(N[:, 1], 0, 1)
         # toasted on top and along the ridges; paler, doughy on the walls
-        toast = smoothstep(0.3, 1.0, up * (0.55 + 0.45 * smoothstep(0.0, 0.6, 1 - g)) + 0.3 * blot)
-        col = mix(dough_pale, dough_c, 0.55 + 0.3 * blot)
+        toast = smoothstep(0.3, 1.0, up * (0.55 + 0.45 * smoothstep(0.0, 0.6, 1 - g)) + 0.3 * blot + bake)
+        col = mix(dough_pale, dough_c, 0.7 + 0.3 * blot + 2 * bake)
         col = mix(col, dough_top, toast * (0.7 + 0.25 * fine))
         col = mix(col, dough_top, smoothstep(2.0 * MM, 0.0, y) * 0.5)       # the foot browned by the pan
         # cinnamon-sugar swirl between the turns and at the spiral's cut ends
@@ -391,7 +391,7 @@ def cinnamon(i):
 
     ext = R + 4.0 * MM
     lo, hi = np.array([-ext, -1.0 * MM, -ext]), np.array([ext, H + 1.5 * MM, ext])
-    return piece(f'cinnamon_{i}', f, lo, hi, 1.15 * MM, paint, smooth=2, cls='matte', flat=True, ao_strength=1.0)
+    return piece(f'cinnamon_{i}', f, lo, hi, 1.2 * MM, paint, smooth=2, cls='matte', flat=True, ao_strength=1.0)
 
 
 PIECES['cinnamon'] = dict(fn=cinnamon, n=4, heap=None)
@@ -484,7 +484,7 @@ def _finish(name, V, N, F, rgb, rough, ao, sss, spec, cls='matte', flat=False):
 # ------------------------------------------------------------------ shredded coconut
 def coconut(i):
     rng = np.random.default_rng(10000 + i)
-    L = rng.uniform(7.0, 14.0) * MM
+    L = rng.uniform(9.0, 16.0) * MM
     M = 240
     ds = L / M
     # a curl: the tangent turns with a smoothly varying curvature in two directions
@@ -529,7 +529,8 @@ def coconut(i):
     return _finish(f'coconut_{i}', V, N, F, col, rough, ao, sss, spec)
 
 
-PIECES['coconut'] = dict(fn=coconut, n=8, heap=dict(bowl='hobnail', over=0.02, phi=0.18))
+# shreds are 3.6 mm3 each: a full mound is thousands, so it is deposited (fast=True), not simulated
+PIECES['coconut'] = dict(fn=coconut, n=8, heap=dict(bowl='hobnail', over=0.004, phi=0.04, fast=True, min_n=5500, max_n=8000, tries=1))      # tries=1: shreds stick where they land, they do not roll downhill
 
 
 # ------------------------------------------------------------------ kataifi nests
@@ -537,7 +538,7 @@ def kataifi(i):
     rng = np.random.default_rng(11000 + i)
     Rn = rng.uniform(7.0, 10.0) * MM                  # nest radius: 14-20 mm across
     Hn = rng.uniform(5.5, 8.0) * MM
-    nstr = int(rng.integers(28, 38))
+    nstr = int(rng.integers(26, 34))
     n = 11
     verts, norms, faces, cols, roughs, aos, ssss, specs = [], [], [], [], [], [], [], []
     base_gold, base_dark, tip_dark, glint = lin('#e2b055'), lin('#a8671f'), lin('#7a4513'), lin('#f4d58a')
@@ -545,7 +546,7 @@ def kataifi(i):
     ell = np.array([Rn, Hn, Rn])
     for k in range(nstr):
         # a strand: a persistent random walk with a loop-y wave, kept inside the mound; resampled to n rings
-        L = rng.uniform(16.0, 26.0) * MM
+        L = rng.uniform(15.0, 24.0) * MM
         steps = 60
         ds = L / steps
         u = rng.normal(size=3)
@@ -555,23 +556,27 @@ def kataifi(i):
         side = _unit(np.cross(T, rng.normal(size=3)))
         wl = rng.uniform(2.6, 4.6) * MM
         ph = rng.uniform(0, math.tau)
-        turn = rng.uniform(0.05, 0.085)
+        turn = rng.uniform(0.022, 0.04)
         om = np.zeros(3)
         pts = [p0]
         for j in range(steps):
             # wave: the heading swings from side to side; plus a smoothly wandering drift (no kinks)
             wob = math.sin(math.tau * (j * ds) / wl + ph) * 0.2
-            om = 0.88 * om + rng.normal(size=3) * turn
+            om = 0.9 * om + rng.normal(size=3) * turn
             T = _unit(T + side * wob * 0.5 + om)
             q = pts[-1]
             e = np.linalg.norm(q / (ell * 1.04))
             if e > 0.92:                                   # steer back into the mound
-                T = _unit(T - _unit(q / ell ** 2) * (e - 0.85) * 1.6)
+                T = _unit(T - _unit(q / ell ** 2) * (e - 0.8) * 0.5)
             if q[1] < 0.35 * MM and T[1] < 0:              # the floor
                 T = _unit(np.array([T[0], -T[1] * 0.6, T[2]]))
             side = _unit(side - T * (side @ T))
             pts.append(q + T * ds)
         pts = np.array(pts)
+        # squeeze whatever sprawled outside the mound back onto its skin (a smooth map, so no kinks)
+        e = np.linalg.norm(pts / ell, axis=1)
+        e2 = np.where(e < 0.78, e, 0.78 + 0.27 * np.tanh((e - 0.78) / 0.27))
+        pts = pts * (e2 / np.maximum(e, 1e-9))[:, None]
         idx = np.linspace(0, steps, n)
         path = np.array([np.interp(idx, np.arange(steps + 1), pts[:, c]) for c in range(3)]).T
         path[:, 1] = np.maximum(path[:, 1], 0.22 * MM)
@@ -584,7 +589,8 @@ def kataifi(i):
         off += len(V)
         # colour: one tone per strand, toasted darker toward the ends and deeper in the nest, glints on the crest
         tone = rng.uniform(0, 1)
-        gold = mix(base_gold, base_dark, 0.12 + 0.6 * tone ** 1.4)
+        gold = mix(base_gold, base_dark, 0.02 + 0.8 * tone ** 1.3)
+        gold = gold * (0.9 + 0.2 * rng.random())
         col = np.repeat(gold[None, :], len(V), 0)
         col = mix(col, tip_dark, smoothstep(0.16, 0.0, np.minimum(S, 1 - S)) * 0.85)
         e = np.linalg.norm(V / (ell * 1.0), axis=1)

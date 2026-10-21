@@ -198,6 +198,84 @@ def simulate(kind, variants, weights, n, y_c, y_e, seed=0, wave=48, frames=34):
     return out
 
 
+def _rest_orientation(V, rng):
+    """a random orientation (rotation matrix, piece-local -> world, Y up) in which the piece could lie: plates lie flat, rods
+    and ribbons lie along the surface, the rest tumble (principal axes of the vertices decide which)"""
+    from scipy.spatial.transform import Rotation as Rot
+    Vc = V - V.mean(0)
+    w, E = np.linalg.eigh(np.cov(Vc.T))                # ascending variances; E's columns are the axes
+    s = np.sqrt(np.maximum(w, 1e-18))
+    if s[0] / s[2] < 0.38 and s[0] / s[1] < 0.7:       # a plate: thin axis up (or down), any yaw
+        up = E[:, 0] * rng.choice([-1.0, 1.0])
+        a = Rot.align_vectors([[0, 1, 0]], [up])[0]
+        base = a.as_matrix()
+    elif s[1] / s[2] < 0.5:                            # a rod or ribbon: long axis horizontal, any roll about it
+        a = Rot.align_vectors([[1, 0, 0]], [E[:, 2] * rng.choice([-1.0, 1.0])])[0]
+        base = Rot.from_rotvec([rng.uniform(0, math.tau), 0, 0]).as_matrix() @ a.as_matrix()
+    else:
+        return Rot.random(random_state=int(rng.integers(1 << 30))).as_matrix()
+    tilt = 0.14 if s[0] / s[2] < 0.38 else 0.35
+    yaw = Rot.from_rotvec([0, rng.uniform(0, math.tau), 0]).as_matrix()
+    tl = Rot.from_rotvec([rng.normal(0, tilt), 0, rng.normal(0, tilt)]).as_matrix()
+    return yaw @ tl @ base
+
+
+def simulate_fast(kind, variants, weights, top, y_c, y_e, seed=0, cell=0.0015, max_n=4500, tries=8, min_n=0):
+    """Heaps of tiny pieces (chips, crumbs, shreds) by height-field deposition instead of rigid bodies, which take hours at
+    thousands of pieces. Each piece lands at a random spot on the surface so far, in an orientation it could rest in, sinks
+    a little into the gaps below it, and raises the surface; stops when the pile reaches `top`. Pieces may touch or overlap
+    by a fraction of a millimetre; at 25 to 40 px a piece, that is invisible. Same output as simulate()."""
+    rng = np.random.default_rng(seed)
+    pr = np.asarray(weights, dtype=float) / np.sum(weights)
+    Rw = wall_radius(kind, y_e)
+    half = BOWLS[kind]['R'] + 0.004
+    nc = int(2 * half / cell) + 1
+    ctr = (nc - 1) / 2
+
+    def floor_at(x, z):
+        r = np.hypot(x, z)
+        u = np.clip(r / Rw, 0, 1)
+        return y_c + (y_e - y_c) * u ** 1.15
+    gx = (np.arange(nc) - ctr) * cell
+    X, Z = np.meshgrid(gx, gx, indexing='ij')
+    Hf = floor_at(X, Z)
+    inner = np.hypot(X, Z) < Rw * 0.78
+
+    def cells(x, z):
+        return (np.clip(np.rint(x / cell + ctr).astype(int), 0, nc - 1), np.clip(np.rint(z / cell + ctr).astype(int), 0, nc - 1))
+    out, tops = [], []
+    while len(out) < max_n:
+        vi = int(rng.choice(len(variants), p=pr))
+        V = variants[vi]['V']
+        R = _rest_orientation(V, rng)
+        Vw = V @ R.T                                           # world-oriented vertices, piece centred
+        reach = float(np.hypot(Vw[:, 0], Vw[:, 2]).max())
+        best = None
+        for _ in range(tries):                               # several spots; the piece settles in the lowest (fills the gaps)
+            a = rng.uniform(0, math.tau)
+            d = math.sqrt(rng.uniform(0, 1)) * max(Rw * 0.96 - reach, 0.0)
+            cx, cz = d * math.cos(a), d * math.sin(a)
+            for _ in range(2):
+                ix, iz = cells(cx + Vw[:, 0], cz + Vw[:, 2])
+                yc = float(np.percentile(Hf[ix, iz] - Vw[:, 1], 88))     # rest on the high spots, sink into the gaps
+                wr = min(wall_radius(kind, max(yc + Vw[:, 1].min(), y_e)), wall_radius(kind, max(yc + Vw[:, 1].max(), y_e)))
+                over = np.hypot(cx + Vw[:, 0], cz + Vw[:, 2]).max() - wr + 0.0008
+                if over <= 0:
+                    break
+                f = max(0.0, 1 - over / max(math.hypot(cx, cz), 1e-6))
+                cx, cz = cx * f, cz * f
+            if best is None or yc < best[0]:
+                best = (yc, cx, cz)
+        yc, cx, cz = best
+        ix, iz = cells(cx + Vw[:, 0], cz + Vw[:, 2])
+        np.maximum.at(Hf, (ix, iz), yc + Vw[:, 1])
+        out.append((vi, np.array([cx, yc, cz]), _quat(R)))        # (already in three's frame: no Blender conversion)
+        tops.append(yc + 0.6 * variants[vi]['r'])
+        if len(out) % 40 == 0 and len(out) >= min_n and Hf[inner].mean() >= top - 0.014 and np.percentile(tops, 97) >= top - 0.002:
+            break
+    return out
+
+
 def _quat(R):
     t = np.trace(R)
     if t > 0:

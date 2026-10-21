@@ -142,7 +142,7 @@ def granola(i):
             pools = smin(pools, S[:, j], 0.6 * MM)
         return pools - film(P)
 
-    pale, golden, toasted, deep = lin('#e2c786'), lin('#d4a85f'), lin('#a97a3c'), lin('#8c5a24')
+    pale, golden, toasted, deep = lin('#e4c581'), lin('#d3a05a'), lin('#a8702f'), lin('#8c5a24')
     honey, honey_d = lin('#a56a26'), lin('#7c4a18')
     pump_c, pump_rim, ses_c = lin('#5e7a2c'), lin('#8da04a'), lin('#e8d6a6')
 
@@ -190,10 +190,10 @@ def granola(i):
 def brownies(i):
     """a brownie bite cut from the pan: shiny crackled crust on top, dense fudgy crumb on the cut sides, crumbled edges"""
     rng = np.random.default_rng(3200 + i)
-    half = np.array([rng.uniform(5.4, 7.0), rng.uniform(4.6, 6.0), rng.uniform(5.4, 7.0)]) * MM
+    half = np.array([rng.uniform(5.3, 6.7), rng.uniform(4.6, 5.9), rng.uniform(5.3, 6.7)]) * MM
     axes = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], float)
     nrm = np.array([_unit(a + 0.07 * rng.normal(size=3)) for a in axes])
-    off = np.array([half[np.argmax(np.abs(a))] * rng.uniform(0.94, 1.04) for a in axes])
+    off = np.array([half[np.argmax(np.abs(a))] * rng.uniform(0.94, 1.02) for a in axes])
     dome = rng.uniform(0.35, 0.8) * MM
     # a few bites taken out of the edges and corners
     chips = []
@@ -280,7 +280,7 @@ def rainbow(i):
     th = [tc, spl[0], tj[0], spl[1], tj[1], spl[2], tc]
     bnd = -hh + np.cumsum(th)[:-1]                                        # the six boundaries, bottom to top
     green, yellow, redp = lin('#6aa84f'), lin('#f1d27a'), lin('#e05a62')
-    jam_c, choc_c = lin('#b9361f'), lin('#1f0f09')
+    jam_c, choc_c = lin('#a82a1a'), lin('#1f0f09')
     sponge = [green, yellow, redp]
     if rng.random() < 0.4:
         sponge = sponge[::-1]
@@ -355,19 +355,21 @@ def krispies(i):
     rng = np.random.default_rng(3400 + i)
     h = rng.uniform(7.0, 8.4, 3) * MM
     ext = h + 0.6 * MM
-    want = int(rng.integers(26, 38))
+    want = int(rng.integers(32, 41))
     pts = []
     for _ in range(6000):
         c = rng.uniform(-ext, ext)
-        if all(np.linalg.norm(c - q) > 3.0 * MM for q in pts):
+        if np.max(np.abs(c) / h) < 0.6:
+            continue                                       # kernels sit in the outer shell; the middle is marshmallow
+        if all(np.linalg.norm(c - q) > 2.3 * MM for q in pts):
             pts.append(c)
             if len(pts) >= want:
                 break
     nk = len(pts)
     KC = np.array(pts)
     KA = np.array([_unit(rng.normal(size=3)) for _ in range(nk)])
-    KL = rng.uniform(0.9, 1.5, nk) * MM
-    KR = rng.uniform(1.3, 1.75, nk) * MM
+    KL = rng.uniform(1.1, 1.7, nk) * MM
+    KR = rng.uniform(1.4, 1.85, nk) * MM
     toast = rng.random(nk)
     # strands of marshmallow between near neighbours
     pairs = [(a, b) for a in range(nk) for b in range(a + 1, nk) if np.linalg.norm(KC[a] - KC[b]) < 4.6 * MM]
@@ -383,21 +385,22 @@ def krispies(i):
         return K
 
     def bub(P):
-        w1, _, _ = worley(P / (1.7 * MM), seed + 2)
-        return -0.22 * MM * (1 - smoothstep(0.0, 0.65, w1))
+        w1, _, _ = worley(P / (1.5 * MM), seed + 2)
+        return -0.28 * MM * (1 - smoothstep(0.0, 0.65, w1))
 
     def f(P):
         K = kern(P)
         M = K[:, 0] - 0.22 * MM
         for j in range(1, nk):
-            M = smin(M, K[:, j] - 0.22 * MM, 1.7 * MM)
+            M = smin(M, K[:, j] - 0.22 * MM, 1.2 * MM)
         for a, b, r in strands:
             M = smin(M, sd_capsule(P, a, b, r), 0.5 * MM)
+        M = smin(M, sd_box(P, 0, h - 1.7 * MM, 1.7 * MM) + 0.45 * MM * fbm(P / (2.2 * MM), 2, seed + 4), 0.9 * MM)   # the marshmallow body
         M = M + bub(P)
         cube = sd_box(P, 0, h, 1.7 * MM) + 0.25 * MM * fbm(P / (3.5 * MM), 2, seed + 3)
         return smax(M, cube, 0.9 * MM)
 
-    kern_pale, kern_toast, kern_in, marsh = lin('#efdcab'), lin('#d9b574'), lin('#f4ead0'), lin('#f6efe0')
+    kern_pale, kern_toast, kern_in, marsh = lin('#e9cf98'), lin('#cc9f5a'), lin('#f1e3c0'), lin('#fbf1da')
 
     def paint(V, N, field):
         K = kern(V)
@@ -405,21 +408,21 @@ def krispies(i):
         j = np.argmin(K, 1)
         wk = smoothstep(0.55 * MM, 0.2 * MM, Kd)
         tj = np.clip(toast[j] * 0.9 + 0.25 * vnoise(V / (1.4 * MM), seed + 7), 0, 1)
-        kc = mix(kern_pale, mix(lin('#e6cb92'), kern_toast, smoothstep(0.5, 1.0, tj)), smoothstep(0.0, 0.6, tj))
+        kc = mix(kern_pale, kern_toast, smoothstep(0.35, 1.0, tj))
         shell = smoothstep(-0.55 * MM, -0.15 * MM, Kd)                       # cut through a kernel: toasted shell ring, pale airy middle
         kc = mix(kern_in, kc, np.where(Kd < 0, shell, 1.0))
-        w1, _, _ = worley(V / (1.7 * MM), seed + 2)
-        kc = kc * (0.93 + 0.12 * smoothstep(0.0, 0.7, w1))[:, None]          # the bubbly relief
+        w1, _, _ = worley(V / (1.5 * MM), seed + 2)
+        kc = kc * (0.78 + 0.34 * smoothstep(0.0, 0.7, w1))[:, None]          # the bubbly relief: pits toasted darker
         coat = smoothstep(0.55, 0.85, vnoise(V / (2.2 * MM), seed + 8)) * 0.55  # thin marshmallow coat over parts of a kernel
         col = mix(kc, marsh * (0.96 + 0.04 * vnoise(V / (1.3 * MM), seed + 9))[:, None], np.clip(1 - wk + coat * wk, 0, 1))
         wm = np.clip(1 - wk + coat * wk, 0, 1)
-        rough = _lerp(0.72, 0.30, wm)
-        sss = _lerp(0.12, 0.4, wm)
-        spec = _lerp(0.4, 1.0, wm)
+        rough = _lerp(0.72, 0.46, wm)
+        sss = _lerp(0.12, 0.6, wm)
+        spec = _lerp(0.4, 0.6, wm)
         return col, rough, sss, spec
 
     lo, hi = -ext, ext
-    return _bake(f'krispies_{i}', f, lo, hi, 0.86 * MM, paint, smooth=1, ao_strength=1.1)
+    return _bake(f'krispies_{i}', f, lo, hi, 1.09 * MM, paint, smooth=1, ao_strength=0.85)
 
 
 # ------------------------------------------------------------------ Oreo crumble
@@ -458,8 +461,8 @@ def oreo(i):
     seed = int(rng.integers(0, 1000))
     if creamy:
         ox, oz = rng.uniform(-0.25, 0.25) * Rx, rng.uniform(-0.25, 0.25) * Rz
-        rx, rz = Rx * rng.uniform(0.5, 0.85), Rz * rng.uniform(0.55, 0.9)
-        ct = rng.uniform(0.7, 1.2) * MM
+        rx, rz = Rx * rng.uniform(0.55, 0.9), Rz * rng.uniform(0.6, 0.95)
+        ct = rng.uniform(0.55, 0.95) * MM
 
     def wafer(P):
         Q = P @ Ry
@@ -476,13 +479,14 @@ def oreo(i):
     def cream(P):
         d0, Qb, D = wafer(P)
         x, y, z = Qb[:, 0], Qb[:, 1], Qb[:, 2]
-        d2 = (np.hypot((x - ox) / rx, (z - oz) / rz) - 1) * min(rx, rz) + 0.45 * MM * fbm(P / (1.3 * MM), 2, seed + 2)
-        dy = np.abs(y - (th / 2 + ct / 2 - 0.2 * MM)) - (ct / 2 + 0.2 * MM) + 0.2 * MM * fbm(P / (1.5 * MM), 2, seed + 3)
-        c = smax(d2, dy, 0.5 * MM)
+        e = np.hypot((x - ox) / rx, (z - oz) / rz) + 0.14 * fbm(P / (2.4 * MM), 2, seed + 2)
+        t = (0.2 * MM + ct) * smoothstep(1.0, 0.82, e) * (0.88 + 0.24 * (0.5 + 0.5 * vnoise(P / (1.8 * MM), seed + 3)))     # a smear: thickest in the middle, feathered out
+        top = th / 2 + t
+        c = smax(y - top, (th / 2 - 0.5 * MM) - y, 0.2 * MM)
         inner = D[:, 0]
         for k in range(1, len(PO)):
             inner = smax(inner, D[:, k], 0.3 * MM)
-        return smax(c, inner + 0.12 * MM, 0.3 * MM)
+        return smax(c, inner + 0.1 * MM, 0.3 * MM)
 
     def f(P):
         d0 = wafer(P)[0]
@@ -491,7 +495,7 @@ def oreo(i):
     t0 = rng.uniform()
     dark = mix(lin('#1d1514'), lin('#2b1f1a'), t0)
     light = mix(lin('#2e221d'), lin('#3d2d26'), t0)
-    fract = lin('#4a382d')
+    fract = lin('#5b4638')
     cream_c, cream_e, flecks = lin('#efe8d8'), lin('#ddd2b8'), lin('#3a2c25')
 
     def paint(V, N, field):
@@ -500,14 +504,14 @@ def oreo(i):
         w1, _, wid = worley(V / (0.7 * MM), seed + 4)
         grain = smoothstep(0.3, 0.1, w1) * (wid > 0.55)
         col = mix(light, dark, orig)
-        col = mix(col, fract, grain * (0.35 + 0.5 * (1 - orig)))
+        col = mix(col, fract, grain * (0.35 + 0.5 * (1 - orig)) + 0.35 * (1 - orig) * (0.5 + 0.5 * vnoise(V / (1.0 * MM), seed + 8)))
         col = col * (0.9 + 0.2 * (0.5 + 0.5 * vnoise(V / (1.2 * MM), seed + 5)))[:, None]
         rough = 0.92 - 0.2 * orig
         spec = 0.15 + 0.15 * orig
         sss = np.full(len(V), 0.08)
         if creamy:
             dc = cream(V)
-            wc = smoothstep(-0.10 * MM, 0.22 * MM, d0 - dc)
+            wc = smoothstep(0.0, 0.14 * MM, d0 - dc)
             f1, _, fid = worley(V / (0.55 * MM), seed + 6)
             cc = mix(cream_c, cream_e, smoothstep(0.0, 0.5, 0.5 + 0.5 * vnoise(V / (1.5 * MM), seed + 7)))
             cc = mix(cc, flecks, smoothstep(0.2, 0.1, f1) * (fid > 0.72) * 0.8)
@@ -531,10 +535,16 @@ def cookies(i):
     seed = int(rng.integers(0, 1000))
     nch = int(rng.integers(5, 9))
     chunks = []
-    for j in range(nch):
-        u = rng.uniform(0.0, 0.8) if j < nch - 1 else rng.uniform(0.82, 0.95)
+    cpos = []
+    for j in range(nch * 12):
+        if len(chunks) >= nch:
+            break
+        u = rng.uniform(0.0, 0.8) if len(chunks) < nch - 1 else rng.uniform(0.82, 0.95)
         a = rng.uniform(0, TAU)
         c = np.array([u * R * math.cos(a), 0.0, u * R * math.sin(a)])
+        if any(np.linalg.norm(c - q) < 4.4 * MM for q in cpos):
+            continue
+        cpos.append(c)
         half = np.array([rng.uniform(1.4, 2.1), rng.uniform(0.9, 1.3), rng.uniform(1.3, 1.9)]) * MM
         Rm = rot_matrix(rng.uniform(-0.25, 0.25), rng.uniform(0, TAU), rng.uniform(-0.25, 0.25))
         chunks.append((c, half, Rm, rng.uniform(0.0, 0.6) * MM))
@@ -557,8 +567,8 @@ def cookies(i):
     def dough(P):
         yt, yb, u = tops(P)
         cr = crack(P) * smoothstep(1.0, 0.45, u)
-        d_side = np.hypot(P[:, 0], P[:, 2]) - outline(P) + 0.25 * MM * fbm(P / (1.4 * MM), 2, seed + 6)
-        d_top = P[:, 1] - yt + 0.45 * MM * cr - 0.35 * MM * fbm(P / (3.5 * MM), 2, seed + 7)
+        d_side = np.hypot(P[:, 0], P[:, 2]) - outline(P) + 0.4 * MM * fbm(P / (1.5 * MM), 2, seed + 6)
+        d_top = P[:, 1] - yt + 0.45 * MM * cr - 0.55 * MM * fbm(P / (3.0 * MM), 2, seed + 7)
         d_bot = yb - P[:, 1] + 0.12 * MM * fbm(P / (2 * MM), 2, seed + 8)
         return smax(smax(d_side, d_top, 1.8 * MM), d_bot, 1.2 * MM)
 
@@ -588,6 +598,7 @@ def cookies(i):
         cr = crack(V) * smoothstep(1.0, 0.45, u)
         top = mix(top, c_crack, cr * 0.8)
         lump = vnoise(V / (1.2 * MM), seed + 11)
+        top = mix(top, lin('#b9792f'), smoothstep(0.25, 0.7, fbm(V / (2.6 * MM), 2, seed + 14)) * 0.55)   # browned patches
         top = top * (1 + 0.07 * mott + 0.05 * lump)[:, None]
         side = mix(c_edge, c_dark, smoothstep(0.2 * ht, -0.7 * ht, V[:, 1])) * (1 + 0.08 * mott)[:, None]
         col = mix(side, top, up)
@@ -609,10 +620,10 @@ def cookies(i):
 
 
 PIECES = {
-    'granola': dict(fn=granola, n=8, heap=dict(bowl='organic', over=0.012, phi=0.45)),
+    'granola': dict(fn=granola, n=8, heap=dict(bowl='organic', over=0.012, phi=0.45, fast=True)),      # (the rigid-body run takes 20 minutes)
     'brownies': dict(fn=brownies, n=6, heap=dict(bowl='organic', over=0.012, phi=0.5)),
     'rainbow': dict(fn=rainbow, n=5, heap=dict(bowl='organic', over=0.012, phi=0.5)),
     'krispies': dict(fn=krispies, n=6, heap=dict(bowl='organic', over=0.012, phi=0.5)),
-    'oreo': dict(fn=oreo, n=8, heap=dict(bowl='organic', over=0.012, phi=0.4)),
+    'oreo': dict(fn=oreo, n=8, heap=dict(bowl='organic', over=0.012, phi=0.4, fast=True)),
     'cookies': dict(fn=cookies, n=5, heap=dict(bowl='organic', over=0.012, phi=0.5)),
 }

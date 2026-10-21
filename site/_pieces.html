@@ -1,0 +1,87 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>pieces lab</title>
+<style>html,body{margin:0;background:#cfc5b5}canvas{display:block;width:100vw;height:100vh}</style>
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }</script>
+</head><body><canvas id="c"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { modelledPieces, toppingMaterial } from './bar-pieces.js';
+import { bowlGeometry, buildHeap } from './bar-heap.js';
+// pieces lab: every modelled variant of the chosen keys in a row on a quartz-like slab, lit like the bar
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+r.setSize(innerWidth, innerHeight, false);
+r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.NeutralToneMapping; r.toneMappingExposure = 1.0;
+r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(q.get('bg') || '#8d8b87');
+scene.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.45;
+scene.add(new THREE.HemisphereLight('#fff6ea', '#a99c88', 0.35));
+const key = new THREE.DirectionalLight('#ffe6c4', 2.8); key.position.set(-0.4, 0.9, 0.5); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -0.1, right: 0.1, top: 0.1, bottom: -0.1, near: 0.1, far: 3 });
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.0006; key.shadow.radius = 3;
+scene.add(key);
+const fill = new THREE.DirectionalLight('#f2ecff', 0.4); fill.position.set(1, 0.5, 1.4); scene.add(fill);
+const slab = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshStandardMaterial({ color: q.get('slab') || '#b4b1ab', roughness: 0.5 }));
+slab.rotation.x = -Math.PI / 2; slab.receiveShadow = true; scene.add(slab);
+const cam = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.002, 5);
+const gl = await new Promise((res, rej) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(q.get('src') || 'assets/models/toppings.glb', res, undefined, rej));
+const P = modelledPieces(gl.scene);
+const want = (q.get('keys') || Object.keys(P).join(',')).split(',');
+const sc = +(q.get('scale') || 1);
+const grp = new THREE.Group(); scene.add(grp);
+// heaps=assets/<file>.json: show each key's bowl with its settled heap instead of the loose pieces (bowls 0.26 m apart)
+if (q.get('heaps')) {
+  const H = await (await fetch(q.get('heaps'))).json();
+  const ceramic = new THREE.MeshPhysicalMaterial({ color: '#f5f3ef', roughness: 0.24, clearcoat: 0.6, clearcoatRoughness: 0.15 });
+  const keys = want.filter(k => H[k]);
+  keys.forEach((k, i) => {
+    const d = H[k], vs = P[k], g = new THREE.Group();
+    const bowl = new THREE.Mesh(bowlGeometry(d.bowl), ceramic); bowl.castShadow = bowl.receiveShadow = true; g.add(bowl);
+    const base = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 14, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#2a1a14', roughness: 0.9 }));
+    base.scale.set(d.rw, Math.max(0.004, d.yc - d.ye + 0.004), d.rw); base.position.y = d.ye + 0.002; g.add(base);
+    g.add(buildHeap(d, vs, v => toppingMaterial(v.cls)));
+    g.position.x = i * 0.26 - (keys.length - 1) * 0.13;
+    scene.add(g);
+  });
+  window.lab = { THREE, scene, P, H, view(c, t, fov = 30) { cam.position.set(...c); cam.lookAt(...t); cam.fov = fov; cam.updateProjectionMatrix(); r.render(scene, cam); }, auto() { this.view([0, 0.3, 0.42], [0, 0.04, 0], 30); } };
+  window.labReady = true;
+  await new Promise(() => {});   // (the loose-pieces layout below is skipped)
+}
+// pieces in rows of at most `wrap` metres (default: 14 cm at real size)
+const wrap = +(q.get('wrap') || 0.14 * Math.max(1, sc * 0.8));
+let x = 0, z = 0, rowH = 0, maxX = 0;
+for (const k of want) {
+  const vs = P[k] || [];
+  vs.forEach((v, i) => {
+    const m = new THREE.Mesh(q.get('lod') ? (v.lod || v.geo) : v.geo, toppingMaterial(v.cls));      // lod=1: the decimated meshes the bowl heaps use
+    m.castShadow = m.receiveShadow = true;
+    v.geo.computeBoundingBox();
+    const d = v.r * sc * 2.2;
+    if (x + d > wrap) { x = 0; z += rowH * 1.0 + 0.004 * sc; rowH = 0; }
+    m.scale.setScalar(sc);
+    m.position.set(x + d / 2, -v.geo.boundingBox.min.y * sc, z);
+    m.rotation.y = 0.6;
+    grp.add(m);
+    x += d; maxX = Math.max(maxX, x); rowH = Math.max(rowH, d);
+  });
+  x += 0.004 * sc;
+}
+const W = maxX, D = z + rowH, rowMax = rowH;
+grp.position.set(-W / 2, 0, -D / 2);
+const ctr = new THREE.Vector3(0, 0.01 * sc, 0);
+window.lab = {
+  THREE, scene, P, width: W, depth: D,
+  view(c, t, fov = 30) { cam.position.set(...c); cam.lookAt(...t); cam.fov = fov; cam.updateProjectionMatrix(); r.render(scene, cam); },
+  // frame everything: elev radians above the table, az radians round it
+  auto(elev = 0.75, az = 0, fov = 30) {
+    const tv = Math.tan(THREE.MathUtils.degToRad(fov) / 2), th = tv * cam.aspect;
+    const dist = Math.max((W / 2 + 0.01 * sc) / th, (D / 2 * Math.sin(elev) + rowMax * 0.6 + 0.01 * sc) / tv) * 1.08 + 0.02 * sc;
+    const c = [Math.sin(az) * Math.cos(elev) * dist, Math.sin(elev) * dist + 0.004 * sc, Math.cos(az) * Math.cos(elev) * dist];
+    this.view(c, [0, 0.004 * sc, 0], fov);
+  },
+};
+window.labReady = true;
+</script></body></html>
