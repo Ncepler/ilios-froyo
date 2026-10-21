@@ -35,20 +35,20 @@ def make_heap(key, pieces, spec):
     rmean = float(np.average([v['r'] for v in vs], weights=w))
     R = heap.BOWLS[kind]['R']
     top = H + spec['over']
-    T = max(0.016, 2.3 * rmean)                       # thickness of the simulated layer
+    T = spec.get('layer') or max(0.016, 2.3 * rmean)  # thickness of the simulated layer (the dome under it is the rest of the fill)
     y_e_top = H * spec.get('edge', 0.78)
     y_c, y_e = top - T, y_e_top - T
     n = int(math.pi * (0.8 * R) ** 2 * T * spec['phi'] / vmean)
     if spec.get('fast'):                               # tiny pieces: height-field deposition, not rigid bodies (heap.simulate_fast)
         inst = heap.simulate_fast(kind, vs, w, top, y_c, y_e, seed=7, max_n=spec.get('max_n', 4500), tries=spec.get('tries', 8), min_n=spec.get('min_n', 0))
-        res, st = heap.finish(kind, inst, vs, y_c, y_e)
+        res, st = heap.finish(kind, inst, vs, y_c, y_e, ao_lo=spec.get('ao_lo', 0.4))
         print(f"  {key}: fast, {len(inst)} dropped, {len(res)} kept, top={st['top'] * 1000:.0f} mm (want {top * 1000:.0f}) cover={st['cover']:.2f}", flush=True)
         return dict(instances=res, top=st['top'], n=len(inst), bowl=kind, variants=len(vs), yc=round(y_c, 5), ye=round(y_e, 5),
                     rw=round(heap.wall_radius(kind, y_e), 5), cover=round(st['cover'], 3))
     best = None
     for it in range(4):
         inst = heap.simulate(kind, vs, w, n, y_c, y_e, seed=7 + it)
-        res, st = heap.finish(kind, inst, vs, y_c, y_e)
+        res, st = heap.finish(kind, inst, vs, y_c, y_e, ao_lo=spec.get('ao_lo', 0.4))
         best = dict(instances=res, top=st['top'], n=n, bowl=kind, variants=len(vs), yc=round(y_c, 5), ye=round(y_e, 5),
                     rw=round(heap.wall_radius(kind, y_e), 5), cover=round(st['cover'], 3))
         print(f"  {key}: n={n} top={st['top'] * 1000:.0f} mm (want {top * 1000:.0f}) cover={st['cover']:.2f}", flush=True)

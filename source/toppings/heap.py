@@ -294,7 +294,7 @@ def _quat(R):
     return q / np.linalg.norm(q)
 
 
-def finish(kind, instances, variants, y_c=None, y_e=None, top_cull=True):
+def finish(kind, instances, variants, y_c=None, y_e=None, top_cull=True, ao_lo=0.4):
     """work out each piece's occlusion, drop the ones that are buried, and measure the heap: its top, and how much of the
     bowl's surface the pieces cover (so the caller can add pieces until there are no bare patches)"""
     H = BOWLS[kind]['H']
@@ -320,7 +320,7 @@ def finish(kind, instances, variants, y_c=None, y_e=None, top_cull=True):
         miss = np.sqrt(np.maximum(np.einsum('ij,ij->i', dn, dn)[None, :] - t * t, 0))
         hit = (t > 0) & (miss < rn[None, :])
         open_frac[a] = 1 - hit.any(1).mean()
-    ao = 0.4 + 0.6 * np.clip(open_frac * 1.15, 0, 1)
+    ao = ao_lo + (1 - ao_lo) * np.clip(open_frac * 1.15, 0, 1)          # (ao_lo: thin pieces have big bounding spheres, so they overrate how shut in their neighbours are)
     # the heap's height field: the highest piece top in each 6 mm cell within the bowl
     cell = 0.006
     Rw = wall_radius(kind, y_e if y_e is not None else H * 0.7)

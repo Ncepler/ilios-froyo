@@ -62,7 +62,7 @@ export function buildHeap(data, variants, matFor) {
       const k = r[8] * (0.9 + 0.2 * hash(i, vi));
       im.setColorAt(i, col.setRGB(k, k * (0.97 + 0.06 * hash(vi, i)), k * (0.95 + 0.1 * hash(i + 7, vi))));
     });
-    im.castShadow = true; im.receiveShadow = true;
+    im.castShadow = false; im.receiveShadow = true;      // piece-on-piece shading is the AO pass's job; skipping them in the shadow pass halves its cost
     im.computeBoundingSphere();
     grp.add(im);
   });

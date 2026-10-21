@@ -40,7 +40,7 @@ export const BAR = [
   { key: 'blueberries', label: 'Blueberries', zone: 'fruit', tool: 'spoon', make: PC.blueberry, n: 13, heap: '#2b3150' },
   { key: 'grapes', label: 'Green Grapes', zone: 'fruit', tool: 'tongs', make: PC.grape, n: 7, heap: '#a9c45a' },
   { key: 'honeydew', label: 'Honeydew', zone: 'fruit', tool: 'spoon', make: PC.honeydew, n: 7, heap: '#cfe2a1' },
-  { key: 'coconut', label: 'Coconut', zone: 'fruit', bowl: 'hobnail', tool: 'spoon', make: PC.coconut, n: 70, heap: '#f4efe4', fine: true },
+  { key: 'coconut', label: 'Coconut', zone: 'fruit', bowl: 'hobnail', tool: 'spoon', make: PC.coconut, n: 70, heap: '#f4efe4', baseTone: 0.93, fine: true },
   { key: 'pineapple', label: 'Pineapple', zone: 'fruit', tool: 'tongs', make: PC.pineapple, n: 8, heap: '#f2c632' },
   // candy and crunch
   { key: 'gummies', label: 'Gummy Bears', zone: 'candy', tool: 'tongs', make: PC.gummyBear, n: 9, heap: '#ef7a2a', chalk: true },
@@ -1393,10 +1393,12 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
     grp.add(m);
     if (def.kind === 'rolls') {
       // the little cinnamon rolls soaking in the icing
-      for (let i = 0; i < 7; i++) {
-        const v = it.variants.length ? it.variants[i % it.variants.length] : PC.miniRoll(i * 3 + 1);
+      const ring = [[0.064, 9, 0.3], [0.03, 4, 0.9]];          // rolls packed in two rings: [radius, count, start angle]
+      let ri = 0;
+      for (const [rad, cnt, a0] of ring) for (let k = 0; k < cnt; k++, ri++) {
+        const v = it.variants.length ? it.variants[ri % it.variants.length] : PC.miniRoll(ri * 3 + 1);
         const r = new THREE.Mesh(v.geo, v.cls ? it.matFor(v) : pieceMat);
-        const a = i / 7 * Math.PI * 2 + 0.3, d = i ? 0.052 : 0;
+        const a = a0 + k / cnt * Math.PI * 2 + (Math.random() - 0.5) * 0.12, d = rad + (Math.random() - 0.5) * 0.006;
         r.position.set(Math.cos(a) * d, H - 0.001, Math.sin(a) * d);
         r.rotation.set((Math.random() - 0.5) * 0.3, Math.random() * 6, (Math.random() - 0.5) * 0.3);
         r.castShadow = true;
@@ -1411,7 +1413,7 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
   if (it.heapData) {
     // settled by physics (bar-heap.js): the pieces rest on a dark, dome-shaped fill whose gaps stay in shadow
     const d = it.heapData;
-    const base = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 14, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: new THREE.Color(def.heap).multiplyScalar(0.42), roughness: 0.9 }));
+    const base = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 14, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: new THREE.Color(def.heap).multiplyScalar(def.baseTone || 0.42), roughness: 0.9 }));   // (darker than the pieces: the gaps between them are in shadow)
     base.scale.set(d.rw, Math.max(0.004, d.yc - d.ye + 0.004), d.rw);
     base.position.y = d.ye + 0.002;
     base.receiveShadow = true;

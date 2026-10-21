@@ -163,7 +163,7 @@ def biscoffbits(i):
     return piece(f'biscoffbits_{i}', f, lo, hi, 0.48 * MM, paint, smooth=2, cls='matte', flat=True, ao_strength=0.9)
 
 
-PIECES['biscoffbits'] = dict(fn=biscoffbits, n=8, heap=None)
+PIECES['biscoffbits'] = dict(fn=biscoffbits, n=8, heap=dict(bowl='organic', over=0.012, phi=0.45, fast=True))
 
 
 # ------------------------------------------------------------------ cookie dough
@@ -530,7 +530,7 @@ def coconut(i):
 
 
 # shreds are 3.6 mm3 each: a full mound is thousands, so it is deposited (fast=True), not simulated
-PIECES['coconut'] = dict(fn=coconut, n=8, heap=dict(bowl='hobnail', over=0.004, phi=0.04, fast=True, min_n=5500, max_n=8000, tries=1))      # tries=1: shreds stick where they land, they do not roll downhill
+PIECES['coconut'] = dict(fn=coconut, n=8, heap=dict(bowl='hobnail', over=0.004, phi=0.04, fast=True, layer=0.032, max_n=12000, tries=1, ao_lo=0.88))      # tries=1: shreds stick where they land, they do not roll downhill
 
 
 # ------------------------------------------------------------------ kataifi nests

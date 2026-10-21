@@ -11,7 +11,7 @@ bar). The page already ships three's GLTFLoader and the meshopt decoder, so this
     indices   uint16, vertex-cache ordered
 
 and meshopt-codes each buffer view. Pieces of more than ~600 triangles also get a `<name>_lod` node: the same vertex buffers,
-a decimated index list (meshopt simplify, ~28%). Settled bowl heaps show pieces as 25-40 px blobs, so they draw the lod
+a decimated index list (meshopt simplify, ~16%). Settled bowl heaps show pieces as 25-40 px blobs, so they draw the lod
 and the scene stays at a few million triangles; servings and the cup keep the full mesh. The page turns it all back into
 plain float arrays (bar-pieces.js, modelledPieces).
 Needs `pip install meshoptimizer`.
@@ -24,8 +24,8 @@ import meshoptimizer as mo
 
 EXT = 'EXT_meshopt_compression'
 LOD_MIN = 600          # triangles below which a piece has no lod
-LOD_RATIO = 0.28       # of the full index count
-LOD_ERROR = 0.03       # relative to the piece's extent
+LOD_RATIO = 0.16       # of the full index count
+LOD_ERROR = 0.04       # relative to the piece's extent
 
 
 def _q(a, lo, hi, dtype):

@@ -61,6 +61,14 @@ coconut and cookie dough; organic wavy bowl for the rest), how far the heap stan
 fraction (0.5 for chunky, 0.3 for strands/shreds/crumbs, 0.55 for spheres). `weights=[...]` favours some variants.
 `heap=None` for tiny pieces (sprinkles, jimmies): the page scatters those.
 
+Other `heap` options: `fast=True` skips the rigid-body run and deposits the pieces onto a height field instead (use it above
+roughly 500 pieces, where Blender's run grows with the square of the count: granola's 577 pieces took 20 minutes);
+`tries` (default 8: each piece settles in the lowest of that many random spots; 1 for things that stick where they
+land, like coconut), `layer` (thickness of the simulated layer, m), `min_n` / `max_n` (piece count bounds), `ao_lo`
+(lowest occlusion tint, raise it for thin pieces whose big bounding spheres overrate how shut in their neighbours are),
+`weights` (favour some variants). Each finished heap is saved as `<prefix>-heaps/<key>.json`, so an interrupted run
+resumes.
+
 ## Workflow
 
 Needs Python 3.11 with `numpy scipy scikit-image meshoptimizer` and, for the heaps, `bpy==4.2.0` (Blender as a module).
@@ -83,7 +91,7 @@ cp /tmp/full.glb site/assets/models/toppings-v2.glb && cp /tmp/full-heaps.json s
 
 Files named `site/assets/models/_*` are scratch and gitignored. The output is `pack.py`'s format: positions int16 under a node
 scale, int8 normals, uint8 sqrt(albedo) + roughness, uint8 occlusion/translucency/specular, uint16 indices, all
-meshopt-coded (4.1 MB for the 183 pieces; the same data as plain float32 is 17 MB, `--plain` writes that).
+meshopt-coded (4.4 MB for the 183 pieces including the decimated lod copies; the same data as plain float32 is 17 MB, `--plain` writes that).
 `bar-pieces.js` (`modelledPieces`) turns either layout back into float arrays, so a plain GLB works in the lab too.
 
 View the PNGs with the Read tool. Judge honestly against a photograph of the real thing in your head: silhouette,

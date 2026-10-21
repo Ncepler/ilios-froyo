@@ -120,11 +120,16 @@ you are.
   rolls have a spiral and pooled icing; kataifi and coconut are swept strands and ribbons. Every variant of a family
   is different (size, cut, ripeness). One shader per surface class (matte, wet fruit, candy shell, chocolate, jelly)
   adds gloss, a micro bump and light passing through thin or translucent parts.
-- **Bowls are filled by physics.** Blender's rigid-body engine drops each topping into its bowl (about @NPIECES@
-  pieces in all, 60 to 3,000 per bowl) and the settled pile is stored in `assets/bar-heaps.json`; the page draws
-  it as instanced meshes with decimated copies of the pieces (they are 25 to 40 px on screen), so the whole line is
-  a few million triangles. Servings and everything in the cup use the full meshes. The pieces come as one
-  @GLB@ MB file, quantised and meshopt-compressed (`source/toppings/pack.py`; the same data as float32 is 17 MB).
+- **Bowls are filled by physics.** Each bowl's pile is settled ahead of time and stored in `assets/bar-heaps.json` (about
+  7,000 visible pieces across 24 bowls, 60 to 1,000 per bowl, 460 KB). Chunky pieces (strawberries, mango, kiwi, gummy
+  bears, M&M's, brownies and so on, 18 bowls) are dropped into the bowl in Blender's rigid-body engine and left to rest
+  on each other, leaning and overlapping. Bowls of tiny pieces (chips, Oreo crumble, coconut, granola, Biscoff shards)
+  would take hours that way, so those are deposited onto a height field: each piece lands in the lowest of several
+  random spots, in an orientation it could rest in (plates flat, ribbons along the surface). The page draws piles as
+  instanced meshes using decimated copies of the pieces (they are 25 to 40 px on screen), which keeps the whole line
+  near 3 million triangles a frame with the occlusion pass on. Servings and everything in the cup use the full meshes.
+  The pieces ship as one 4.4 MB file, quantised and meshopt-compressed (`source/toppings/pack.py`; the same data as
+  float32 is 17 MB).
 - **Lighting:** one warm key light with a soft shadow, a cool rim from behind, a little sky and room reflection, and a
   screen-space ambient-occlusion pass (`site/post.js`) for the contact shadows in every crease. The glass guard is a
   reflection-only layer: clear glass has no body colour, and it used to veil the bowls behind it. Weak devices drop
