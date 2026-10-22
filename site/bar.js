@@ -47,7 +47,7 @@ export const BAR = [
   { key: 'mms', label: "M&M's", zone: 'candy', tool: 'scoop', make: PC.mm, n: 18, heap: '#d6261f', chalk: true },
   { key: 'sprinkles', label: 'Rainbow Sprinkles', zone: 'candy', tool: 'spoon', glb: 'nonpareil', model: 'nonpareil', tint: PC.RAINBOW_JIMMIES, jimmies: PC.RAINBOW_JIMMIES, n: 260, heap: '#e9a0a8', fine: true, chalk: true },
   { key: 'brownies', label: 'Brownie Bites', zone: 'candy', tool: 'tongs', glb: 'brownie', n: 6, heap: '#4a2815', chalk: true },
-  { key: 'rainbow', label: 'Rainbow Cookies', zone: 'candy', tool: 'tongs', glb: 'rainbow', n: 4, heap: '#5da345', chalk: true },
+  { key: 'rainbow', label: 'Rainbow Cookies', zone: 'candy', tool: 'tongs', glb: 'rainbow', n: 4, heap: '#4a2d20', chalk: true },
   { key: 'chips', label: 'Chocolate Chips', zone: 'candy', tool: 'spoon', glb: 'chip', n: 34, heap: '#24120b', chalk: true },
   { key: 'jimmies', label: 'Chocolate Sprinkles', zone: 'candy', tool: 'soup', make: s => PC.jimmy(s, PC.CHOC_JIMMIES), model: 'jimmy', tint: PC.CHOC_JIMMIES, n: 160, heap: '#3b2216', fine: true, chalk: true },
   { key: 'krispies', label: 'Rice Krispies Treats', zone: 'candy', tool: 'tongs', make: PC.krispie, n: 5, heap: '#e1c189', chalk: true },
