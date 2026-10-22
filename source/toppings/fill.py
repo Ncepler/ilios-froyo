@@ -118,7 +118,7 @@ def make_heap(key, pieces, spec, weights=None, log=print):
         T = T - sd * np.exp(-((X - sx) ** 2 + (Z - sz) ** 2) / sr ** 2) * np.clip(1.2 - u ** 3, 0, 1)
     if spec.get('solid'):                              # tiny pieces: everything deeper than this below the target is taken as already filled
         Hf = np.maximum(Hf, T - spec['solid'])
-    inner = rr < Rr * (1 - G.BOWLS[kind]['wobble']) - 0.004          # (not the cells the wavy rim might cover)
+    inner = rr < G.wall_radius(kind, H, np.arctan2(Z, X), seed) - 0.0035          # (every cell inside the wavy wall: the pile must reach it all the way round)
     tol = spec.get('tol', 0.55) * rbar
     tries = spec.get('tries', 10)
     pct = spec.get('pct', 90)

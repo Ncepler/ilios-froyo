@@ -1483,23 +1483,44 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
     // settled by physics (bar-heap.js): the pieces rest on a dark, dome-shaped fill whose gaps stay in shadow
     const d = it.heapData;
     const baseMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(def.heap).multiplyScalar(def.baseTone || 0.42), roughness: 0.9 });   // (darker than the pieces: the gaps between them are in shadow)
-    let base;
+    // the base is the pile's own body under the shell of pieces, so nothing seems to float: it meets the bowl's wall all the way
+    // round (organic bowls have a wavy rim: the lathe is scaled with the same wave as the bowl) and drops down along the wall
+    const hobBowl = def.bowl === 'hobnail', bR = hobBowl ? 0.095 : 0.102, bH = hobBowl ? 0.085 : 0.07, bB = hobBowl ? 0.055 : 0.06, bP = hobBowl ? 0.8 : 1.2;
+    const wobble = !hobBowl && d.seed !== undefined;
+    const wallIn = y => (wobble || hobBowl ? 1 : 0.94) * (bB + (bR - bB) * Math.sin(Math.min(1, Math.max(0, y / bH)) * Math.PI / 2) ** bP - 0.006) - 0.0012;
+    let pts;
     if (d.dome) {
-      // the pile's own surface, sunk below the shell of pieces; tiny pieces (sprinkles) sit on a dome that is itself flecked with them
-      // (it stays inside the bowl: the wall narrows towards the floor, and the rim is wavy, which takes up to 6% off the radius)
-      const hobBowl = def.bowl === 'hobnail', bR = hobBowl ? 0.095 : 0.102, bH = hobBowl ? 0.085 : 0.07, bB = hobBowl ? 0.055 : 0.06, bP = hobBowl ? 0.8 : 1.2;
-      const wallIn = y => 0.93 * (bB + (bR - bB) * Math.sin(Math.min(1, Math.max(0, y / bH)) * Math.PI / 2) ** bP - 0.006);
-      const prof = d.dome.map(([r, y]) => new THREE.Vector2(Math.min(r, wallIn(y)), y));
-      const edge = prof[prof.length - 1];
-      for (let k = 0; k < 5; k++) { const y = edge.y - 0.004 - k * 0.0065; prof.push(new THREE.Vector2(Math.min(edge.x, wallIn(y)), y)); }
-      prof.reverse();
-      base = new THREE.Mesh(new THREE.LatheGeometry(prof, 48), baseMat);
-      if (def.tint) { baseMat.color.set('#ffffff'); baseMat.map = confettiMap(def.tint, def.baseTone || 0.42); }
+      pts = d.dome.map(([r, y]) => [r, y]);        // (a dome flecked with the sprinkles' own colours sits under tiny pieces)
+      pts.push([bR, pts[pts.length - 1][1]]);
     } else {
-      base = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 14, 0, Math.PI * 2, 0, Math.PI / 2), baseMat);
-      base.scale.set(d.rw, Math.max(0.004, d.yc - d.ye + 0.004), d.rw);
-      base.position.y = d.ye + 0.002;
+      // from the pieces themselves: the low end of the pieces in each ring is where the shell starts
+      const nb = 18, bw = bR / nb, ys = Array.from({ length: nb }, () => []);
+      for (const r of d.instances) { const b = Math.min(nb - 1, Math.floor(Math.hypot(r[1], r[3]) / bw)); ys[b].push(r[2]); }
+      const lev = ys.map(a => { if (a.length < 3) return NaN; a.sort((x, y) => x - y); return a[Math.floor(a.length * 0.12)] - 0.004; });
+      let last = lev.find(v => !isNaN(v)) ?? d.ye;
+      for (let i = 0; i < nb; i++) { if (isNaN(lev[i])) lev[i] = last; else last = lev[i]; }
+      pts = lev.map((y, i) => [(i + 0.5) * bw, Math.min(y, d.top - 0.006)]);
+      pts.unshift([0.0005, pts[0][1]]);
+      pts.push([bR, pts[pts.length - 1][1]]);
     }
+    // cut where the pile meets the wall, then follow the wall down
+    const prof = [];
+    for (const [r, y] of pts) { const w = wallIn(y); if (r >= w) { prof.push(new THREE.Vector2(w, y)); break; } prof.push(new THREE.Vector2(r, y)); }
+    const edge = prof[prof.length - 1];
+    for (let k = 0; k < 5; k++) { const y = edge.y - 0.004 - k * 0.0065; prof.push(new THREE.Vector2(Math.min(edge.x, wallIn(y)), y)); }
+    prof.reverse();
+    const baseGeo = new THREE.LatheGeometry(prof, 72);
+    if (wobble) {
+      const pp = baseGeo.attributes.position;
+      for (let i = 0; i < pp.count; i++) {
+        const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i), t = y / bH;
+        const f = 1 + 0.06 * Math.sin(Math.atan2(z, x) * 3 + d.seed) * t * t;
+        pp.setXYZ(i, x * f, y, z * f);
+      }
+      baseGeo.computeVertexNormals();
+    }
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    if (d.dome && def.tint) { baseMat.color.set('#ffffff'); baseMat.map = confettiMap(def.tint, def.baseTone || 0.42); }
     base.receiveShadow = true;
     grp.add(base, buildHeap(d, vs, it.matFor));
     it.heapTop = d.top;
