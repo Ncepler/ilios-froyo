@@ -1488,37 +1488,68 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
     const hobBowl = def.bowl === 'hobnail', bR = hobBowl ? 0.095 : 0.102, bH = hobBowl ? 0.085 : 0.07, bB = hobBowl ? 0.055 : 0.06, bP = hobBowl ? 0.8 : 1.2;
     const wobble = !hobBowl && d.seed !== undefined;
     const wallIn = y => (wobble || hobBowl ? 1 : 0.94) * (bB + (bR - bB) * Math.sin(Math.min(1, Math.max(0, y / bH)) * Math.PI / 2) ** bP - 0.006) - 0.0012;
-    let pts;
-    if (d.dome) {
-      pts = d.dome.map(([r, y]) => [r, y]);        // (a dome flecked with the sprinkles' own colours sits under tiny pieces)
-      pts.push([bR, pts[pts.length - 1][1]]);
-    } else {
-      // from the pieces themselves: the low end of the pieces in each ring is where the shell starts
-      const nb = 18, bw = bR / nb, ys = Array.from({ length: nb }, () => []);
-      for (const r of d.instances) { const b = Math.min(nb - 1, Math.floor(Math.hypot(r[1], r[3]) / bw)); ys[b].push(r[2]); }
-      const lev = ys.map(a => { if (a.length < 3) return NaN; a.sort((x, y) => x - y); return a[Math.floor(a.length * 0.12)] - 0.004; });
-      let last = lev.find(v => !isNaN(v)) ?? d.ye;
-      for (let i = 0; i < nb; i++) { if (isNaN(lev[i])) lev[i] = last; else last = lev[i]; }
-      pts = lev.map((y, i) => [(i + 0.5) * bw, Math.min(y, d.top - 0.006)]);
-      pts.unshift([0.0005, pts[0][1]]);
-      pts.push([bR, pts[pts.length - 1][1]]);
+    // a height map over angle and radius: the low end of the pieces in each cell (so the base is right under them everywhere), holes
+    // filled from their neighbours, cut where it meets the (wavy) wall, then down along the wall
+    const nb = 18, ns = 48, bw = bR / nb, TAU = Math.PI * 2;
+    const cellY = Array.from({ length: nb * ns }, () => []);
+    for (const r of d.instances) {
+      const b = Math.floor(Math.hypot(r[1], r[3]) / bw);
+      if (b < nb) cellY[b * ns + (Math.floor((Math.atan2(r[3], r[1]) + Math.PI) / TAU * ns) % ns)].push(r[2]);
     }
-    // cut where the pile meets the wall, then follow the wall down
-    const prof = [];
-    for (const [r, y] of pts) { const w = wallIn(y); if (r >= w) { prof.push(new THREE.Vector2(w, y)); break; } prof.push(new THREE.Vector2(r, y)); }
-    const edge = prof[prof.length - 1];
-    for (let k = 0; k < 5; k++) { const y = edge.y - 0.004 - k * 0.0065; prof.push(new THREE.Vector2(Math.min(edge.x, wallIn(y)), y)); }
-    prof.reverse();
-    const baseGeo = new THREE.LatheGeometry(prof, 72);
-    if (wobble) {
-      const pp = baseGeo.attributes.position;
-      for (let i = 0; i < pp.count; i++) {
-        const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i), t = y / bH;
-        const f = 1 + 0.06 * Math.sin(Math.atan2(z, x) * 3 + d.seed) * t * t;
-        pp.setXYZ(i, x * f, y, z * f);
+    const off = d.dome ? 0.0012 : 0.004, cap = d.top - 0.006;
+    let lev = cellY.map(a => { if (a.length < 3) return NaN; a.sort((x, y) => x - y); return Math.min(cap, a[Math.floor(a.length * 0.12)] - off); });
+    for (let pass = 0; pass < 40 && lev.some(isNaN); pass++) {
+      lev = lev.map((v, k) => {
+        if (!isNaN(v)) return v;
+        const b = Math.floor(k / ns), j = k % ns; let sum = 0, n = 0;
+        for (const [db, dj] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+          const bb = b + db; if (bb < 0 || bb >= nb) continue;
+          const u = lev[bb * ns + (j + dj + ns) % ns]; if (!isNaN(u)) { sum += u; n++; }
+        }
+        return n ? sum / n : NaN;
+      });
+    }
+    lev = lev.map(v => isNaN(v) ? d.ye : v);
+    const sm = lev.map((v, k) => {         // a light smoothing that never lifts the base into the pieces
+      const b = Math.floor(k / ns), j = k % ns; let sum = 0, n = 0;
+      for (let db = -1; db <= 1; db++) for (let dj = -1; dj <= 1; dj++) { const bb = b + db; if (bb < 0 || bb >= nb) continue; sum += lev[bb * ns + (j + dj + ns) % ns]; n++; }
+      return Math.min(v, sum / n);
+    });
+    const wob = (th, y) => wobble ? 1 + 0.06 * Math.sin(th * 3 + d.seed) * (y / bH) ** 2 : 1;
+    const rows = nb + 1 + 5;               // ring 0 is the centre, rings 1..nb the heap, then five steps down the wall
+    const posA = new Float32Array(rows * ns * 3), uvA = new Float32Array(rows * ns * 2), idx = [];
+    for (let j = 0; j < ns; j++) {
+      const th = (j + 0.5) / ns * TAU - Math.PI, c = Math.cos(th), sn = Math.sin(th);
+      let cut = false, ry = 0, rr = 0;
+      for (let i = 0; i < rows; i++) {
+        let r, y;
+        if (i <= nb) {
+          y = sm[Math.max(0, i - 1) * ns + j];
+          r = i * bw;
+          const w = wallIn(y) * wob(th, y);
+          if (cut || r >= w) { r = w; cut = true; if (!ry) { ry = y; } y = ry; }
+          rr = r;
+        } else {
+          y = ry || sm[(nb - 1) * ns + j];
+          if (!ry) { ry = y; rr = wallIn(y) * wob(th, y); }
+          y = ry - 0.004 - (i - nb - 1) * 0.0065;
+          r = Math.min(rr, wallIn(y) * wob(th, y));
+        }
+        const o = (i * ns + j);
+        posA[o * 3] = r * c; posA[o * 3 + 1] = y; posA[o * 3 + 2] = r * sn;
+        uvA[o * 2] = (r * c / bR) * 0.5 + 0.5; uvA[o * 2 + 1] = (r * sn / bR) * 0.5 + 0.5;
       }
-      baseGeo.computeVertexNormals();
     }
+    for (let i = 0; i < rows - 1; i++) for (let j = 0; j < ns; j++) {
+      const a0 = i * ns + j, a1 = i * ns + (j + 1) % ns, b0 = (i + 1) * ns + j, b1 = (i + 1) * ns + (j + 1) % ns;
+      idx.push(a0, a1, b0, a1, b1, b0);
+    }
+    const baseGeo = new THREE.BufferGeometry();
+    baseGeo.setAttribute('position', new THREE.BufferAttribute(posA, 3));
+    baseGeo.setAttribute('uv', new THREE.BufferAttribute(uvA, 2));
+    baseGeo.setIndex(idx);
+    baseGeo.computeVertexNormals();
+    baseMat.side = THREE.DoubleSide;
     const base = new THREE.Mesh(baseGeo, baseMat);
     if (d.dome && def.tint) { baseMat.color.set('#ffffff'); baseMat.map = confettiMap(def.tint, def.baseTone || 0.42); }
     base.receiveShadow = true;

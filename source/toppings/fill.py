@@ -92,7 +92,7 @@ def make_heap(key, pieces, spec, weights=None, log=print):
     cell = spec.get('cell') or max(0.0008, min(0.002, rbar / 4.5))
     over = spec['over']
     edge = spec.get('edge', 0.0)
-    Rr = G.wall_radius(kind, H, 0.0, seed)             # (the rim's radius, without the wobble)
+    Rr = G.wall_radius(kind, H, None, seed)            # (the rim's radius, without the wobble: a=0 would have put the wobble's phase at angle 0 in, and cut the pile off short of the wall)
     half = Rr * 1.12 + 0.004
     nc = int(2 * half / cell) + 1
     ctr = (nc - 1) / 2
@@ -130,6 +130,7 @@ def make_heap(key, pieces, spec, weights=None, log=print):
 
     out = []
     n_try_fail = 0
+    need = np.zeros(0, int)
     while len(out) < max_n:
         vi = int(rng.choice(len(vs), p=pr))
         v = vs[vi]
@@ -140,9 +141,13 @@ def make_heap(key, pieces, spec, weights=None, log=print):
             Vw = v['S'] @ R.T
             reach = float(np.hypot(Vw[:, 0], Vw[:, 2]).max())
             # aim at the deficit: a random spot, weighted to the lowest of a few
-            a = rng.uniform(0, math.tau)
-            d = math.sqrt(rng.uniform(0, 1)) * Rr * 0.98
-            cx, cz = d * math.cos(a), d * math.sin(a)
+            if need.size and rng.random() < spec.get('aim', 0.5):      # (half the candidates aim at a cell that is still short: the ring by the wall is thin and a random spot rarely lands in it)
+                k = int(need[rng.integers(need.size)])
+                cx, cz = float(gx[k // nc]), float(gx[k % nc])
+            else:
+                a = rng.uniform(0, math.tau)
+                d = math.sqrt(rng.uniform(0, 1)) * Rr * 1.05          # (the wall check pulls a piece in where the wavy wall is nearer)
+                cx, cz = d * math.cos(a), d * math.sin(a)
             ok = False
             for _ in range(3):
                 ix, iz = cells(cx + Vw[:, 0], cz + Vw[:, 2])
@@ -180,6 +185,8 @@ def make_heap(key, pieces, spec, weights=None, log=print):
         ix, iz = cells(cx + Vw[:, 0], cz + Vw[:, 2])
         np.maximum.at(Hf, (ix, iz), yc + Vw[:, 1])
         out.append((vi, np.array([cx, yc, cz]), R))
+        if len(out) % 10 == 1:
+            need = np.flatnonzero((inner & (T - Hf > 1.5 * tol)).ravel())
         if len(out) % 30 == 0:
             lack = (T - Hf)[inner]
             if np.percentile(lack, 96) <= tol and lack.mean() <= 0.35 * tol:
