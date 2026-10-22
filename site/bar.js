@@ -1486,8 +1486,12 @@ function contents(def, R, H, M, pieceMat, jellyMat, it) {
     let base;
     if (d.dome) {
       // the pile's own surface, sunk below the shell of pieces; tiny pieces (sprinkles) sit on a dome that is itself flecked with them
-      const prof = d.dome.map(([r, y]) => new THREE.Vector2(r, y));
-      prof.push(new THREE.Vector2(d.rw, prof[prof.length - 1].y - 0.004), new THREE.Vector2(d.rw, prof[prof.length - 1].y - 0.03));
+      // (it stays inside the bowl: the wall narrows towards the floor, and the rim is wavy, which takes up to 6% off the radius)
+      const hobBowl = def.bowl === 'hobnail', bR = hobBowl ? 0.095 : 0.102, bH = hobBowl ? 0.085 : 0.07, bB = hobBowl ? 0.055 : 0.06, bP = hobBowl ? 0.8 : 1.2;
+      const wallIn = y => 0.93 * (bB + (bR - bB) * Math.sin(Math.min(1, Math.max(0, y / bH)) * Math.PI / 2) ** bP - 0.006);
+      const prof = d.dome.map(([r, y]) => new THREE.Vector2(Math.min(r, wallIn(y)), y));
+      const edge = prof[prof.length - 1];
+      for (let k = 0; k < 5; k++) { const y = edge.y - 0.004 - k * 0.0065; prof.push(new THREE.Vector2(Math.min(edge.x, wallIn(y)), y)); }
       prof.reverse();
       base = new THREE.Mesh(new THREE.LatheGeometry(prof, 48), baseMat);
       if (def.tint) { baseMat.color.set('#ffffff'); baseMat.map = confettiMap(def.tint, def.baseTone || 0.42); }

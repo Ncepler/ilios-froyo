@@ -32,8 +32,8 @@ def registry():
 # bowls whose heap is made of pieces that are not a topping of their own: page key -> (the piece families, in the order the page
 # lists their variants, heap spec).  Rainbow sprinkles are nonpareils and jimmies together; the page tints every instance.
 EXTRA_BOWLS = {
-    'sprinkles': (['nonpareil', 'jimmy'], dict(bowl='organic', over=0.012, depth=1.7, solid=0.0055, tilt=1.3, max_n=16000, tries=6, tint=True, ao_lo=0.55, weights=[2.2, 1, 1, 1])),
-    'jimmies': (['jimmy'], dict(bowl='organic', over=0.012, depth=1.7, solid=0.0055, tilt=1.3, max_n=16000, tries=6, tint=True, ao_lo=0.55)),
+    'sprinkles': (['nonpareil', 'jimmy'], dict(bowl='organic', over=0.028, bumps=(0.007, 0.08), depth=1.7, solid=0.0055, tilt=1.3, max_n=16000, tries=6, tint=True, ao_lo=0.55, weights=[2.2, 1, 1, 1])),
+    'jimmies': (['jimmy'], dict(bowl='organic', over=0.028, bumps=(0.007, 0.08), depth=1.7, solid=0.0055, tilt=1.3, max_n=16000, tries=6, tint=True, ao_lo=0.55)),
 }
 
 

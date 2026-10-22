@@ -105,6 +105,17 @@ def make_heap(key, pieces, spec, weights=None, log=print):
     u = np.clip(rr / Rr, 0, 1)
     shape = spec.get('shape', 1.0)
     T = H + edge + over * (1 - u ** 2) ** shape
+    if spec.get('bumps'):                              # a loose pile is lumpy, not a smooth cap: a few long waves over the mound, none at the rim
+        amp, wl = spec['bumps']
+        br = np.random.default_rng(int(seed * 100))
+        wave = np.zeros_like(T)
+        for k in range(1, 5):
+            th, ph = br.uniform(0, math.tau, 2)
+            wave += np.sin(math.tau * (X * math.cos(th) + Z * math.sin(th)) / (wl / k) + ph) / k
+        T = T + amp * wave / 1.4 * np.clip(1.2 - u ** 3, 0, 1) * (u < 1)
+    if spec.get('scoop'):                              # where the spoon has been
+        sx, sz, sr, sd = spec['scoop']
+        T = T - sd * np.exp(-((X - sx) ** 2 + (Z - sz) ** 2) / sr ** 2) * np.clip(1.2 - u ** 3, 0, 1)
     if spec.get('solid'):                              # tiny pieces: everything deeper than this below the target is taken as already filled
         Hf = np.maximum(Hf, T - spec['solid'])
     inner = rr < Rr * (1 - G.BOWLS[kind]['wobble']) - 0.004          # (not the cells the wavy rim might cover)
