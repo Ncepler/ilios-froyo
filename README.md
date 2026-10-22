@@ -23,6 +23,7 @@ site/                       the website: plain HTML + ES modules, no build step 
   bar-pieces.js             topping materials, loader for the modelled pieces, procedural fallbacks
   post.js                   the bar's ambient-occlusion pass and tone mapping
   bar-list.js               plain-text bar list, used when WebGL is off
+  2/                        option two: the whole site with no 3D (one HTML file + img/), see below
   assets/models/            machine, room, cup materials, topping-v2 pieces (glTF, meshopt)
   assets/bar-heaps.json     every bowl's settled pile (piece, position, rotation), from Blender's rigid-body physics
 models/                     the same GLBs for use elsewhere (plus Draco versions)
@@ -47,6 +48,23 @@ Preview locally (it has to be served; opening `index.html` from disk won't load 
 cd site && python3 -m http.server 8080
 # open http://localhost:8080
 ```
+
+## Option two: `site/2/` (no 3D)
+
+A second, complete version of the site to pitch side by side with the 3D one, served at `/2/`. No WebGL: a calm,
+editorial page in the shop's own palette (limewash milk and oat, the gold sun, one olive branch), built to feel
+like the room. Sections: announcement ticker, hero, flavors today, toppings today (filterable), the warm pistachio
+kataifi, how it works, the story, the shop, visit (live open/closed in New York time, hours, map), FAQ, Instagram,
+a monthly-flavor email form, footer.
+
+- `site/2/index.html` holds the page, styles and script (no build step, no libraries).
+- **Daily edits** are in the HTML: each flavor is one `<li class="flavor">`; add `class="soon"` to a topping that's
+  not out today. The ticker and the hero's "Now pouring" chip are plain text next to them. Hours live in `HOURS`
+  in the script and in the hours list.
+- The flavor photos are the `renders/cup-hero.jpg` Cycles render with the froyo recoloured per flavor (the twists
+  are two flavors banded along each coil); the skillet and the lounge are SVG illustrations in `site/2/img/`.
+- **Before launch:** point the email form at the shop's mailing list (it only confirms on the page for now) and
+  make `og:image` absolute.
 
 ## The hero: the pour
 
