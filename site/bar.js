@@ -55,7 +55,7 @@ export const BAR = [
   { key: 'cookies', label: 'Mini Cookies', zone: 'candy', tool: 'tongs', make: PC.miniCookie, n: 5, heap: '#c08440', chalk: true },
   { key: 'biscoffbits', label: 'Biscoff Cookies', zone: 'candy', tool: 'tongs', glb: 'biscoff', n: 9, heap: '#a8672b', chalk: true },
   { key: 'dough', label: 'Cookie Dough', zone: 'candy', bowl: 'hobnail', tool: 'disher', make: PC.cookieDough, n: 3, heap: '#d9b984', chalk: true },
-  { key: 'sour', label: 'Sour Strips', zone: 'candy', tool: 'tongs', make: PC.sourStrip, n: 4, heap: '#e8352c', chalk: true },
+  { key: 'sour', label: 'Sour Strips', zone: 'candy', tool: 'tongs', make: PC.sourStrip, n: 4, heap: '#3a2226', chalk: true },
   { key: 'worms', label: 'Gummy Worms', zone: 'candy', tool: 'tongs', make: PC.gummyWorm, n: 3, heap: '#5fbf3c', chalk: true },
   { key: 'chunks', label: 'Chocolate Chunks', zone: 'candy', tool: 'tongs', make: PC.chocChunk, n: 5, heap: '#5a3423', chalk: true },
   // the warm station (served by the staff from behind the glass)
