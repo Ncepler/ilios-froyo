@@ -66,6 +66,21 @@ a monthly-flavor email form, footer.
 - **Before launch:** point the email form at the shop's mailing list (it only confirms on the page for now) and
   make `og:image` absolute.
 
+### Halloween: `site/2/halloween/`
+
+The same page after dark, served at `/2/halloween/`: every section, the toppings filter, the live open/closed
+status and the email form carry over, in a plum-black room with a pumpkin glow. The sun mark is a jack-o'-lantern
+sun, the olive branch is a dead one with a spider on a thread, a web sways behind the hero arch under a full moon,
+bats cross the hero, the kicker rules are candy corn, and the "on the machines tonight" line counts the nights to
+Halloween. The flavors wear October names (Ghost Tart, Blood Moon Raspberry, Witching Hour Twist...) and each card
+still says what's really in the cup; the warm station is "the cauldron". Animation stops under reduced motion.
+
+- `site/2/halloween/index.html` is a copy of `site/2/index.html` with its own tokens, copy and decorations; daily
+  edits work the same way. It links back to `/2/` from the footer.
+- The photos are night grades of `site/2/img/`, with small ghost faces on the white swirls:
+  `python3 source/dev/halloween_img.py` rebuilds them into `site/2/halloween/img/`. `lounge.svg` (moon, cobweb,
+  jack-o'-lanterns) and `cauldron.svg` (the skillet's kataifi in an iron pot, bubbling) are illustrations there.
+
 ## The hero: the pour
 
 Screen one is the shop's station: the machine in its limewash niche with the gold sun on the wall. Pick one of the

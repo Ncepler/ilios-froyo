@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ilios Froyo after dark · Halloween at the shop in Roslyn, NY</title>
+<meta name="description" content="Organic Greek froyo, softly haunted. Made in house every day from Greek yogurt and kefir, with trick-or-treat toppings and warm pistachio kataifi from the cauldron. 1355 Old Northern Blvd, Roslyn, NY.">
+<meta name="theme-color" content="#100C13">
+<meta name="color-scheme" content="dark">
+<!-- DEPLOY STEP: set og:url and make og:image absolute once the site has its live address. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ilios Froyo after dark · Roslyn, NY">
+<meta property="og:description" content="Greek froyo, softly haunted. Organic, made daily, at 1355 Old Northern Blvd. Open Tuesday to Sunday, 5 to 10 pm.">
+<meta property="og:image" content="img/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='%23EE7A22'%3E%3Cellipse cx='22' cy='36' rx='12' ry='16'/%3E%3Cellipse cx='42' cy='36' rx='12' ry='16'/%3E%3Cellipse cx='32' cy='36' rx='13' ry='17'/%3E%3C/g%3E%3Cpath d='M30 20c-.4-5 1-9 5-11l2.4 2.4C34.6 13.6 33.6 16.6 34 20z' fill='%235B6B2C'/%3E%3Cg fill='%23100C13'%3E%3Cpath d='M18 34l5-7 5 7zM36 34l5-7 5 7zM18 40c8 8 20 8 28 0l-4 .8-2.6 3-3-2.6-3.4 3-3.4-3-3 2.6-2.6-3z'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..500,100;1,9..144,300..500,100&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="img/hero.webp" type="image/webp">
+<script>document.documentElement.classList.add('js')</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "IceCreamShop",
+  "name": "Ilios Froyo",
+  "description": "Organic Greek frozen yogurt made in house daily, with a topping bar of fresh fruit and warm pistachio kataifi.",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "1355 Old Northern Blvd",
+    "addressLocality": "Roslyn",
+    "addressRegion": "NY",
+    "postalCode": "11576",
+    "addressCountry": "US"
+  },
+  "openingHoursSpecification": [{
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "opens": "17:00",
+    "closes": "22:00"
+  }],
+  "servesCuisine": ["Frozen yogurt", "Greek"],
+  "sameAs": ["https://www.instagram.com/iliosfroyo/"]
+}
+</script>
+<style>
+/* ------------------------------------------------------------------ tokens
+   The same shop after dark: a plum-black room, one pumpkin glow, a pale moon.
+   Token names are kept from the daylight page so every rule carries over;
+   milk/bone/oat are now the night surfaces and ink is the bone-white text.
+   Colour is still spent sparingly so the froyo (and the pumpkin) carry it. */
+:root{
+  --milk:#100C13; --bone:#18121C; --oat:#221A27; --sand:#3A2E3F; --nude:#2A1F2C;
+  --latte:#C9A682; --rasp:#E3A3B2; --pistachio:#A9A96D; --sage:#131A10; --sage-deep:#1C2416;
+  --gold:#EE7A22; --gold-deep:#F49A4C; --olive:#B5C46A;
+  --pumpkin:#EE7A22; --pumpkin-hi:#F7924A; --candle:#FFC766; --moon:#F3E9CF; --slime:#B5C46A;
+  --ink:#F2E8DA; --ink-2:#C2B5A6; --ink-3:#8F8274;
+  --line:rgba(242,232,218,.1); --line-2:rgba(242,232,218,.18);
+  --bark:#4A3843;
+
+  --serif:"Fraunces",ui-serif,Georgia,serif;
+  --sans:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+  --ease-in-out:cubic-bezier(0.77,0,0.175,1);
+  --ease-drawer:cubic-bezier(0.32,0.72,0,1);
+
+  --gutter:clamp(16px,4.4vw,64px);
+  --max:1360px;
+  --nav-h:72px;
+  --r-lg:28px; --r-md:20px; --r-sm:14px;
+  interpolate-size:allow-keywords;
+  --bat-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 50'%3E%3Cpath d='M47 22C38 9 20 6 3 15c9 1 13 7 11 14 6-4 13-2 15 4 4-6 11-6 16-2zM53 22c9-13 27-16 44-7-9 1-13 7-11 14-6-4-13-2-15 4-4-6-11-6-16-2zM50 14c-1.6 0-2.4-2.6-3.6-4.4.4 2 .3 3.6-.6 5-1.4 2-1.8 6-1 10 .8 4.4 3 8 5.2 8s4.4-3.6 5.2-8c.8-4 .4-8-1-10-.9-1.4-1-3-.6-5-1.2 1.8-2 4.4-3.6 4.4z'/%3E%3C/svg%3E");
+}
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-top:calc(var(--nav-h) + 16px)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{background:var(--milk);color:var(--ink);font:400 1.0625rem/1.6 var(--sans);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  overflow-x:hidden;overflow-x:clip;-webkit-tap-highlight-color:transparent}
+img,svg{display:block;max-width:100%}
+img{height:auto}
+a{color:inherit;text-decoration:none}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--gold-deep);outline-offset:3px;border-radius:6px}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.skip{position:fixed;left:12px;top:12px;z-index:100;background:var(--ink);color:var(--milk);padding:10px 16px;border-radius:999px;transform:translateY(-200%)}
+.skip:focus{transform:none}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 var(--gutter)}
+
+/* ------------------------------------------------------------------ type */
+.serif{font-family:var(--serif);font-variation-settings:"SOFT" 100;font-optical-sizing:auto}
+em,.it{font-style:italic}
+.display{font:340 clamp(3.25rem,7.2vw,7.4rem)/.94 var(--serif);letter-spacing:-.03em;font-variation-settings:"SOFT" 100}
+.h2{font:340 clamp(2.5rem,5.2vw,4.75rem)/.98 var(--serif);letter-spacing:-.025em;font-variation-settings:"SOFT" 100}
+.h3{font:400 clamp(1.5rem,2vw,1.85rem)/1.1 var(--serif);letter-spacing:-.012em;font-variation-settings:"SOFT" 100}
+.display em,.h2 em{font-weight:300;color:var(--gold-deep)}
+.label{font:500 .75rem/1.2 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.kicker{display:inline-flex;align-items:center;gap:12px}
+/* the kicker rule is a stripe of candy corn */
+.kicker::before{content:"";width:24px;height:3px;border-radius:2px;background:linear-gradient(90deg,#FFF1D2 0 30%,var(--pumpkin) 30% 64%,#F7C548 64%)}
+.lede{font-size:clamp(1.0625rem,1.25vw,1.2rem);line-height:1.6;color:var(--ink-2);max-width:40ch}
+.muted{color:var(--ink-3)}
+
+/* ------------------------------------------------------------------ buttons
+   Press feedback on pointer-down (scale .97, 120ms). Colour on hover only where hover exists. */
+.btn{--bg:transparent;--fg:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;padding:0 24px;border-radius:999px;
+  background:var(--bg);color:var(--fg);font:500 .975rem/1 var(--sans);letter-spacing:.005em;border:1px solid var(--line-2);white-space:nowrap;
+  transition:transform 120ms var(--ease-out),background-color 200ms ease,border-color 200ms ease,color 200ms ease;touch-action:manipulation}
+.btn:active{transform:scale(.97)}
+.btn.solid{--bg:var(--pumpkin);--fg:var(--milk);border-color:var(--pumpkin);box-shadow:0 10px 30px -14px rgba(238,122,34,.7)}
+.btn.light{--bg:var(--milk);border-color:var(--milk)}
+.btn svg{width:16px;height:16px;flex:none}
+@media (hover:hover) and (pointer:fine){
+  .btn:hover{--bg:rgba(242,232,218,.06);border-color:var(--ink)}
+  .btn.solid:hover{--bg:var(--pumpkin-hi);border-color:var(--pumpkin-hi)}
+  .btn.light:hover{--bg:var(--bone)}
+  .tlink:hover{color:var(--ink)}
+  .tlink:hover::after{opacity:1}
+}
+.tlink{position:relative;display:inline-flex;align-items:center;gap:8px;font-weight:500;color:var(--ink-2);transition:color 200ms ease}
+.tlink::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:1px;background:currentColor;opacity:.35;transition:opacity 200ms ease}
+
+/* ------------------------------------------------------------------ announcement ticker (constant motion: linear) */
+.ticker{position:relative;z-index:31;background:var(--pumpkin);color:var(--milk);height:38px;overflow:hidden;display:flex;align-items:center}
+.ticker-track{display:flex;flex:none;gap:0;white-space:nowrap;animation:tick 48s linear infinite}
+.ticker:hover .ticker-track{animation-play-state:paused}
+.ticker-track span{display:inline-flex;align-items:center;gap:22px;padding-right:22px;font:600 .72rem/1 var(--sans);letter-spacing:.16em;text-transform:uppercase}
+/* a tiny bat between items */
+.ticker-track span::after{content:"";width:16px;height:8px;background:var(--milk);-webkit-mask:var(--bat-mask) center/contain no-repeat;mask:var(--bat-mask) center/contain no-repeat}
+@keyframes tick{to{transform:translateX(-50%)}}
+
+/* ------------------------------------------------------------------ nav: a translucent material that appears once content scrolls under it */
+.nav{position:sticky;top:0;z-index:30;height:var(--nav-h)}
+.nav::before{content:"";position:absolute;inset:0;background:rgba(16,12,19,.72);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
+  box-shadow:0 1px 0 var(--line);opacity:0;transition:opacity 300ms ease}
+.nav.is-scrolled::before,.menu-open .nav::before{opacity:1}
+.nav-in{position:relative;height:100%;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px}
+.brand{display:inline-flex;align-items:center;gap:12px;justify-self:start}
+.brand svg{width:34px;height:34px;color:var(--gold)}
+.brand b{display:block;font:400 1.3rem/1 var(--serif);letter-spacing:.32em;margin-right:-.32em;font-variation-settings:"SOFT" 100}
+.brand small{display:block;font:500 .56rem/1 var(--sans);letter-spacing:.42em;color:var(--ink-2);margin-top:5px}
+.nav-links{display:flex;gap:4px}
+.nav-links a{position:relative;padding:10px 14px;border-radius:999px;font:500 .9rem/1 var(--sans);color:var(--ink-2);transition:color 200ms ease,background-color 200ms ease}
+@media (hover:hover) and (pointer:fine){.nav-links a:hover{color:var(--ink);background:rgba(242,232,218,.06)}}
+.nav-links a[aria-current="true"]{color:var(--ink)}
+.nav-end{justify-self:end;display:flex;align-items:center;gap:14px}
+.status{display:inline-flex;align-items:center;gap:8px;font:500 .8rem/1 var(--sans);color:var(--ink-2);white-space:nowrap}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--ink-3);box-shadow:0 0 0 4px rgba(143,130,116,.16)}
+/* open = the candle is lit */
+.status.is-open i{background:var(--candle);box-shadow:0 0 0 4px rgba(238,122,34,.25),0 0 14px 2px rgba(255,199,102,.55)}
+.nav-end .btn{min-height:42px;padding:0 18px;font-size:.9rem}
+
+.menu-btn{display:none;width:44px;height:44px;border-radius:50%;position:relative;justify-self:end}
+.menu-btn i{position:absolute;left:13px;right:13px;height:1.5px;background:var(--ink);border-radius:2px;transition:transform 300ms var(--ease-out)}
+.menu-btn i:first-child{transform:translateY(-4px)}
+.menu-btn i:last-child{transform:translateY(4px)}
+.menu-open .menu-btn i:first-child{transform:rotate(45deg)}
+.menu-open .menu-btn i:last-child{transform:rotate(-45deg)}
+
+/* phone menu: a sheet that drops from under the bar and leaves the same way */
+.sheet{position:fixed;left:0;right:0;top:0;z-index:29;padding:calc(var(--nav-h) + 38px + 12px) var(--gutter) 28px;background:var(--milk);
+  border-radius:0 0 var(--r-lg) var(--r-lg);box-shadow:0 30px 60px -30px rgba(0,0,0,.8);transform:translateY(-104%);visibility:hidden;
+  transition:transform 260ms var(--ease-out),visibility 0s 260ms}
+.menu-open .sheet{transform:none;visibility:visible;transition:transform 480ms var(--ease-drawer),visibility 0s}
+.sheet a.big{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line);font:340 2.1rem/1.05 var(--serif);letter-spacing:-.02em;font-variation-settings:"SOFT" 100;
+  opacity:0;transform:translateY(-8px);transition:opacity 200ms ease,transform 200ms var(--ease-out)}
+.sheet a.big span{font:500 .72rem/1 var(--sans);letter-spacing:.16em;color:var(--ink-3)}
+.menu-open .sheet a.big{opacity:1;transform:none;transition:opacity 400ms ease calc(80ms + var(--i)*40ms),transform 500ms var(--ease-drawer) calc(80ms + var(--i)*40ms)}
+.sheet-foot{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:24px}
+.scrim{position:fixed;inset:0;z-index:28;background:rgba(5,3,7,.6);opacity:0;visibility:hidden;transition:opacity 260ms ease,visibility 0s 260ms}
+.menu-open .scrim{opacity:1;visibility:visible;transition:opacity 400ms ease,visibility 0s}
+
+/* ------------------------------------------------------------------ hero */
+.hero{position:relative;isolation:isolate;overflow:hidden;margin-top:calc(var(--nav-h) * -1);padding-top:var(--nav-h)}
+/* night through the window: moonlight high right, a pumpkin glow low left, a few stars */
+.hero::before{content:"";position:absolute;inset:-10% -10% 0 -10%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(46% 42% at 76% 24%,rgba(243,233,207,.16),transparent 70%),
+    radial-gradient(50% 45% at 12% 96%,rgba(238,122,34,.22),transparent 70%),
+    linear-gradient(112deg,transparent 0 54%,rgba(184,194,232,.05) 54% 57%,transparent 57% 66%,rgba(184,194,232,.045) 66% 69%,transparent 69%);
+  filter:blur(28px)}
+.stars{position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.7;
+  background:
+    radial-gradient(1.2px 1.2px at 8% 14%,#fff8e6 50%,transparent),radial-gradient(1px 1px at 22% 6%,#fff8e6 50%,transparent),
+    radial-gradient(1.4px 1.4px at 37% 19%,#fff8e6 50%,transparent),radial-gradient(1px 1px at 46% 8%,#fff8e6 50%,transparent),
+    radial-gradient(1px 1px at 58% 27%,#fff8e6 50%,transparent),radial-gradient(1.3px 1.3px at 66% 10%,#fff8e6 50%,transparent),
+    radial-gradient(1px 1px at 88% 9%,#fff8e6 50%,transparent),radial-gradient(1.2px 1.2px at 95% 31%,#fff8e6 50%,transparent),
+    radial-gradient(1px 1px at 4% 44%,#fff8e6 50%,transparent),radial-gradient(1px 1px at 29% 37%,#fff8e6 50%,transparent),
+    radial-gradient(1.2px 1.2px at 52% 46%,#fff8e6 50%,transparent),radial-gradient(1px 1px at 81% 52%,#fff8e6 50%,transparent)}
+/* low fog rolling along the floor */
+.fog{position:absolute;left:-20%;right:-20%;bottom:-6%;height:34%;z-index:-1;pointer-events:none;opacity:.5;
+  background:radial-gradient(30% 60% at 20% 70%,rgba(220,214,232,.12),transparent 70%),radial-gradient(28% 55% at 55% 80%,rgba(220,214,232,.1),transparent 70%),radial-gradient(30% 60% at 85% 70%,rgba(220,214,232,.12),transparent 70%);
+  filter:blur(18px);animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translateX(8%)}}
+.hero-in{min-height:calc(100svh - 38px);display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:clamp(32px,5vw,88px);align-items:center;
+  padding-block:clamp(28px,5vh,64px) clamp(48px,8vh,96px)}
+.hero-copy .label{margin-bottom:28px}
+.hero-copy .lede{margin-top:28px}
+.hero .btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
+.facts{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:44px;padding-top:24px;border-top:1px solid var(--line);max-width:520px}
+.facts li{list-style:none;display:flex;align-items:center;gap:10px;font:500 .85rem/1.3 var(--sans);color:var(--ink-2)}
+.facts svg{width:18px;height:18px;color:var(--gold)}
+
+.arch-wrap{position:relative;justify-self:center;width:min(100%,520px)}
+/* a spider web behind the arch, stirring in a draught */
+.arch-sun{position:absolute;left:50%;top:40%;width:156%;aspect-ratio:1;translate:-50% -50%;color:var(--ink);opacity:.1;z-index:-1;pointer-events:none}
+.arch-sun svg{width:100%;height:100%;animation:sway 9s ease-in-out infinite alternate}
+@keyframes sway{from{transform:rotate(-2.5deg)}to{transform:rotate(2.5deg)}}
+.moon{position:absolute;right:-16%;top:-10%;width:44%;aspect-ratio:1;border-radius:50%;z-index:-1;pointer-events:none;
+  background:radial-gradient(14% 14% at 36% 34%,rgba(201,183,140,.55),transparent 70%),radial-gradient(9% 9% at 62% 58%,rgba(201,183,140,.5),transparent 70%),radial-gradient(7% 7% at 44% 70%,rgba(201,183,140,.45),transparent 70%),radial-gradient(circle at 38% 34%,#FFF8E6,#EFE2BF 62%,#D6C493);
+  box-shadow:0 0 60px 10px rgba(243,233,207,.18),0 0 160px 40px rgba(243,233,207,.08)}
+.arch{position:relative;aspect-ratio:4/5;border-radius:50% 50% var(--r-lg) var(--r-lg) / 40% 40% var(--r-lg) var(--r-lg);overflow:hidden;background:var(--oat);
+  box-shadow:0 50px 90px -40px rgba(238,122,34,.42),0 0 0 10px rgba(242,232,218,.05)}
+.arch img{width:100%;height:100%;object-fit:cover;object-position:50% 50%}
+.branch{position:absolute;width:74%;pointer-events:none}
+.branch svg{width:100%;height:auto}
+.arch-wrap .branch{left:-26%;top:-4%;rotate:-14deg;filter:drop-shadow(0 0 12px rgba(0,0,0,.6))}
+/* a spider on a thread, bobbing on the corner of the arch */
+.spider{position:absolute;right:16%;top:-2%;width:26px;pointer-events:none;transform-origin:50% 0;animation:dangle 5.5s ease-in-out infinite}
+.spider::before{content:"";display:block;width:1px;height:var(--thread,110px);margin:0 auto;background:linear-gradient(rgba(242,232,218,0),rgba(242,232,218,.5))}
+.spider svg{width:26px;height:26px;color:#0b080d;filter:drop-shadow(0 0 6px rgba(238,122,34,.5))}
+@keyframes dangle{0%,100%{transform:translateY(-18px) rotate(2deg)}50%{transform:translateY(14px) rotate(-2deg)}}
+/* bats crossing the hero */
+.bats{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.bat{position:absolute;left:0;top:var(--y);width:var(--w,44px);color:#0a070c;filter:drop-shadow(0 0 5px rgba(238,122,34,.45));animation:fly var(--t,24s) linear var(--delay,0s) infinite}
+.bat svg{width:100%;height:auto;overflow:visible}
+.bat .w{transform-box:view-box;transform-origin:50px 22px;animation:flap .22s ease-in-out infinite alternate}
+@keyframes flap{to{transform:scaleY(-.35)}}
+@keyframes fly{0%{transform:translate(-10vw,0)}25%{transform:translate(22vw,-34px)}50%{transform:translate(50vw,12px)}75%{transform:translate(78vw,-22px)}100%{transform:translate(112vw,6px)}}
+.float{position:absolute;display:flex;align-items:center;gap:12px;padding:10px 16px 10px 10px;border-radius:999px;background:rgba(28,21,32,.74);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 0 0 1px rgba(242,232,218,.06),0 18px 40px -22px rgba(0,0,0,.8)}
+.float .dot{width:34px;height:34px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(242,232,218,.14)}
+.float b{display:block;font:500 .9rem/1.2 var(--sans)}
+.float small{display:block;font:500 .66rem/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.float.pour{left:-12%;bottom:12%}
+.float.open{right:-6%;top:18%}
+
+/* first-visit entrance: the delight budget lives here (it plays once) */
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes unveil{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes settle{from{transform:scale(1.08)}to{transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.js .hero [data-in]{animation:rise 900ms var(--ease-out) both;animation-delay:calc(120ms + var(--d,0) * 80ms)}
+.js .hero .arch{animation:unveil 1200ms var(--ease-in-out) 160ms both}
+.js .hero .arch img{animation:settle 1800ms var(--ease-out) 160ms both}
+.js .hero .arch-sun,.js .hero .moon{animation:fade 1800ms ease 500ms both}
+.js .hero .float{animation:rise 800ms var(--ease-out) both;animation-delay:calc(900ms + var(--d,0) * 120ms)}
+.js .hero .arch-wrap .branch{animation:fade 1200ms ease 1000ms both}
+.js .hero .spider{animation:drop 1400ms var(--ease-out) 1300ms both,dangle 5.5s ease-in-out 2700ms infinite}
+@keyframes drop{from{transform:translateY(-140px);opacity:0}to{transform:translateY(-18px) rotate(2deg);opacity:1}}
+
+/* ------------------------------------------------------------------ values strip */
+.values{border-block:1px solid var(--line);background:var(--bone)}
+.values ul{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.values li{display:flex;align-items:center;gap:14px;padding:26px 24px;font:500 .95rem/1.3 var(--sans)}
+.values li+li{border-left:1px solid var(--line)}
+.values svg{width:26px;height:26px;color:var(--gold);flex:none}
+.values li span{display:block;font-weight:400;font-size:.82rem;color:var(--ink-3)}
+
+/* ------------------------------------------------------------------ section scaffolding + scroll reveal */
+.sec{position:relative;padding-block:clamp(88px,12vw,168px)}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:32px 48px;flex-wrap:wrap;margin-bottom:clamp(40px,5vw,72px)}
+.sec-head .h2{margin-top:20px}
+.sec-head .aside{max-width:360px;color:var(--ink-2)}
+.js [data-reveal]{opacity:0;transform:translateY(22px);transition:opacity 900ms var(--ease-out),transform 900ms var(--ease-out);transition-delay:calc(var(--i,0) * 70ms)}
+.js [data-reveal].is-in{opacity:1;transform:none}
+
+/* ------------------------------------------------------------------ flavors today */
+.today{display:inline-flex;align-items:center;gap:10px;padding:9px 14px;border-radius:999px;background:var(--bone);font:500 .8rem/1 var(--sans);color:var(--ink-2);margin-bottom:14px}
+.today i{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.flavors{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(18px,2.2vw,32px)}
+.flavor{position:relative;display:flex;flex-direction:column}
+.flavor figure{position:relative;aspect-ratio:4/5;border-radius:var(--r-md);overflow:hidden;background:var(--oat)}
+.flavor figure img{width:100%;height:100%;object-fit:cover;object-position:50% 46%;transform:scale(1.18);transition:transform 900ms var(--ease-out)}
+@media (hover:hover) and (pointer:fine){.flavor:hover figure img{transform:scale(1.23)}}
+.tags{position:absolute;left:14px;top:14px;display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(16,12,19,.66);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  font:500 .68rem/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+.tag.gold{background:var(--pumpkin);color:var(--milk)}
+.flavor-body{display:grid;grid-template-columns:1fr auto;gap:8px 16px;padding:20px 4px 0}
+.flavor-body p{grid-column:1/-1;color:var(--ink-2);font-size:.98rem;max-width:36ch}
+.sw{width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(242,232,218,.16);margin-top:4px}
+.sw.tart{background:#F7F8F7}
+.sw.vanilla{background:radial-gradient(circle at 30% 35%,#2a1d14 0 1px,transparent 1.6px),radial-gradient(circle at 66% 62%,#2a1d14 0 1px,transparent 1.6px),radial-gradient(circle at 58% 28%,#2a1d14 0 .8px,transparent 1.3px),#F4EAD2}
+.sw.rasp{background:var(--rasp)}
+.sw.coffee{background:var(--latte)}
+.sw.rtwist{background:conic-gradient(var(--rasp) 0 60deg,#F4EAD2 60deg 120deg,var(--rasp) 120deg 180deg,#F4EAD2 180deg 240deg,var(--rasp) 240deg 300deg,#F4EAD2 300deg)}
+.sw.ctwist{background:conic-gradient(var(--latte) 0 60deg,#F4EAD2 60deg 120deg,var(--latte) 120deg 180deg,#F4EAD2 180deg 240deg,var(--latte) 240deg 300deg,#F4EAD2 300deg)}
+.machine{grid-column:1/-1;font:500 .72rem/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding-top:6px}
+.flavor-note{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 32px;margin-top:clamp(36px,4vw,56px);padding:22px 26px;border-radius:var(--r-md);background:var(--bone)}
+.flavor-note p{display:flex;align-items:center;gap:14px;color:var(--ink-2)}
+.flavor-note p svg{width:22px;height:22px;color:var(--gold);flex:none}
+
+/* ------------------------------------------------------------------ toppings today */
+.toppings{background:var(--bone)}
+.seg{position:relative;display:inline-flex;padding:4px;border-radius:999px;background:var(--milk);box-shadow:inset 0 0 0 1px var(--line)}
+.seg button,.seg-on span{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 18px;border-radius:999px;font:500 .92rem/1 var(--sans);color:var(--ink-2);white-space:nowrap}
+.seg button sup,.seg-on sup{font:500 .7rem/1 var(--sans);color:var(--ink-3);vertical-align:0}
+/* the active state is a second, inked copy of the row, clipped to the chosen tab: colour changes land exactly with the move */
+.seg-on{position:absolute;inset:4px;display:flex;border-radius:999px;background:var(--pumpkin);pointer-events:none;
+  clip-path:inset(0 var(--r,100%) 0 var(--l,0) round 999px);transition:clip-path 260ms var(--ease-in-out)}
+.seg-on span{color:var(--milk)}
+.seg-on sup{color:rgba(16,12,19,.6)}
+.groups{margin-top:clamp(36px,4vw,56px);display:grid;gap:clamp(40px,5vw,64px)}
+.group[hidden]{display:none}
+.group-h{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line-2)}
+.group-h p{color:var(--ink-3);font-size:.9rem}
+.items{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));column-gap:clamp(24px,3vw,48px)}
+.items li{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line)}
+.items .c{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(242,232,218,.16)}
+.items b{font:400 1.2rem/1.2 var(--serif);letter-spacing:-.005em;font-variation-settings:"SOFT" 100}
+.items small{display:block;font-size:.82rem;color:var(--ink-3);margin-top:2px}
+.items .pill{margin-left:auto;padding:5px 9px;border-radius:999px;background:var(--milk);font:500 .64rem/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap}
+.items .pill.sig{background:var(--pumpkin);color:var(--milk)}
+.items .pill.warm{background:#3A2412;color:var(--candle)}
+.items li.soon{opacity:.5}
+.bar-foot{margin-top:28px;color:var(--ink-3);font-size:.9rem}
+
+/* ------------------------------------------------------------------ signature */
+/* the cauldron: a dark moss room with a green glow off the brew */
+.sig-sec{background:radial-gradient(50% 60% at 78% 55%,rgba(181,196,106,.12),transparent 70%),var(--sage);overflow:hidden}
+.sig-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(32px,6vw,96px);align-items:center}
+.sig-in .lede{margin-top:26px;color:#C9CCAE}
+.sig-in .label{color:#B7BB98}
+.sig-in .kicker::before{background:var(--olive)}
+.sig-in .h2 em{color:var(--olive)}
+.warm-list{list-style:none;margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:0 28px;max-width:520px}
+.warm-list li{padding:13px 0;border-top:1px solid rgba(181,196,106,.18);font-size:.97rem;color:#E1E3CB;display:flex;align-items:center;gap:10px}
+.warm-list li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--olive)}
+.skillet{position:relative;width:118%;margin-right:-18%}
+.skillet img{width:100%}
+.sig-sec .branch{right:-4%;bottom:-2%;width:46%;rotate:168deg;opacity:.9;--bark:#0A0D08}
+
+/* ------------------------------------------------------------------ how it works */
+.steps{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(18px,2.2vw,32px);counter-reset:s}
+.step{position:relative;padding:clamp(26px,3vw,40px);border-radius:var(--r-md);background:var(--bone);min-height:320px;display:flex;flex-direction:column}
+.step .n{font:300 4.5rem/1 var(--serif);font-style:italic;color:var(--gold);font-variation-settings:"SOFT" 100;letter-spacing:-.04em}
+.step svg{position:absolute;right:clamp(26px,3vw,40px);top:clamp(26px,3vw,40px);width:44px;height:44px;color:var(--ink-2)}
+.step h3{margin-top:auto;padding-top:36px}
+.step p{margin-top:12px;color:var(--ink-2);max-width:34ch}
+
+/* ------------------------------------------------------------------ story */
+.story-in{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(32px,6vw,104px);align-items:center}
+.story figure{position:relative;border-radius:var(--r-lg);overflow:hidden;aspect-ratio:16/11;background:var(--oat)}
+.story figure img{width:100%;height:100%;object-fit:cover}
+.story .lede{margin-top:26px}
+.story .lede+.lede{margin-top:16px}
+.greek{display:flex;align-items:baseline;gap:18px;margin-top:40px;padding-top:28px;border-top:1px solid var(--line)}
+.greek b{font:300 clamp(3rem,5vw,4.5rem)/1 var(--serif);color:var(--gold);font-variation-settings:"SOFT" 100}
+.greek span{font:500 .75rem/1.5 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ------------------------------------------------------------------ the shop */
+.shop{background:var(--bone)}
+.tiles{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:clamp(18px,2.2vw,32px)}
+.tile{position:relative;border-radius:var(--r-lg);overflow:hidden;background:var(--oat)}
+.tile img{width:100%;height:100%;object-fit:cover}
+.tile.wide{aspect-ratio:16/11}
+.tile.tall{aspect-ratio:auto}
+.tile figcaption{position:absolute;left:16px;bottom:16px}
+.details{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(18px,2.2vw,32px);margin-top:clamp(36px,4vw,56px)}
+.details li{padding-top:18px;border-top:1px solid var(--line-2)}
+.details b{display:block;font:400 1.25rem/1.2 var(--serif);font-variation-settings:"SOFT" 100}
+.details span{display:block;margin-top:6px;font-size:.92rem;color:var(--ink-2)}
+
+/* ------------------------------------------------------------------ visit */
+.visit-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(32px,6vw,96px);align-items:start}
+.addr{font:340 clamp(2.2rem,4.2vw,3.75rem)/1.02 var(--serif);letter-spacing:-.022em;font-variation-settings:"SOFT" 100;margin-top:20px}
+.hours{margin-top:40px;border-top:1px solid var(--line-2)}
+.hours div{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);color:var(--ink-2)}
+.hours div.is-today{color:var(--ink);font-weight:600}
+.hours div.is-today dt::after{content:"Tonight";margin-left:10px;padding:3px 8px;border-radius:999px;background:var(--pumpkin);color:var(--milk);font:500 .62rem/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;vertical-align:2px}
+.visit .status{margin-top:24px;font-size:.92rem}
+.visit .btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+.map{position:relative;border-radius:var(--r-lg);overflow:hidden;aspect-ratio:5/6;background:var(--oat);box-shadow:inset 0 0 0 1px var(--line)}
+/* the map, turned to night */
+.map iframe{position:absolute;inset:0;width:100%;height:100%;border:0;filter:invert(.92) hue-rotate(180deg) grayscale(.7) sepia(.35) hue-rotate(-12deg) contrast(.9) brightness(.9)}
+.map .float{left:16px;right:auto;top:16px;bottom:auto}
+
+/* ------------------------------------------------------------------ faq */
+.faq-in{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(32px,6vw,96px)}
+/* a small ghost keeps the questions company */
+.ghost{width:clamp(70px,8vw,104px);margin-top:clamp(28px,4vw,56px);color:var(--ink);animation:float 4.8s ease-in-out infinite alternate;filter:drop-shadow(0 18px 24px rgba(0,0,0,.5))}
+.ghost svg{width:100%;height:auto}
+@keyframes float{from{transform:translateY(-8px) rotate(-3deg)}to{transform:translateY(10px) rotate(3deg)}}
+.faq details{border-bottom:1px solid var(--line-2)}
+.faq details:first-child{border-top:1px solid var(--line-2)}
+.faq summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 0;cursor:pointer;font:400 clamp(1.2rem,1.6vw,1.45rem)/1.25 var(--serif);font-variation-settings:"SOFT" 100;letter-spacing:-.008em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary i{position:relative;width:34px;height:34px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px var(--line-2);transition:background-color 200ms ease}
+.faq summary i::before,.faq summary i::after{content:"";position:absolute;left:11px;right:11px;top:50%;height:1.5px;margin-top:-.75px;background:var(--ink);transition:transform 260ms var(--ease-out)}
+.faq summary i::after{transform:rotate(90deg)}
+.faq details[open] summary i::after{transform:rotate(0)}
+@media (hover:hover) and (pointer:fine){.faq summary:hover i{background:var(--bone)}}
+/* accordion height is the one place height animates (no transform equivalent); browsers without ::details-content just open instantly */
+.faq details::details-content{block-size:0;overflow:hidden;transition:block-size 300ms var(--ease-out),content-visibility 300ms allow-discrete}
+.faq details[open]::details-content{block-size:auto}
+.faq .a{padding:0 64px 26px 0;color:var(--ink-2);max-width:62ch}
+
+/* ------------------------------------------------------------------ social + newsletter */
+.social{background:var(--bone)}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,1.6vw,22px)}
+.grid4 a{position:relative;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;background:var(--oat);display:block}
+.grid4 img{width:100%;height:100%;object-fit:cover;transition:transform 900ms var(--ease-out)}
+.grid4 a.quote{display:flex;align-items:flex-end;padding:22px;background:var(--gold);color:var(--milk)}
+.grid4 a.quote b{font:340 clamp(1.6rem,2.6vw,2.4rem)/1 var(--serif);letter-spacing:-.02em;font-variation-settings:"SOFT" 100}
+.grid4 a.quote small{position:absolute;left:22px;top:22px;font:500 .68rem/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;opacity:.8}
+.grid4 a.sage{background:radial-gradient(60% 60% at 50% 60%,rgba(181,196,106,.14),transparent 70%),var(--sage)}
+@media (hover:hover) and (pointer:fine){.grid4 a:hover img{transform:scale(1.04)}}
+
+.news{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px 64px;align-items:end;margin-top:clamp(64px,8vw,112px);padding:clamp(28px,4vw,56px);border-radius:var(--r-lg);background:var(--milk)}
+.news>*{min-width:0}
+.news .h2{font-size:clamp(2rem,3.6vw,3.25rem)}
+.news p.lede{margin-top:14px}
+.field{display:flex;gap:8px;padding:6px;border-radius:999px;background:var(--bone);box-shadow:inset 0 0 0 1px var(--line)}
+.field input{flex:1;min-width:0;border:0;background:transparent;padding:0 18px;font-size:1rem;outline:none}
+.field input::placeholder{color:var(--ink-3)}
+.field:focus-within{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.field .btn{min-height:46px}
+.field .btn span{display:inline-block;transition:filter 200ms ease,opacity 200ms ease}
+.news-msg{min-height:1.6em;margin-top:12px;padding-left:18px;font-size:.9rem;color:var(--ink-2)}
+form.is-sending .btn span{filter:blur(2px);opacity:.6}
+form.is-done .field{box-shadow:inset 0 0 0 1.5px var(--pumpkin)}
+
+/* ------------------------------------------------------------------ footer */
+footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);overflow:hidden}
+.foot-top{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:40px}
+.foot-top h4{font:500 .72rem/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:rgba(242,232,218,.55);margin-bottom:18px}
+.foot-top p,.foot-top li{color:rgba(242,232,218,.86);font-size:.97rem;line-height:1.7}
+.foot-top ul{list-style:none}
+.foot-top a{transition:color 200ms ease}
+@media (hover:hover) and (pointer:fine){.foot-top a:hover{color:#fff}}
+.foot-top .lede{color:rgba(242,232,218,.75);max-width:30ch}
+.wordmark{display:flex;align-items:center;justify-content:center;gap:clamp(12px,2vw,28px);margin-top:clamp(56px,8vw,96px);color:var(--gold)}
+.wordmark svg{width:clamp(56px,10vw,150px);height:auto;flex:none;--face:#09070B}
+.wordmark b{font:300 clamp(5rem,21vw,19rem)/.8 var(--serif);letter-spacing:.12em;margin-right:-.12em;color:var(--ink);font-variation-settings:"SOFT" 100}
+.foot-bot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-block:28px calc(28px + env(safe-area-inset-bottom));margin-top:clamp(40px,5vw,64px);
+  border-top:1px solid rgba(242,232,218,.12);font-size:.82rem;color:rgba(242,232,218,.55)}
+.foot-bot a{text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(242,232,218,.3)}
+
+/* ------------------------------------------------------------------ responsive */
+@media (max-width:1100px){
+  .nav-in{grid-template-columns:auto 1fr auto}
+  .nav-links{justify-self:center}
+  .nav-end .status{display:none}
+  .values ul{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .values li:nth-child(3){border-left:0}
+  .values li:nth-child(n+3){border-top:1px solid var(--line)}
+  .details{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .foot-top{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .foot-top>div:first-child{grid-column:1/-1}
+}
+@media (max-width:900px){
+  :root{--nav-h:64px}
+  .nav-in{grid-template-columns:1fr auto}
+  .nav-links,.nav-end{display:none}
+  .menu-btn{display:block}
+  .hero-in{grid-template-columns:1fr;min-height:0;gap:36px;padding-top:28px}
+  .arch-wrap{order:-1;width:min(66%,380px)}
+  .arch-wrap .branch{width:80%;left:-34%}
+  .float.pour{left:-8%}
+  .float.open{right:-8%}
+  .flavors{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin-inline:calc(var(--gutter) * -1);padding-inline:var(--gutter);scroll-padding-inline:var(--gutter);
+    scrollbar-width:none;overscroll-behavior-x:contain}
+  .flavors::-webkit-scrollbar{display:none}
+  .flavor{flex:0 0 min(78vw,340px);scroll-snap-align:start}
+  .sig-in,.story-in,.visit-in,.faq-in,.news{grid-template-columns:1fr}
+  .skillet{width:100%;margin:0 auto;max-width:520px}
+  .steps{grid-template-columns:1fr}
+  .step{min-height:0}
+  .tiles{grid-template-columns:1fr}
+  .tile.tall{aspect-ratio:5/6}
+  .map{aspect-ratio:4/3}
+  .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .story figure{order:-1}
+}
+@media (max-width:600px){
+  .ticker{height:34px}
+  .hero .btns .btn{flex:1 1 auto}
+  .facts{gap:12px 20px}
+  .values li{padding:20px 14px;gap:10px;font-size:.88rem}
+  .values svg{width:22px;height:22px}
+  .sec-head>div{width:100%}
+  .seg{display:flex;width:100%}
+  .group-h{flex-direction:column;gap:4px}
+  .news{padding:28px 20px}
+  .news .h2{font-size:2rem}
+  .grid4 a.quote small{right:22px}
+  .seg button,.seg-on span{flex:1 1 auto;justify-content:center;padding:0 10px;font-size:.85rem}
+  .seg button sup,.seg-on sup{display:none}
+  .items{grid-template-columns:1fr}
+  .warm-list{grid-template-columns:1fr}
+  .details{grid-template-columns:1fr 1fr}
+  .faq .a{padding-right:0}
+  .foot-top{grid-template-columns:1fr 1fr}
+  .float{padding:8px 12px 8px 8px;gap:10px}
+  .float .dot{width:28px;height:28px}
+  .float b{font-size:.82rem}
+  .float.open{display:none}
+  .float.pour{left:-22%;bottom:8%}
+  .moon{right:-10%;top:-6%;width:38%}
+  .spider{right:8%}
+  .hero-copy .label{margin-bottom:18px}
+  .hero-copy .lede{margin-top:20px}
+  .hero .btns{margin-top:28px}
+  .facts{margin-top:32px}
+}
+
+/* ------------------------------------------------------------------ accessibility preferences */
+@media (prefers-reduced-motion:reduce){
+  .ticker-track,.arch-sun svg,.fog,.spider,.js .hero .spider,.ghost{animation:none}
+  .bats{display:none}
+  .js .hero [data-in],.js .hero .float{animation:fade 400ms ease both}
+  .js .hero .arch,.js .hero .arch img{animation:none}
+  .js [data-reveal]{transform:none;transition:opacity 400ms ease}
+  .sheet,.menu-open .sheet{transform:none;opacity:0;transition:opacity 200ms ease,visibility 0s 200ms}
+  .menu-open .sheet{opacity:1;transition:opacity 200ms ease,visibility 0s}
+  .sheet a.big,.menu-open .sheet a.big{transform:none;transition:opacity 200ms ease}
+  .flavor figure img,.grid4 img{transition:none}
+  .seg-on{transition:clip-path 120ms ease}
+}
+@media (prefers-reduced-transparency:reduce){
+  .nav::before,.float,.tag{background:var(--bone);-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+@media (prefers-contrast:more){
+  :root{--line:rgba(242,232,218,.3);--line-2:rgba(242,232,218,.45);--ink-2:#DDD2C4;--ink-3:#BFB2A3}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="web" viewBox="0 0 600 600"><g fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round"><path d="M300 300 L592.0 297.8"/><path d="M300 300 L568.7 414.3"/><path d="M300 300 L492.0 520.0"/><path d="M300 300 L413.2 569.2"/><path d="M300 300 L299.6 592.0"/><path d="M300 300 L184.5 568.2"/><path d="M300 300 L104.2 516.6"/><path d="M300 300 L30.0 411.2"/><path d="M300 300 L8.1 293.9"/><path d="M300 300 L35.8 175.7"/><path d="M300 300 L80.6 107.4"/><path d="M300 300 L179.8 33.9"/><path d="M300 300 L280.9 8.6"/><path d="M300 300 L425.0 36.1"/><path d="M300 300 L512.8 100.0"/><path d="M300 300 L560.9 168.8"/><path d="M327.0 299.8 Q323.0 304.5 324.2 310.3 Q318.4 313.1 316.6 318.8 Q312.0 318.9 310.1 323.1 Q304.5 321.9 300.0 325.5 Q295.5 322.2 290.1 323.8 Q287.7 319.6 282.6 319.8 Q281.4 313.4 275.9 310.0 Q277.5 304.3 274.0 299.5 Q277.8 294.9 276.6 289.1 Q280.3 287.1 279.7 282.2 Q285.9 281.1 289.0 275.9 Q294.3 277.7 298.3 274.6 Q304.2 278.4 310.9 277.3 Q313.6 281.8 319.3 282.3 Q319.4 286.8 323.9 288.4 Q322.9 294.7 327.0 299.8"/><path d="M349.8 299.6 Q341.5 308.1 342.4 318.4 Q333.8 324.5 332.6 336.1 Q323.4 336.0 319.3 343.9 Q308.7 341.6 299.9 348.5 Q291.2 341.3 280.6 343.3 Q277.3 335.3 268.9 335.1 Q265.3 324.2 254.0 318.7 Q258.4 308.0 253.5 299.0 Q260.1 290.7 257.9 280.3 Q264.5 277.2 263.1 269.1 Q274.5 266.5 280.2 256.4 Q289.7 258.4 296.9 251.2 Q307.6 258.3 319.9 256.1 Q324.2 265.6 333.9 267.3 Q334.1 275.8 341.9 278.8 Q341.2 290.3 349.8 299.6"/><path d="M376.8 299.4 Q364.7 313.2 367.0 329.9 Q351.6 338.3 347.5 355.3 Q334.7 355.9 329.5 369.0 Q313.2 365.6 299.9 376.9 Q287.1 364.6 271.4 366.7 Q264.3 354.4 249.3 354.1 Q246.9 336.6 232.7 327.2 Q237.5 311.6 228.4 298.5 Q238.3 285.0 234.4 268.3 Q245.7 263.8 245.0 251.4 Q261.0 247.8 268.4 232.6 Q283.6 235.5 295.1 224.0 Q311.7 236.5 330.9 235.0 Q338.9 247.3 355.7 248.0 Q354.2 262.0 364.8 267.6 Q363.7 285.1 376.8 299.4"/><path d="M406.0 299.2 Q389.7 318.6 393.4 342.2 Q373.7 354.5 370.5 379.0 Q349.7 377.3 340.1 392.8 Q318.0 390.3 299.9 407.8 Q281.8 392.2 259.7 397.1 Q251.1 379.3 231.6 379.2 Q225.6 353.2 203.1 339.0 Q210.8 316.5 198.7 297.8 Q213.5 279.5 209.1 256.7 Q223.8 248.8 221.5 229.5 Q245.2 226.4 256.8 206.9 Q277.4 212.5 293.0 198.7 Q316.1 212.9 342.8 207.7 Q353.2 227.6 375.5 231.3 Q374.7 248.3 390.5 253.8 Q388.4 278.8 406.0 299.2"/><path d="M438.8 299.0 Q419.0 324.6 425.6 355.7 Q398.9 372.4 394.2 405.3 Q366.8 405.0 354.3 428.1 Q324.4 417.4 299.8 432.9 Q276.3 418.7 247.5 430.9 Q234.1 406.7 206.0 406.2 Q202.5 371.7 177.3 353.1 Q182.8 322.6 162.2 297.1 Q182.6 271.2 176.9 238.9 Q199.5 231.4 199.8 208.6 Q228.9 200.5 242.1 170.2 Q269.8 178.6 290.8 160.1 Q323.1 179.0 360.4 171.1 Q371.9 198.8 399.4 204.1 Q402.0 228.1 427.2 236.2 Q419.7 270.8 438.8 299.0"/><path d="M474.8 298.6 Q453.7 330.6 466.7 369.3 Q427.6 390.3 416.9 431.4 Q383.5 432.7 368.7 463.6 Q330.8 453.7 299.8 478.0 Q267.3 455.0 227.6 466.6 Q213.4 433.2 179.8 429.4 Q171.3 388.6 134.2 367.5 Q146.6 328.7 124.9 296.2 Q151.9 263.9 146.0 223.6 Q173.4 212.9 172.7 182.9 Q210.2 176.7 227.7 143.1 Q262.2 150.4 288.3 124.4 Q328.9 147.0 376.0 135.6 Q390.8 173.9 425.7 184.2 Q426.2 211.8 454.7 219.8 Q448.3 263.3 474.8 298.6"/><path d="M512.8 298.4 Q489.0 338.2 507.1 386.4 Q457.4 415.1 442.7 469.4 Q401.7 467.9 383.4 503.6 Q337.4 489.2 299.7 516.8 Q260.1 490.6 211.7 506.9 Q192.5 465.2 149.4 460.2 Q140.9 408.9 97.1 381.8 Q113.5 334.8 88.4 295.5 Q113.6 255.1 97.4 204.6 Q133.9 190.0 133.4 151.0 Q185.4 145.9 211.9 106.6 Q254.0 116.8 285.8 86.4 Q334.6 115.8 391.2 104.3 Q413.2 144.8 460.4 150.8 Q458.5 187.6 491.9 199.4 Q482.1 254.0 512.8 298.4"/><path d="M572.1 298.0 Q527.2 343.5 532.9 398.7 Q484.6 430.0 477.4 490.2 Q426.3 494.9 403.3 542.9 Q346.3 529.9 299.7 568.1 Q255.0 525.8 200.3 533.6 Q176.4 489.3 125.0 487.0 Q109.3 428.1 51.4 397.7 Q73.6 341.6 45.6 294.8 Q77.7 247.7 60.5 189.0 Q102.7 171.3 101.1 125.0 Q160.8 109.9 189.5 52.5 Q242.5 73.8 282.6 44.8 Q342.5 81.4 411.9 69.3 Q432.9 115.6 483.4 121.0 Q489.7 167.8 538.1 185.3 Q529.6 247.5 572.1 298.0"/></g></symbol>
+    <symbol id="branch" viewBox="-10 -20 590 280"><path d="M22.3 165.7 L29.9 161.7 L37.5 157.7 L45.2 153.8 L52.8 149.8 L60.4 146.0 L68.0 142.1 L75.7 138.4 L83.2 134.6 L90.9 131.0 L98.5 127.3 L106.0 123.9 L113.6 120.4 L121.3 117.2 L128.8 113.9 L136.4 110.9 L144.1 107.8 L151.6 105.1 L159.2 102.3 L166.8 99.8 L174.3 97.3 L181.9 95.1 L189.6 92.9 L197.1 91.0 L204.7 89.1 L212.3 87.5 L219.8 86.0 L227.5 84.8 L235.1 83.6 L242.6 82.7 L250.2 81.9 L257.8 81.3 L265.4 81.0 L273.0 80.7 L280.6 80.6 L288.2 80.8 L295.9 81.2 L303.5 81.6 L311.0 82.3 L318.7 83.1 L326.3 84.3 L333.9 85.5 L341.6 86.8 L349.3 88.4 L356.8 90.2 L364.5 92.1 L372.2 94.1 L379.8 96.3 L387.5 98.7 L395.2 101.2 L402.8 103.8 L410.5 106.5 L418.2 109.5 L425.8 112.4 L433.5 115.5 L441.2 118.8 L448.9 122.1 L456.6 125.5 L464.3 129.1 L471.9 132.6 L479.7 136.2 L480.3 134.8 L472.7 131.0 L465.1 127.3 L457.4 123.7 L449.7 120.1 L442.2 116.6 L434.5 113.3 L426.8 110.0 L419.2 106.9 L411.5 103.9 L403.8 101.0 L396.2 98.2 L388.5 95.5 L380.8 93.1 L373.2 90.7 L365.5 88.5 L357.8 86.4 L350.1 84.6 L342.4 82.8 L334.7 81.3 L327.1 79.9 L319.3 78.7 L311.6 77.7 L303.9 76.8 L296.1 76.2 L288.4 75.8 L280.8 75.4 L273.0 75.3 L265.2 75.4 L257.6 75.7 L249.8 76.1 L242.0 76.7 L234.3 77.6 L226.5 78.6 L218.8 79.8 L211.1 81.1 L203.3 82.7 L195.5 84.4 L187.8 86.3 L180.1 88.3 L172.3 90.5 L164.6 92.8 L156.8 95.3 L149.0 97.9 L141.3 100.6 L133.6 103.5 L125.8 106.5 L118.1 109.6 L110.4 112.8 L102.6 116.1 L94.9 119.5 L87.1 123.0 L79.4 126.6 L71.7 130.2 L64.0 133.9 L56.2 137.6 L48.6 141.4 L40.8 145.2 L33.1 149.1 L25.5 152.9 L17.7 156.7Z" fill="var(--bark)"/><path d="M50.7 145.6 Q64.0 115.1 69.6 83.7" stroke="var(--bark)" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M64.0 115.1 L56.3 90.4" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M0 0 C10.6 -7.6 25.8 -6.1 35.0 0 C25.8 6.1 10.6 7.6 0 0Z" fill="#C8641E" transform="translate(69.6 83.7) rotate(-22)"/><path d="M81.3 130.6 Q92.4 101.2 111.3 84.6" stroke="var(--bark)" stroke-width="3.0" fill="none" stroke-linecap="round"/><path d="M92.4 101.2 L112.7 92.8" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M112.0 116.6 Q125.4 89.7 141.9 66.8" stroke="var(--bark)" stroke-width="2.9" fill="none" stroke-linecap="round"/><path d="M125.4 89.7 L124.0 66.6" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M142.7 104.2 Q152.8 86.2 167.3 76.3" stroke="var(--bark)" stroke-width="2.7" fill="none" stroke-linecap="round"/><path d="M152.8 86.2 L167.2 82.5" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M0 0 C8.3 -5.9 20.1 -4.7 27.1 0 C20.1 4.7 8.3 5.9 0 0Z" fill="#9A3F16" transform="translate(167.3 76.3) rotate(3)"/><path d="M173.3 93.9 Q188.5 68.3 198.3 55.4" stroke="var(--bark)" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M188.5 68.3 L188.0 49.9" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M234.7 80.6 Q252.3 64.7 277.4 45.8" stroke="var(--bark)" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M252.3 64.7 L258.5 43.6" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M265.3 78.2 Q288.3 108.2 311.7 122.7" stroke="var(--bark)" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M288.3 108.2 L313.7 112.4" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M0 0 C8.3 -6.0 20.2 -4.8 27.4 0 C20.2 4.8 8.3 6.0 0 0Z" fill="#D9933A" transform="translate(311.7 122.7) rotate(103)"/><path d="M296.0 78.7 Q319.4 89.2 328.5 100.4" stroke="var(--bark)" stroke-width="2.1" fill="none" stroke-linecap="round"/><path d="M319.4 89.2 L335.1 89.1" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M326.7 82.1 Q339.0 99.3 356.3 121.1" stroke="var(--bark)" stroke-width="1.9" fill="none" stroke-linecap="round"/><path d="M339.0 99.3 L357.6 105.5" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M388.0 97.1 Q404.9 114.0 411.9 125.9" stroke="var(--bark)" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M404.9 114.0 L406.3 128.8" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M0 0 C7.9 -5.7 19.3 -4.5 26.1 0 C19.3 4.5 7.9 5.7 0 0Z" fill="#7A3413" transform="translate(411.9 125.9) rotate(85)"/><path d="M418.7 108.2 Q431.1 119.0 437.0 134.7" stroke="var(--bark)" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M431.1 119.0 L431.2 131.9" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M449.3 121.1 Q454.1 147.5 467.7 158.7" stroke="var(--bark)" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M454.1 147.5 L468.7 155.7" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/></symbol>
+    <symbol id="mark" viewBox="0 0 64 64"><g fill="currentColor"><ellipse cx="25.6" cy="34" rx="7.4" ry="9.8"/><ellipse cx="38.4" cy="34" rx="7.4" ry="9.8"/><ellipse cx="32" cy="34" rx="8" ry="10.4"/><path d="M30.6 24.6c-.2-2.6.6-4.6 2.6-5.8l1.3 1.3c-1.5 1.1-2 2.6-1.8 4.6z"/></g><g fill="var(--face,var(--milk))"><path d="M24.2 32.6l2.6-4 2.6 4z"/><path d="M34.6 32.6l2.6-4 2.6 4z"/><path d="M24.6 36.4c4.4 4.6 10.4 4.6 14.8 0l-2.4.4-1.4 1.6-1.6-1.4-1.8 1.6-1.8-1.6-1.6 1.4-1.4-1.6z"/></g><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M32 2v10M32 52v10M2 34h10M52 34h10M10.8 12.8l7 7M46.2 48.2l7 7M53.2 12.8l-7 7M17.8 48.2l-7 7"/><path d="M43.5 4.3l-3.4 8.6M23.9 55.1l-3.4 8.6M59.7 22.5l-8.6 3.4M12.9 41.5L4.3 44.7M59.7 45.5l-8.6-3.4M12.9 26.5L4.3 23.3M43.5 63.7l-3.4-8.6M23.9 12.9L20.5 4.3" stroke-width="1.1"/></g></symbol>
+    <symbol id="bat" viewBox="0 0 100 50"><g class="w"><path d="M47 22C38 9 20 6 3 15c9 1 13 7 11 14 6-4 13-2 15 4 4-6 11-6 16-2z"/></g><g class="w r"><path d="M53 22c9-13 27-16 44-7-9 1-13 7-11 14-6-4-13-2-15 4-4-6-11-6-16-2z"/></g><path d="M50 14c-1.6 0-2.4-2.6-3.6-4.4.4 2 .3 3.6-.6 5-1.4 2-1.8 6-1 10 .8 4.4 3 8 5.2 8s4.4-3.6 5.2-8c.8-4 .4-8-1-10-.9-1.4-1-3-.6-5-1.2 1.8-2 4.4-3.6 4.4z"/></symbol>
+    <symbol id="arrow" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="9.5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="ig" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="ticker" aria-label="Announcements">
+  <div class="ticker-track" aria-hidden="true">
+    <span>Open Tuesday to Sunday, 5 to 10 pm</span><span>Blood Moon twist on machine two</span><span>Pistachio kataifi bubbling in the cauldron</span><span>Halloween is a Saturday. We're open 5 to 10</span><span>Costumes very welcome</span><span>Froyo is so back. From the dead</span><span>1355 Old Northern Blvd, Roslyn</span>
+    <span>Open Tuesday to Sunday, 5 to 10 pm</span><span>Blood Moon twist on machine two</span><span>Pistachio kataifi bubbling in the cauldron</span><span>Halloween is a Saturday. We're open 5 to 10</span><span>Costumes very welcome</span><span>Froyo is so back. From the dead</span><span>1355 Old Northern Blvd, Roslyn</span>
+  </div>
+  <p class="vh">Open Tuesday to Sunday, 5 to 10 pm. Halloween is a Saturday, and we're open 5 to 10. Costumes very welcome.</p>
+</div>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="Ilios Froyo, back to top">
+      <svg aria-hidden="true"><use href="#mark"/></svg>
+      <span><b>ILIOS</b><small>FROYO</small></span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#flavors">Flavors</a>
+      <a href="#toppings">Toppings</a>
+      <a href="#story">Our story</a>
+      <a href="#visit">Visit</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-end">
+      <p class="status" data-status><i></i><span>Open Tuesday to Sunday</span></p>
+      <a class="btn solid" href="https://www.google.com/maps/search/?api=1&query=Ilios+Froyo+1355+Old+Northern+Blvd+Roslyn+NY+11576" target="_blank" rel="noopener">Directions</a>
+    </div>
+    <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sheet" aria-label="Open menu"><i></i><i></i></button>
+  </div>
+</header>
+
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<div class="sheet" id="sheet" aria-label="Menu">
+  <nav aria-label="Menu">
+    <a class="big" href="#flavors" style="--i:0">Flavors tonight <span>01</span></a>
+    <a class="big" href="#toppings" style="--i:1">Tricks + treats <span>02</span></a>
+    <a class="big" href="#story" style="--i:2">Our story <span>03</span></a>
+    <a class="big" href="#visit" style="--i:3">Visit <span>04</span></a>
+    <a class="big" href="#faq" style="--i:4">FAQ <span>05</span></a>
+  </nav>
+  <div class="sheet-foot">
+    <p class="status" data-status><i></i><span>Open Tuesday to Sunday</span></p>
+    <a class="btn solid" href="https://www.google.com/maps/search/?api=1&query=Ilios+Froyo+1355+Old+Northern+Blvd+Roslyn+NY+11576" target="_blank" rel="noopener">Directions</a>
+  </div>
+</div>
+
+<main id="main">
+  <!-- ============================================================ hero -->
+  <section class="hero" id="top" aria-labelledby="hero-h">
+    <div class="stars" aria-hidden="true"></div>
+    <div class="fog" aria-hidden="true"></div>
+    <div class="bats" aria-hidden="true">
+      <span class="bat" style="--y:16%;--w:46px;--t:26s;--delay:-4s"><svg><use href="#bat"/></svg></span>
+      <span class="bat" style="--y:9%;--w:30px;--t:31s;--delay:-17s"><svg><use href="#bat"/></svg></span>
+      <span class="bat" style="--y:30%;--w:36px;--t:22s;--delay:-11s"><svg><use href="#bat"/></svg></span>
+    </div>
+    <div class="wrap hero-in">
+      <div class="hero-copy">
+        <p class="label kicker" data-in style="--d:0">Organic Greek froyo · Roslyn Village · After dark</p>
+        <h1 class="display" id="hero-h"><span data-in style="--d:1;display:block">Greek froyo,</span><span data-in style="--d:2;display:block"><em>softly</em> haunted.</span></h1>
+        <p class="lede" data-in style="--d:3">Made in house every day from Greek yogurt and kefir, then pulled by you from six handles. Finish it at a bar of fresh fruit, trick-or-treat candy and warm pistachio kataifi straight from the cauldron.</p>
+        <div class="btns" data-in style="--d:4">
+          <a class="btn solid" href="#flavors">See tonight's flavors <svg aria-hidden="true"><use href="#arrow"/></svg></a>
+          <a class="btn" href="#visit">Plan your visit</a>
+        </div>
+        <ul class="facts" data-in style="--d:5">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 5 6.5 5 10a5 5 0 0 1-10 0c0-3.5 2-6 5-10Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Made fresh daily</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c0-8 6-14 14-14 0 8-6 14-14 14Zm0 0 8-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Organic tart + vanilla</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="14" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Real fruit flavors</li>
+        </ul>
+      </div>
+
+      <div class="arch-wrap">
+        <div class="moon" aria-hidden="true"></div>
+        <div class="arch-sun" aria-hidden="true"><svg><use href="#web"/></svg></div>
+        <div class="arch">
+          <img src="img/hero.webp" width="1040" height="1300" alt="A cup of Ilios tart froyo swirled high into a little ghost with two dark eyes, glowing in a dark room. The sun on the cup glows pumpkin orange." fetchpriority="high">
+        </div>
+        <div class="branch" aria-hidden="true"><svg><use href="#branch"/></svg></div>
+        <div class="spider" aria-hidden="true"><svg viewBox="0 0 26 26"><g fill="currentColor"><circle cx="13" cy="10" r="4"/><ellipse cx="13" cy="17" rx="5.5" ry="6.5"/></g><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M9 14l-5-4-3 2M9 17l-6-1-2 3M9.5 20l-5 2-1 3M10 12l-4-6-3 0M17 14l5-4 3 2M17 17l6-1 2 3M16.5 20l5 2 1 3M16 12l4-6 3 0"/></g><g fill="#F7924A"><circle cx="11.6" cy="9.4" r=".9"/><circle cx="14.4" cy="9.4" r=".9"/></g></svg></div>
+        <div class="float open" style="--d:0"><span class="dot" style="background:var(--milk);display:grid;place-items:center"><svg width="18" height="18" style="color:var(--gold)" aria-hidden="true"><use href="#mark"/></svg></span><span><small>Tonight</small><b data-status-short>5 to 10 pm</b></span></div>
+        <div class="float pour" style="--d:1"><span class="dot sw rtwist" style="margin:0"></span><span><small>Now pouring</small><b>Blood Moon twist</b></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ values -->
+  <section class="values" aria-label="What goes into it">
+    <ul class="wrap">
+      <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 11h14l-1.6 15a2 2 0 0 1-2 1.8h-6.8a2 2 0 0 1-2-1.8Z M8 11h16M12 11c0-3 1.8-5 4-5s4 2 4 5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><p>Greek yogurt + kefir<span>Thick, tangy, cultured</span></p></li>
+      <li><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M16 10v6l4 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><p>Made in house, daily<span>Every morning, small batches</span></p></li>
+      <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 25C7 14 14 7 25 7c0 11-7 18-18 18Zm0 0L17 15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><p>Organic cane sugar<span>Organic tart and vanilla</span></p></li>
+      <li><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="19" r="7" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="21" cy="13" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M21 7.5c0-2 1-3.5 3-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><p>100% real fruit<span>In every fruit flavor</span></p></li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ flavors today
+       EDIT DAILY: one <li class="flavor"> per handle that's pouring. Swap the image, name, swatch and line.
+       The October names are costumes for the regular flavors; each card's line says what's really in the cup. -->
+  <section class="sec" id="flavors" aria-labelledby="flavors-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="today" data-reveal><i></i><span data-today>On the machines tonight</span></p>
+          <p class="label kicker" data-reveal style="--i:1;display:flex">Three machines · six handles</p>
+          <h2 class="h2" id="flavors-h" data-reveal style="--i:2">Flavors <em>tonight</em></h2>
+        </div>
+        <p class="aside" data-reveal style="--i:3">Pull one, or twist two together from the middle handle. Tart and vanilla are organic; the fruit flavors are made with real fruit. Same six as ever, in costume for October.</p>
+      </div>
+
+      <ul class="flavors" data-stagger>
+        <li class="flavor" data-reveal>
+          <figure><img src="img/cup-tart.webp" width="800" height="1000" alt="Organic Original Tart, bright white and swirled into a little ghost with two dark eyes, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag">Organic</span><span class="tag">Classic</span></div></figure>
+          <div class="flavor-body"><h3 class="h3">Ghost Tart</h3><i class="sw tart" aria-hidden="true"></i><p>Organic Original Tart under a bedsheet. Bright, clean and properly tangy. The one we're known for.</p><span class="machine">Machine one · both handles</span></div>
+        </li>
+        <li class="flavor" data-reveal>
+          <figure><img src="img/cup-vanilla.webp" width="800" height="1000" alt="Organic Vanilla Bean, warm ivory with black vanilla specks and a little ghost face, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag">Organic</span></div></figure>
+          <div class="flavor-body"><h3 class="h3">Bone-White Vanilla</h3><i class="sw vanilla" aria-hidden="true"></i><p>Organic Vanilla Bean, specks and all. Soft, warm and a little floral, like a friendly ghost.</p><span class="machine">Machines two + three</span></div>
+        </li>
+        <li class="flavor" data-reveal>
+          <figure><img src="img/cup-raspberry.webp" width="800" height="1000" alt="Raspberry froyo, dusty pink, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag">Real fruit</span></div></figure>
+          <div class="flavor-body"><h3 class="h3">Blood Moon Raspberry</h3><i class="sw rasp" aria-hidden="true"></i><p>Raspberry, made with real raspberries. Dusty pink, sweet-tart, a little bit wicked.</p><span class="machine">Machine two · left handle</span></div>
+        </li>
+        <li class="flavor" data-reveal>
+          <figure><img src="img/cup-raspberry-twist.webp" width="800" height="1000" alt="Raspberry and vanilla bean twist, pink and ivory swirled together, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag gold">Twist</span></div></figure>
+          <div class="flavor-body"><h3 class="h3">Blood Moon Twist</h3><i class="sw rtwist" aria-hidden="true"></i><p>Raspberry and vanilla bean at once, spiralled together from the middle handle.</p><span class="machine">Machine two · middle handle</span></div>
+        </li>
+        <li class="flavor" data-reveal>
+          <figure><img src="img/cup-coffee.webp" width="800" height="1000" alt="Sweet Harbor Coffee froyo, latte tan, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag">Local collab</span></div></figure>
+          <div class="flavor-body"><h3 class="h3">Midnight Coffee</h3><i class="sw coffee" aria-hidden="true"></i><p>Sweet Harbor Coffee: a latte-soft coffee froyo, made with our neighbors in Roslyn Village. For staying up late.</p><span class="machine">Machine three · left handle</span></div>
+        </li>
+        <li class="flavor" data-reveal>
+          <figure><img src="img/cup-coffee-twist.webp" width="800" height="1000" alt="Coffee and vanilla bean twist, tan and ivory swirled together, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag gold">Twist</span></div></figure>
+          <div class="flavor-body"><h3 class="h3">Witching Hour Twist</h3><i class="sw ctwist" aria-hidden="true"></i><p>Sweet Harbor Coffee and vanilla bean, twisted. Iced-latte energy, after dark.</p><span class="machine">Machine three · middle handle</span></div>
+        </li>
+      </ul>
+
+      <div class="flavor-note" data-reveal>
+        <p><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Three of the six handles rotate every month. Whatever rises next, it shows up on Instagram first.</p>
+        <a class="tlink" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener">See what's next on @iliosfroyo <svg width="14" height="14" aria-hidden="true"><use href="#arrow"/></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ toppings today
+       EDIT DAILY: add class="soon" to anything that's not out today (it greys out and says Back soon). -->
+  <section class="sec toppings" id="toppings" aria-labelledby="toppings-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="label kicker" data-reveal>The bar, front to back</p>
+          <h2 class="h2" id="toppings-h" data-reveal style="--i:1">Tricks + <em>treats</em></h2>
+        </div>
+        <div data-reveal style="--i:2">
+          <div class="seg" id="seg" role="group" aria-label="Filter toppings">
+            <button type="button" aria-pressed="true" data-filter="all">All <sup data-count="all"></sup></button>
+            <button type="button" aria-pressed="false" data-filter="fruit">Fruit <sup data-count="fruit"></sup></button>
+            <button type="button" aria-pressed="false" data-filter="candy">Candy &amp; crunch <sup data-count="candy"></sup></button>
+            <button type="button" aria-pressed="false" data-filter="warm">Cauldron <sup data-count="warm"></sup></button>
+            <div class="seg-on" id="segOn" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="groups" id="groups" aria-live="polite">
+        <div class="group" data-group="fruit">
+          <div class="group-h"><h3 class="h3">The witch's garden</h3><p>Fresh fruit + sauce · self serve · first along the bar</p></div>
+          <ul class="items">
+            <li><i class="c" style="background:#E27C78"></i><span><b>Strawberries</b><small>Diced</small></span></li>
+            <li><i class="c" style="background:#F2C35E"></i><span><b>Golden mango</b><small>Diced</small></span></li>
+            <li><i class="c" style="background:#C9A26B"></i><span><b>Granola</b><small>Nut free, gluten free</small></span><em class="pill">GF</em></li>
+            <li><i class="c" style="background:#7A4E32"></i><span><b>Medjool dates</b><small>Chopped</small></span></li>
+            <li><i class="c" style="background:#8E5A7A"></i><span><b>Fresh figs</b><small>Quartered</small></span></li>
+            <li><i class="c" style="background:#C4435C"></i><span><b>Raspberry sauce</b><small>Ladled, blood red</small></span></li>
+            <li><i class="c" style="background:#9BB53F"></i><span><b>Kiwi</b><small>Diced</small></span></li>
+            <li><i class="c" style="background:#55618F"></i><span><b>Blueberries</b><small>Whole</small></span></li>
+            <li><i class="c" style="background:#BBCB6E"></i><span><b>Green grapes</b><small>Whole</small></span></li>
+            <li><i class="c" style="background:#D3E2A8"></i><span><b>Honeydew</b><small>Melon balls. Or eyeballs</small></span></li>
+            <li><i class="c" style="background:#F7F3EC"></i><span><b>Coconut</b><small>Shredded</small></span></li>
+            <li class="soon"><i class="c" style="background:#F2D16B"></i><span><b>Pineapple</b><small>Cubes</small></span><em class="pill">Back soon</em></li>
+          </ul>
+        </div>
+
+        <div class="group" data-group="candy">
+          <div class="group-h"><h3 class="h3">Trick-or-treat</h3><p>Candy + crunch · self serve · the middle of the bar</p></div>
+          <ul class="items">
+            <li><i class="c" style="background:conic-gradient(#F28C6B 0 25%,#F4D35E 0 50%,#8CC084 0 75%,#E57A9A 0)"></i><span><b>Gummy bears</b></span></li>
+            <li><i class="c" style="background:conic-gradient(#D94F45 0 20%,#F2B53C 0 40%,#4C8C4A 0 60%,#3E6FB0 0 80%,#7A4A2E 0)"></i><span><b>M&amp;M's</b></span></li>
+            <li><i class="c" style="background:conic-gradient(#F4A6B8 0 20%,#F7D774 0 40%,#9AD0C2 0 60%,#B9A3E3 0 80%,#F6F1EA 0)"></i><span><b>Rainbow sprinkles</b><small>Nonpareils + jimmies</small></span></li>
+            <li><i class="c" style="background:#5A3A2A"></i><span><b>Brownie bites</b></span></li>
+            <li><i class="c" style="background:linear-gradient(#5E8C4E 0 33%,#F2E2B4 0 66%,#D9675F 0)"></i><span><b>Rainbow cookies</b><small>NY tricolor, sliced</small></span></li>
+            <li><i class="c" style="background:#4A2C20"></i><span><b>Chocolate chips</b></span></li>
+            <li><i class="c" style="background:#5B3A29"></i><span><b>Chocolate jimmies</b><small>Bat black</small></span></li>
+            <li><i class="c" style="background:#EFE2C4"></i><span><b>Rice Krispies treats</b><small>Cubed</small></span></li>
+            <li><i class="c" style="background:#2D2A2A"></i><span><b>Oreo crumble</b><small>Graveyard dirt</small></span></li>
+            <li><i class="c" style="background:#C8955C"></i><span><b>Mini chocolate chip cookies</b></span></li>
+            <li><i class="c" style="background:#B87A43"></i><span><b>Biscoff cookies</b><small>Broken</small></span></li>
+            <li><i class="c" style="background:#D8B78A"></i><span><b>Cookie dough</b><small>Scooped</small></span></li>
+            <li><i class="c" style="background:linear-gradient(135deg,#E85D6C 0 50%,#F4C54A 0)"></i><span><b>Sour strips, Swedish Fish + worms</b><small>Freshly dug</small></span></li>
+            <li><i class="c" style="background:linear-gradient(135deg,#F4C6CF 0 50%,#FBF6F2 0)"></i><span><b>Strawberry mochi</b></span></li>
+            <li><i class="c" style="background:#6B4430"></i><span><b>Chocolate bar chunks</b></span></li>
+          </ul>
+        </div>
+
+        <div class="group" data-group="warm">
+          <div class="group-h"><h3 class="h3">The cauldron</h3><p>The warm station · behind the glass · we spoon it on for you</p></div>
+          <ul class="items">
+            <li><i class="c" style="background:#A9A96D"></i><span><b>Pistachio kataifi</b><small>Served warm from the cauldron, in a dollop</small></span><em class="pill sig">Signature</em></li>
+            <li><i class="c" style="background:#5B3524"></i><span><b>Nutella</b><small>Warm, poured</small></span><em class="pill warm">Warm</em></li>
+            <li><i class="c" style="background:#C08A4F"></i><span><b>Biscoff cookie butter</b><small>Warm, poured</small></span><em class="pill warm">Warm</em></li>
+            <li><i class="c" style="background:#E7D3B4"></i><span><b>Cinnamon rolls</b><small>In warm cream-cheese icing</small></span><em class="pill warm">Warm</em></li>
+            <li><i class="c" style="background:#E2B04A"></i><span><b>Honey</b><small>From the drizzler</small></span></li>
+            <li><i class="c" style="background:#A8A248"></i><span><b>Olive oil + sea salt</b><small>Extra virgin, flaky salt</small></span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="bar-foot">The bar changes with the season and the day. Got an allergy? Ask us before you build your cup. No tricks.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ signature -->
+  <section class="sec sig-sec" aria-labelledby="sig-h">
+    <div class="wrap sig-in">
+      <div>
+        <p class="label kicker" data-reveal>The signature</p>
+        <h2 class="h2" id="sig-h" data-reveal style="--i:1;margin-top:20px">Pistachio kataifi, <em>bubbling warm.</em></h2>
+        <p class="lede" data-reveal style="--i:2">Pistachio cream with toasted, shredded kataifi folded through, kept warm at the end of the bar. Officially it lives in a skillet; in October we call it the cauldron. It goes on in one soft, heavy dollop. Never a drizzle.</p>
+        <ul class="warm-list" data-reveal style="--i:3">
+          <li>Warm Nutella</li>
+          <li>Biscoff cookie butter</li>
+          <li>Cinnamon rolls in icing</li>
+          <li>Olive oil + flaky salt</li>
+        </ul>
+      </div>
+      <div class="skillet" data-reveal style="--i:2">
+        <img src="img/cauldron.svg" width="860" height="600" alt="Illustration of a black iron cauldron of warm pistachio kataifi, khaki green with golden toasted strands, bubbling over a little fire" loading="lazy">
+      </div>
+    </div>
+    <div class="branch" aria-hidden="true"><svg><use href="#branch"/></svg></div>
+  </section>
+
+  <!-- ============================================================ how it works -->
+  <section class="sec" id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="label kicker" data-reveal>How it works</p>
+          <h2 class="h2" id="how-h" data-reveal style="--i:1">Pull. Top. <em>Weigh.</em></h2>
+        </div>
+        <p class="aside" data-reveal style="--i:2">Self serve, the way froyo should be. Staff are always happy to pour for you, costume or not.</p>
+      </div>
+      <ol class="steps">
+        <li class="step" data-reveal style="--i:0">
+          <span class="n">01</span>
+          <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="16" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M19 15l9 13M24 28h12v6H24zM28 34v6M32 34v6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 class="h3">Pull</h3>
+          <p>Grab a cup and pull your own from six handles. Can't choose? The middle handle twists two together.</p>
+        </li>
+        <li class="step" data-reveal style="--i:1">
+          <span class="n">02</span>
+          <svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="18" cy="14" rx="7" ry="9" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M21 22l13 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <h3 class="h3">Top</h3>
+          <p>Walk the bar back toward the door: fresh fruit first, then trick-or-treat candy, then the cauldron behind the glass.</p>
+        </li>
+        <li class="step" data-reveal style="--i:2">
+          <span class="n">03</span>
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 36h32M12 36l3-14h18l3 14M24 22v-8M18 14h12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 class="h3">Weigh</h3>
+          <p>Pay by weight at the register, under the gold sun. Have as much, or as little, as you like. No tricks.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============================================================ story -->
+  <section class="sec story" id="story" aria-labelledby="story-h">
+    <div class="wrap story-in">
+      <figure data-reveal><img src="img/sun-macro.webp" width="1200" height="750" alt="The gold foil sun face printed on every Ilios cup, up close, glowing orange in the dark" loading="lazy"></figure>
+      <div>
+        <p class="label kicker" data-reveal>Our story</p>
+        <h2 class="h2" id="story-h" data-reveal style="--i:1;margin-top:20px">Ilios is Greek for <em>sun.</em></h2>
+        <p class="lede" data-reveal style="--i:2">Ilios is a family shop, run by Andrew and Sophia Quintero. Sophia grew up in Cyprus, and the froyo tastes like it: thick, tangy, properly Greek.</p>
+        <p class="lede" data-reveal style="--i:3">We make it in house every day from nonfat Greek yogurt and kefir, sweeten it with organic cane sugar, and use real fruit in every fruit flavor. The gold sun is on every cup, over every machine, and on the wall when you walk in.</p>
+        <p class="lede" data-reveal style="--i:4">Come October, the sun clocks out early. We don't: Tuesday to Sunday, 5 to 10 pm.</p>
+        <p class="greek" data-reveal style="--i:5" lang="el"><b>Ήλιος</b><span lang="en">ee-lee-os<br>the sun</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ the shop -->
+  <section class="sec shop" aria-labelledby="shop-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="label kicker" data-reveal>The shop</p>
+          <h2 class="h2" id="shop-h" data-reveal style="--i:1">Come in, <em>if you dare.</em></h2>
+        </div>
+        <p class="aside" data-reveal style="--i:2">A white Victorian storefront on Old Northern Blvd, with a porch, columns and slate-grey doors. Honestly, it was built to be haunted. The playlist inside stays loud and very European summer.</p>
+      </div>
+      <div class="tiles">
+        <figure class="tile wide" data-reveal><img src="img/station.webp" width="1400" height="875" alt="The machine wall after dark: soft-serve machines in a lit limewash niche beside the Ilios sun, glowing orange" loading="lazy"><figcaption class="tag">The machine wall</figcaption></figure>
+        <figure class="tile tall" data-reveal style="--i:1"><img src="img/lounge.svg" width="600" height="720" alt="Illustration of the lounge at night: a cream boucle chair, a marble side table with a ghostly cup of froyo, an olive tree, two jack-o-lanterns and a full moon in the arched window" loading="lazy"><figcaption class="tag">The lounge, after dark</figcaption></figure>
+      </div>
+      <ul class="details">
+        <li data-reveal><b>Limewash walls</b><span>Ghost-white plaster, warm light</span></li>
+        <li data-reveal style="--i:1"><b>Bouclé + marble</b><span>Cream barrel chairs, walnut-based tables</span></li>
+        <li data-reveal style="--i:2"><b>Olive trees</b><span>In the tall front windows</span></li>
+        <li data-reveal style="--i:3"><b>The gold sun</b><span>Over the register. It never sets in here.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================ visit -->
+  <section class="sec visit" id="visit" aria-labelledby="visit-h">
+    <div class="wrap visit-in">
+      <div>
+        <p class="label kicker" data-reveal>Visit</p>
+        <h2 class="vh" id="visit-h">Visit Ilios</h2>
+        <p class="addr" data-reveal style="--i:1">1355 Old Northern Blvd<br>Roslyn, NY 11576</p>
+        <p class="status" data-status data-reveal style="--i:2"><i></i><span>Open Tuesday to Sunday</span></p>
+        <dl class="hours" id="hours" data-reveal style="--i:3">
+          <div data-day="2"><dt>Tuesday</dt><dd>5 – 10 pm</dd></div>
+          <div data-day="3"><dt>Wednesday</dt><dd>5 – 10 pm</dd></div>
+          <div data-day="4"><dt>Thursday</dt><dd>5 – 10 pm</dd></div>
+          <div data-day="5"><dt>Friday</dt><dd>5 – 10 pm</dd></div>
+          <div data-day="6"><dt>Saturday</dt><dd>5 – 10 pm</dd></div>
+          <div data-day="0"><dt>Sunday</dt><dd>5 – 10 pm</dd></div>
+          <div data-day="1"><dt>Monday</dt><dd>Closed</dd></div>
+        </dl>
+        <div class="btns" data-reveal style="--i:4">
+          <a class="btn solid" href="https://www.google.com/maps/search/?api=1&query=Ilios+Froyo+1355+Old+Northern+Blvd+Roslyn+NY+11576" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#pin"/></svg>Get directions</a>
+          <a class="btn" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#ig"/></svg>@iliosfroyo</a>
+        </div>
+      </div>
+      <div class="map" data-reveal style="--i:1">
+        <iframe title="Map showing Ilios Froyo at 1355 Old Northern Blvd, Roslyn" src="https://www.google.com/maps?q=Ilios+Froyo,+1355+Old+Northern+Blvd,+Roslyn,+NY+11576&amp;z=16&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <div class="float"><span class="dot" style="background:var(--milk);display:grid;place-items:center"><svg width="18" height="18" style="color:var(--gold)" aria-hidden="true"><use href="#mark"/></svg></span><span><small>Roslyn Village</small><b>In the old Victorian, on Old Northern</b></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ faq -->
+  <section class="sec faq" id="faq" aria-labelledby="faq-h" style="padding-top:0">
+    <div class="wrap faq-in">
+      <div>
+        <p class="label kicker" data-reveal>Good questions</p>
+        <h2 class="h2" id="faq-h" data-reveal style="--i:1;margin-top:20px">Before you <em>creep by.</em></h2>
+        <div class="ghost" aria-hidden="true"><svg viewBox="0 0 80 96"><path d="M40 4C19 4 8 20 8 42v48l8-7 8 7 8-7 8 7 8-7 8 7 8-7 8 7V42C72 20 61 4 40 4Z" fill="currentColor"/><g fill="#100C13"><ellipse cx="30" cy="40" rx="4.6" ry="6.6"/><ellipse cx="50" cy="40" rx="4.6" ry="6.6"/><ellipse cx="40" cy="55" rx="3.6" ry="4.6"/></g><g fill="#fff"><circle cx="28.6" cy="37.4" r="1.4"/><circle cx="48.6" cy="37.4" r="1.4"/></g></svg></div>
+      </div>
+      <div data-reveal style="--i:1">
+        <details name="faq" open>
+          <summary>Can I come in costume?<i aria-hidden="true"></i></summary>
+          <p class="a">Please do. Halloween falls on a Saturday this year, and we're open our usual 5 to 10 pm.</p>
+        </details>
+        <details name="faq">
+          <summary>What makes it Greek froyo?<i aria-hidden="true"></i></summary>
+          <p class="a">We make it from nonfat Greek yogurt plus kefir, so it's thicker and tangier than most froyo, sweetened with organic cane sugar. The tart and vanilla bean are organic, and the fruit flavors use real fruit.</p>
+        </details>
+        <details name="faq">
+          <summary>How does pricing work?<i aria-hidden="true"></i></summary>
+          <p class="a">Fill your cup, add whatever you like from the bar, and pay by weight at the register.</p>
+        </details>
+        <details name="faq">
+          <summary>Do the flavors change?<i aria-hidden="true"></i></summary>
+          <p class="a">Yes. Three of the six handles rotate every month. This page and our Instagram always show what's pouring.</p>
+        </details>
+        <details name="faq">
+          <summary>What's in the cauldron?<i aria-hidden="true"></i></summary>
+          <p class="a">Pistachio kataifi, Nutella, Biscoff cookie butter and cinnamon rolls in cream-cheese icing, all kept warm behind the glass. Ask and we'll spoon them on.</p>
+        </details>
+        <details name="faq">
+          <summary>Anything nut free or gluten free?<i aria-hidden="true"></i></summary>
+          <p class="a">Our granola is nut free and gluten free. Everything shares one bar, so if you have a serious allergy, talk to us before you build your cup.</p>
+        </details>
+        <details name="faq">
+          <summary>Do I have to pull my own?<i aria-hidden="true"></i></summary>
+          <p class="a">It's self serve, but never a test. Our team is happy to pour for you.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ social + newsletter -->
+  <section class="sec social" aria-labelledby="social-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="label kicker" data-reveal>Follow along</p>
+          <h2 class="h2" id="social-h" data-reveal style="--i:1">@iliosfroyo</h2>
+        </div>
+        <a class="tlink" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal style="--i:2">Open Instagram <svg width="14" height="14" aria-hidden="true"><use href="#arrow"/></svg></a>
+      </div>
+      <div class="grid4">
+        <a href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal><img src="img/cup-top.webp" width="900" height="900" alt="A cup of Ilios froyo from above" loading="lazy"></a>
+        <a class="quote" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal style="--i:1"><small>Overheard by the register</small><b>Froyo is so back. From the dead.</b></a>
+        <a href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal style="--i:2"><img src="img/cup-raspberry-twist.webp" width="800" height="1000" alt="A raspberry and vanilla bean twist" loading="lazy" style="object-position:50% 45%;transform:scale(1.25)"></a>
+        <a class="sage" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal style="--i:3"><img src="img/cauldron.svg" width="860" height="600" alt="Warm pistachio kataifi bubbling in a cauldron" loading="lazy" style="object-fit:contain;padding:10%"></a>
+      </div>
+
+      <div class="news" data-reveal>
+        <div>
+          <h2 class="h2">The monthly <em>flavor drop.</em></h2>
+          <p class="lede">One email when the machines change. No tricks.</p>
+        </div>
+        <!-- DEPLOY STEP: point this form at the shop's mailing list (Mailchimp, Klaviyo, etc.). Until then it only confirms on the page. -->
+        <form id="news" novalidate>
+          <label class="vh" for="email">Email address</label>
+          <div class="field">
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="you@email.com" required>
+            <button class="btn solid" type="submit"><span>Join</span></button>
+          </div>
+          <p class="news-msg" id="newsMsg" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div>
+        <h4>Ilios Froyo</h4>
+        <p class="lede">Organic Greek froyo, made in house every day in Roslyn Village. Haunted for October only.</p>
+      </div>
+      <div>
+        <h4>Visit</h4>
+        <p>1355 Old Northern Blvd<br>Roslyn, NY 11576</p>
+        <p style="margin-top:8px"><a class="tlink" style="color:inherit" href="https://www.google.com/maps/search/?api=1&query=Ilios+Froyo+1355+Old+Northern+Blvd+Roslyn+NY+11576" target="_blank" rel="noopener">Directions</a></p>
+      </div>
+      <div>
+        <h4>Hours</h4>
+        <p>Tuesday to Sunday<br>5 to 10 pm<br>Closed Mondays</p>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="#flavors">Flavors tonight</a></li>
+          <li><a href="#toppings">Tricks + treats</a></li>
+          <li><a href="#story">Our story</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener">Instagram</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="wordmark" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#mark"/></svg><b>ILIOS</b></div>
+    <div class="foot-bot">
+      <span>© <span data-year>2026</span> Ilios Froyo · Roslyn, New York</span>
+      <span>Ilios · Ήλιος · the sun, even after dark · <a href="../">Back to daylight</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ---- hours + live open/closed, in the shop's own time zone */
+  const HOURS = { 0: [17, 22], 1: null, 2: [17, 22], 3: [17, 22], 4: [17, 22], 5: [17, 22], 6: [17, 22] }; // 24h, Sunday = 0
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const fmtH = h => (h % 12 || 12) + (h < 12 ? ' am' : ' pm');
+  function shopNow() {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23', month: 'long', day: 'numeric', year: 'numeric' })
+      .formatToParts(new Date()).map(x => [x.type, x.value]));
+    const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday);
+    return { day, mins: +p.hour * 60 + +p.minute, month: p.month, date: p.day, year: +p.year };
+  }
+  function nextOpen(day) {
+    for (let k = 1; k <= 7; k++) { const d = (day + k) % 7; if (HOURS[d]) return { d, k }; }
+  }
+  // nights until October 31, counted in whole calendar days; nothing once it has passed this year
+  function untilHalloween(year, month, date) {
+    const today = Date.UTC(year, new Date(`${month} 1, 2000`).getMonth(), +date);
+    const n = Math.round((Date.UTC(year, 9, 31) - today) / 864e5);
+    return n < 0 ? '' : n === 0 ? ' · Happy Halloween' : n === 1 ? ' · 1 night to Halloween' : ` · ${n} nights to Halloween`;
+  }
+  function renderStatus() {
+    const { day, mins, month, date, year } = shopNow();
+    const h = HOURS[day];
+    let open = false, text, short;
+    if (h && mins >= h[0] * 60 && mins < h[1] * 60) { open = true; text = `Open now · until ${fmtH(h[1])}`; short = `Open until ${fmtH(h[1])}`; }
+    else if (h && mins < h[0] * 60) { text = `Opens today at ${fmtH(h[0])}`; short = `Opens at ${fmtH(h[0])}`; }
+    else { const n = nextOpen(day); const when = n.k === 1 ? 'tomorrow' : DAYS[n.d]; text = `Closed · opens ${when} at ${fmtH(HOURS[n.d][0])}`; short = `Back ${when}, ${fmtH(HOURS[n.d][0])}`; }
+    $$('[data-status]').forEach(el => { el.classList.toggle('is-open', open); $('span', el).textContent = text; });
+    $$('[data-status-short]').forEach(el => el.textContent = short);
+    $$('#hours [data-day]').forEach(el => el.classList.toggle('is-today', +el.dataset.day === day));
+    const t = $('[data-today]'); if (t) t.textContent = `On the machines tonight · ${DAYS[day]}, ${month} ${date}${untilHalloween(year, month, date)}`;
+  }
+  renderStatus(); setInterval(renderStatus, 60000);
+  $$('[data-year]').forEach(el => el.textContent = new Date().getFullYear());
+
+  /* ---- nav material appears once content scrolls under it */
+  const nav = $('#nav'); let ticking = false;
+  const onScroll = () => { if (ticking) return; ticking = true; requestAnimationFrame(() => { nav.classList.toggle('is-scrolled', scrollY > 8); ticking = false; }); };
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  /* ---- phone menu sheet */
+  const btn = $('#menuBtn'), sheet = $('#sheet'), scrim = $('#scrim'), root = document.documentElement;
+  const setMenu = open => {
+    root.classList.toggle('menu-open', open);
+    btn.setAttribute('aria-expanded', open); btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    $$('main, footer').forEach(el => el.inert = open);
+    if (open) $('a', sheet).focus({ preventScroll: true });
+  };
+  btn.addEventListener('click', () => setMenu(!root.classList.contains('menu-open')));
+  scrim.addEventListener('click', () => setMenu(false));
+  $$('a', sheet).forEach(a => a.addEventListener('click', () => setMenu(false)));
+  addEventListener('keydown', e => { if (e.key === 'Escape' && root.classList.contains('menu-open')) { setMenu(false); btn.focus(); } });
+  matchMedia('(min-width: 901px)').addEventListener('change', e => e.matches && setMenu(false));
+
+  /* ---- reveal on scroll (once), children of [data-stagger] cascade 70ms apart */
+  $$('[data-stagger]').forEach(g => [...g.children].forEach((c, i) => c.style.setProperty('--i', i % 3)));
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } }),
+    { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+  $$('[data-reveal]').forEach(el => io.observe(el));
+
+  /* ---- toppings filter: an inked copy of the tab row clipped to the active tab */
+  const seg = $('#seg'), segOn = $('#segOn'), tabs = $$('button', seg), groups = $$('#groups .group');
+  segOn.innerHTML = tabs.map(t => `<span>${t.innerHTML}</span>`).join('');
+  const counts = { all: 0 };
+  groups.forEach(g => { const n = $$('.items li:not(.soon)', g).length; counts[g.dataset.group] = n; counts.all += n; });
+  $$('[data-count]', document).forEach(el => el.textContent = counts[el.dataset.count]);
+  function place(tab) {
+    const w = seg.clientWidth - 8, l = tab.offsetLeft - 4, r = w - (l + tab.offsetWidth);
+    segOn.style.setProperty('--l', l + 'px'); segOn.style.setProperty('--r', r + 'px');
+  }
+  function select(tab) {
+    tabs.forEach(t => t.setAttribute('aria-pressed', t === tab));
+    place(tab);
+    const f = tab.dataset.filter;
+    groups.forEach(g => g.hidden = !(f === 'all' || g.dataset.group === f));
+    // the list itself crossfades in place; a fast 220ms so it never feels like it's in the way
+    const shown = $$('#groups .group:not([hidden]) .items li');
+    shown.forEach((li, i) => {
+      li.getAnimations().forEach(a => a.cancel());
+      if (i > 23) return;
+      li.animate(reduce.matches ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 220, delay: Math.min(i, 12) * 16, easing: 'cubic-bezier(0.23,1,0.32,1)', fill: 'backwards' });
+    });
+  }
+  tabs.forEach(t => t.addEventListener('click', () => select(t)));
+  // place without a transition on first paint and whenever the row resizes
+  const settle = () => { segOn.style.transition = 'none'; place(tabs.find(t => t.getAttribute('aria-pressed') === 'true')); segOn.offsetWidth; segOn.style.transition = ''; };
+  new ResizeObserver(settle).observe(seg);
+  document.fonts && document.fonts.ready.then(settle);
+
+  /* ---- newsletter: front-end only until it's wired to a list */
+  const form = $('#news'), msg = $('#newsMsg'), email = $('#email');
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!email.checkValidity()) { msg.textContent = 'That email looks a little off. Try again?'; email.focus(); return; }
+    form.classList.add('is-sending');
+    setTimeout(() => {
+      form.classList.remove('is-sending'); form.classList.add('is-done');
+      $('button span', form).textContent = 'Joined';
+      msg.textContent = "You're on the list. See you after dark.";
+    }, 450);
+  });
+})();
+</script>
+</body>
+</html>
