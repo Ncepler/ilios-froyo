@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ilios Froyo after dark · Halloween at the shop in Roslyn, NY</title>
-<meta name="description" content="Organic Greek froyo, softly haunted. Made in house every day from Greek yogurt and kefir, with trick-or-treat toppings and warm pistachio kataifi from the cauldron. 1355 Old Northern Blvd, Roslyn, NY.">
+<meta name="description" content="Organic Greek froyo, softly haunted. Made in house every day from Greek yogurt and kefir, with a bar of fresh fruit and warm pistachio kataifi. 1355 Old Northern Blvd, Roslyn, NY.">
 <meta name="theme-color" content="#100C13">
 <meta name="color-scheme" content="dark">
 <!-- DEPLOY STEP: set og:url and make og:image absolute once the site has its live address. -->
@@ -56,7 +56,7 @@
   --pumpkin:#EE7A22; --pumpkin-hi:#F7924A; --candle:#FFC766; --moon:#F3E9CF; --slime:#B5C46A;
   --ink:#F2E8DA; --ink-2:#C2B5A6; --ink-3:#8F8274;
   --line:rgba(242,232,218,.1); --line-2:rgba(242,232,218,.18);
-  --bark:#4A3843;
+  --leaf-1:#4E5638; --leaf-2:#5E6745; --leaf-3:#40472E; --stem:#4A4A36; --olive-fruit:#2A2E1C;
 
   --serif:"Fraunces",ui-serif,Georgia,serif;
   --sans:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -70,7 +70,6 @@
   --nav-h:72px;
   --r-lg:28px; --r-md:20px; --r-sm:14px;
   interpolate-size:allow-keywords;
-  --bat-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 50'%3E%3Cpath d='M47 22C38 9 20 6 3 15c9 1 13 7 11 14 6-4 13-2 15 4 4-6 11-6 16-2zM53 22c9-13 27-16 44-7-9 1-13 7-11 14-6-4-13-2-15 4-4-6-11-6-16-2zM50 14c-1.6 0-2.4-2.6-3.6-4.4.4 2 .3 3.6-.6 5-1.4 2-1.8 6-1 10 .8 4.4 3 8 5.2 8s4.4-3.6 5.2-8c.8-4 .4-8-1-10-.9-1.4-1-3-.6-5-1.2 1.8-2 4.4-3.6 4.4z'/%3E%3C/svg%3E");
 }
 *,*::before,*::after{box-sizing:border-box}
 *{margin:0;padding:0}
@@ -127,8 +126,7 @@ em,.it{font-style:italic}
 .ticker-track{display:flex;flex:none;gap:0;white-space:nowrap;animation:tick 48s linear infinite}
 .ticker:hover .ticker-track{animation-play-state:paused}
 .ticker-track span{display:inline-flex;align-items:center;gap:22px;padding-right:22px;font:600 .72rem/1 var(--sans);letter-spacing:.16em;text-transform:uppercase}
-/* a tiny bat between items */
-.ticker-track span::after{content:"";width:16px;height:8px;background:var(--milk);-webkit-mask:var(--bat-mask) center/contain no-repeat;mask:var(--bat-mask) center/contain no-repeat}
+.ticker-track span::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--milk)}
 @keyframes tick{to{transform:translateX(-50%)}}
 
 /* ------------------------------------------------------------------ nav: a translucent material that appears once content scrolls under it */
@@ -190,7 +188,7 @@ em,.it{font-style:italic}
     radial-gradient(1px 1px at 4% 44%,#fff8e6 50%,transparent),radial-gradient(1px 1px at 29% 37%,#fff8e6 50%,transparent),
     radial-gradient(1.2px 1.2px at 52% 46%,#fff8e6 50%,transparent),radial-gradient(1px 1px at 81% 52%,#fff8e6 50%,transparent)}
 /* low fog rolling along the floor */
-.fog{position:absolute;left:-20%;right:-20%;bottom:-6%;height:34%;z-index:-1;pointer-events:none;opacity:.5;
+.fog{position:absolute;left:-20%;right:-20%;bottom:-6%;height:34%;z-index:-1;pointer-events:none;opacity:.3;
   background:radial-gradient(30% 60% at 20% 70%,rgba(220,214,232,.12),transparent 70%),radial-gradient(28% 55% at 55% 80%,rgba(220,214,232,.1),transparent 70%),radial-gradient(30% 60% at 85% 70%,rgba(220,214,232,.12),transparent 70%);
   filter:blur(18px);animation:drift 26s ease-in-out infinite alternate}
 @keyframes drift{to{transform:translateX(8%)}}
@@ -204,10 +202,10 @@ em,.it{font-style:italic}
 .facts svg{width:18px;height:18px;color:var(--gold)}
 
 .arch-wrap{position:relative;justify-self:center;width:min(100%,520px)}
-/* a spider web behind the arch, stirring in a draught */
-.arch-sun{position:absolute;left:50%;top:40%;width:156%;aspect-ratio:1;translate:-50% -50%;color:var(--ink);opacity:.1;z-index:-1;pointer-events:none}
-.arch-sun svg{width:100%;height:100%;animation:sway 9s ease-in-out infinite alternate}
-@keyframes sway{from{transform:rotate(-2.5deg)}to{transform:rotate(2.5deg)}}
+/* the line sun still turns behind the arch, in candlelight */
+.arch-sun{position:absolute;left:50%;top:40%;width:156%;aspect-ratio:1;translate:-50% -50%;color:var(--candle);opacity:.15;z-index:-1;pointer-events:none}
+.arch-sun svg{width:100%;height:100%;animation:spin 220s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .moon{position:absolute;right:-16%;top:-10%;width:44%;aspect-ratio:1;border-radius:50%;z-index:-1;pointer-events:none;
   background:radial-gradient(14% 14% at 36% 34%,rgba(201,183,140,.55),transparent 70%),radial-gradient(9% 9% at 62% 58%,rgba(201,183,140,.5),transparent 70%),radial-gradient(7% 7% at 44% 70%,rgba(201,183,140,.45),transparent 70%),radial-gradient(circle at 38% 34%,#FFF8E6,#EFE2BF 62%,#D6C493);
   box-shadow:0 0 60px 10px rgba(243,233,207,.18),0 0 160px 40px rgba(243,233,207,.08)}
@@ -216,13 +214,8 @@ em,.it{font-style:italic}
 .arch img{width:100%;height:100%;object-fit:cover;object-position:50% 50%}
 .branch{position:absolute;width:74%;pointer-events:none}
 .branch svg{width:100%;height:auto}
-.arch-wrap .branch{left:-26%;top:-4%;rotate:-14deg;filter:drop-shadow(0 0 12px rgba(0,0,0,.6))}
-/* a spider on a thread, bobbing on the corner of the arch */
-.spider{position:absolute;right:16%;top:-2%;width:26px;pointer-events:none;transform-origin:50% 0;animation:dangle 5.5s ease-in-out infinite}
-.spider::before{content:"";display:block;width:1px;height:var(--thread,110px);margin:0 auto;background:linear-gradient(rgba(242,232,218,0),rgba(242,232,218,.5))}
-.spider svg{width:26px;height:26px;color:#0b080d;filter:drop-shadow(0 0 6px rgba(238,122,34,.5))}
-@keyframes dangle{0%,100%{transform:translateY(-18px) rotate(2deg)}50%{transform:translateY(14px) rotate(-2deg)}}
-/* bats crossing the hero */
+.arch-wrap .branch{left:-26%;top:-4%;rotate:-14deg}
+/* one bat, now and then, across the moon */
 .bats{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
 .bat{position:absolute;left:0;top:var(--y);width:var(--w,44px);color:#0a070c;filter:drop-shadow(0 0 5px rgba(238,122,34,.45));animation:fly var(--t,24s) linear var(--delay,0s) infinite}
 .bat svg{width:100%;height:auto;overflow:visible}
@@ -248,8 +241,6 @@ em,.it{font-style:italic}
 .js .hero .arch-sun,.js .hero .moon{animation:fade 1800ms ease 500ms both}
 .js .hero .float{animation:rise 800ms var(--ease-out) both;animation-delay:calc(900ms + var(--d,0) * 120ms)}
 .js .hero .arch-wrap .branch{animation:fade 1200ms ease 1000ms both}
-.js .hero .spider{animation:drop 1400ms var(--ease-out) 1300ms both,dangle 5.5s ease-in-out 2700ms infinite}
-@keyframes drop{from{transform:translateY(-140px);opacity:0}to{transform:translateY(-18px) rotate(2deg);opacity:1}}
 
 /* ------------------------------------------------------------------ values strip */
 .values{border-block:1px solid var(--line);background:var(--bone)}
@@ -331,7 +322,7 @@ em,.it{font-style:italic}
 .warm-list li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--olive)}
 .skillet{position:relative;width:118%;margin-right:-18%}
 .skillet img{width:100%}
-.sig-sec .branch{right:-4%;bottom:-2%;width:46%;rotate:168deg;opacity:.9;--bark:#0A0D08}
+.sig-sec .branch{right:-4%;bottom:-2%;width:46%;rotate:168deg;opacity:.9}
 
 /* ------------------------------------------------------------------ how it works */
 .steps{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(18px,2.2vw,32px);counter-reset:s}
@@ -380,10 +371,6 @@ em,.it{font-style:italic}
 
 /* ------------------------------------------------------------------ faq */
 .faq-in{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(32px,6vw,96px)}
-/* a small ghost keeps the questions company */
-.ghost{width:clamp(70px,8vw,104px);margin-top:clamp(28px,4vw,56px);color:var(--ink);animation:float 4.8s ease-in-out infinite alternate;filter:drop-shadow(0 18px 24px rgba(0,0,0,.5))}
-.ghost svg{width:100%;height:auto}
-@keyframes float{from{transform:translateY(-8px) rotate(-3deg)}to{transform:translateY(10px) rotate(3deg)}}
 .faq details{border-bottom:1px solid var(--line-2)}
 .faq details:first-child{border-top:1px solid var(--line-2)}
 .faq summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 0;cursor:pointer;font:400 clamp(1.2rem,1.6vw,1.45rem)/1.25 var(--serif);font-variation-settings:"SOFT" 100;letter-spacing:-.008em}
@@ -500,7 +487,6 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
   .float.open{display:none}
   .float.pour{left:-22%;bottom:8%}
   .moon{right:-10%;top:-6%;width:38%}
-  .spider{right:8%}
   .hero-copy .label{margin-bottom:18px}
   .hero-copy .lede{margin-top:20px}
   .hero .btns{margin-top:28px}
@@ -509,7 +495,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
 
 /* ------------------------------------------------------------------ accessibility preferences */
 @media (prefers-reduced-motion:reduce){
-  .ticker-track,.arch-sun svg,.fog,.spider,.js .hero .spider,.ghost{animation:none}
+  .ticker-track,.arch-sun svg,.fog{animation:none}
   .bats{display:none}
   .js .hero [data-in],.js .hero .float{animation:fade 400ms ease both}
   .js .hero .arch,.js .hero .arch img{animation:none}
@@ -531,8 +517,8 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <symbol id="web" viewBox="0 0 600 600"><g fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round"><path d="M300 300 L592.0 297.8"/><path d="M300 300 L568.7 414.3"/><path d="M300 300 L492.0 520.0"/><path d="M300 300 L413.2 569.2"/><path d="M300 300 L299.6 592.0"/><path d="M300 300 L184.5 568.2"/><path d="M300 300 L104.2 516.6"/><path d="M300 300 L30.0 411.2"/><path d="M300 300 L8.1 293.9"/><path d="M300 300 L35.8 175.7"/><path d="M300 300 L80.6 107.4"/><path d="M300 300 L179.8 33.9"/><path d="M300 300 L280.9 8.6"/><path d="M300 300 L425.0 36.1"/><path d="M300 300 L512.8 100.0"/><path d="M300 300 L560.9 168.8"/><path d="M327.0 299.8 Q323.0 304.5 324.2 310.3 Q318.4 313.1 316.6 318.8 Q312.0 318.9 310.1 323.1 Q304.5 321.9 300.0 325.5 Q295.5 322.2 290.1 323.8 Q287.7 319.6 282.6 319.8 Q281.4 313.4 275.9 310.0 Q277.5 304.3 274.0 299.5 Q277.8 294.9 276.6 289.1 Q280.3 287.1 279.7 282.2 Q285.9 281.1 289.0 275.9 Q294.3 277.7 298.3 274.6 Q304.2 278.4 310.9 277.3 Q313.6 281.8 319.3 282.3 Q319.4 286.8 323.9 288.4 Q322.9 294.7 327.0 299.8"/><path d="M349.8 299.6 Q341.5 308.1 342.4 318.4 Q333.8 324.5 332.6 336.1 Q323.4 336.0 319.3 343.9 Q308.7 341.6 299.9 348.5 Q291.2 341.3 280.6 343.3 Q277.3 335.3 268.9 335.1 Q265.3 324.2 254.0 318.7 Q258.4 308.0 253.5 299.0 Q260.1 290.7 257.9 280.3 Q264.5 277.2 263.1 269.1 Q274.5 266.5 280.2 256.4 Q289.7 258.4 296.9 251.2 Q307.6 258.3 319.9 256.1 Q324.2 265.6 333.9 267.3 Q334.1 275.8 341.9 278.8 Q341.2 290.3 349.8 299.6"/><path d="M376.8 299.4 Q364.7 313.2 367.0 329.9 Q351.6 338.3 347.5 355.3 Q334.7 355.9 329.5 369.0 Q313.2 365.6 299.9 376.9 Q287.1 364.6 271.4 366.7 Q264.3 354.4 249.3 354.1 Q246.9 336.6 232.7 327.2 Q237.5 311.6 228.4 298.5 Q238.3 285.0 234.4 268.3 Q245.7 263.8 245.0 251.4 Q261.0 247.8 268.4 232.6 Q283.6 235.5 295.1 224.0 Q311.7 236.5 330.9 235.0 Q338.9 247.3 355.7 248.0 Q354.2 262.0 364.8 267.6 Q363.7 285.1 376.8 299.4"/><path d="M406.0 299.2 Q389.7 318.6 393.4 342.2 Q373.7 354.5 370.5 379.0 Q349.7 377.3 340.1 392.8 Q318.0 390.3 299.9 407.8 Q281.8 392.2 259.7 397.1 Q251.1 379.3 231.6 379.2 Q225.6 353.2 203.1 339.0 Q210.8 316.5 198.7 297.8 Q213.5 279.5 209.1 256.7 Q223.8 248.8 221.5 229.5 Q245.2 226.4 256.8 206.9 Q277.4 212.5 293.0 198.7 Q316.1 212.9 342.8 207.7 Q353.2 227.6 375.5 231.3 Q374.7 248.3 390.5 253.8 Q388.4 278.8 406.0 299.2"/><path d="M438.8 299.0 Q419.0 324.6 425.6 355.7 Q398.9 372.4 394.2 405.3 Q366.8 405.0 354.3 428.1 Q324.4 417.4 299.8 432.9 Q276.3 418.7 247.5 430.9 Q234.1 406.7 206.0 406.2 Q202.5 371.7 177.3 353.1 Q182.8 322.6 162.2 297.1 Q182.6 271.2 176.9 238.9 Q199.5 231.4 199.8 208.6 Q228.9 200.5 242.1 170.2 Q269.8 178.6 290.8 160.1 Q323.1 179.0 360.4 171.1 Q371.9 198.8 399.4 204.1 Q402.0 228.1 427.2 236.2 Q419.7 270.8 438.8 299.0"/><path d="M474.8 298.6 Q453.7 330.6 466.7 369.3 Q427.6 390.3 416.9 431.4 Q383.5 432.7 368.7 463.6 Q330.8 453.7 299.8 478.0 Q267.3 455.0 227.6 466.6 Q213.4 433.2 179.8 429.4 Q171.3 388.6 134.2 367.5 Q146.6 328.7 124.9 296.2 Q151.9 263.9 146.0 223.6 Q173.4 212.9 172.7 182.9 Q210.2 176.7 227.7 143.1 Q262.2 150.4 288.3 124.4 Q328.9 147.0 376.0 135.6 Q390.8 173.9 425.7 184.2 Q426.2 211.8 454.7 219.8 Q448.3 263.3 474.8 298.6"/><path d="M512.8 298.4 Q489.0 338.2 507.1 386.4 Q457.4 415.1 442.7 469.4 Q401.7 467.9 383.4 503.6 Q337.4 489.2 299.7 516.8 Q260.1 490.6 211.7 506.9 Q192.5 465.2 149.4 460.2 Q140.9 408.9 97.1 381.8 Q113.5 334.8 88.4 295.5 Q113.6 255.1 97.4 204.6 Q133.9 190.0 133.4 151.0 Q185.4 145.9 211.9 106.6 Q254.0 116.8 285.8 86.4 Q334.6 115.8 391.2 104.3 Q413.2 144.8 460.4 150.8 Q458.5 187.6 491.9 199.4 Q482.1 254.0 512.8 298.4"/><path d="M572.1 298.0 Q527.2 343.5 532.9 398.7 Q484.6 430.0 477.4 490.2 Q426.3 494.9 403.3 542.9 Q346.3 529.9 299.7 568.1 Q255.0 525.8 200.3 533.6 Q176.4 489.3 125.0 487.0 Q109.3 428.1 51.4 397.7 Q73.6 341.6 45.6 294.8 Q77.7 247.7 60.5 189.0 Q102.7 171.3 101.1 125.0 Q160.8 109.9 189.5 52.5 Q242.5 73.8 282.6 44.8 Q342.5 81.4 411.9 69.3 Q432.9 115.6 483.4 121.0 Q489.7 167.8 538.1 185.3 Q529.6 247.5 572.1 298.0"/></g></symbol>
-    <symbol id="branch" viewBox="-10 -20 590 280"><path d="M22.3 165.7 L29.9 161.7 L37.5 157.7 L45.2 153.8 L52.8 149.8 L60.4 146.0 L68.0 142.1 L75.7 138.4 L83.2 134.6 L90.9 131.0 L98.5 127.3 L106.0 123.9 L113.6 120.4 L121.3 117.2 L128.8 113.9 L136.4 110.9 L144.1 107.8 L151.6 105.1 L159.2 102.3 L166.8 99.8 L174.3 97.3 L181.9 95.1 L189.6 92.9 L197.1 91.0 L204.7 89.1 L212.3 87.5 L219.8 86.0 L227.5 84.8 L235.1 83.6 L242.6 82.7 L250.2 81.9 L257.8 81.3 L265.4 81.0 L273.0 80.7 L280.6 80.6 L288.2 80.8 L295.9 81.2 L303.5 81.6 L311.0 82.3 L318.7 83.1 L326.3 84.3 L333.9 85.5 L341.6 86.8 L349.3 88.4 L356.8 90.2 L364.5 92.1 L372.2 94.1 L379.8 96.3 L387.5 98.7 L395.2 101.2 L402.8 103.8 L410.5 106.5 L418.2 109.5 L425.8 112.4 L433.5 115.5 L441.2 118.8 L448.9 122.1 L456.6 125.5 L464.3 129.1 L471.9 132.6 L479.7 136.2 L480.3 134.8 L472.7 131.0 L465.1 127.3 L457.4 123.7 L449.7 120.1 L442.2 116.6 L434.5 113.3 L426.8 110.0 L419.2 106.9 L411.5 103.9 L403.8 101.0 L396.2 98.2 L388.5 95.5 L380.8 93.1 L373.2 90.7 L365.5 88.5 L357.8 86.4 L350.1 84.6 L342.4 82.8 L334.7 81.3 L327.1 79.9 L319.3 78.7 L311.6 77.7 L303.9 76.8 L296.1 76.2 L288.4 75.8 L280.8 75.4 L273.0 75.3 L265.2 75.4 L257.6 75.7 L249.8 76.1 L242.0 76.7 L234.3 77.6 L226.5 78.6 L218.8 79.8 L211.1 81.1 L203.3 82.7 L195.5 84.4 L187.8 86.3 L180.1 88.3 L172.3 90.5 L164.6 92.8 L156.8 95.3 L149.0 97.9 L141.3 100.6 L133.6 103.5 L125.8 106.5 L118.1 109.6 L110.4 112.8 L102.6 116.1 L94.9 119.5 L87.1 123.0 L79.4 126.6 L71.7 130.2 L64.0 133.9 L56.2 137.6 L48.6 141.4 L40.8 145.2 L33.1 149.1 L25.5 152.9 L17.7 156.7Z" fill="var(--bark)"/><path d="M50.7 145.6 Q64.0 115.1 69.6 83.7" stroke="var(--bark)" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M64.0 115.1 L56.3 90.4" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M0 0 C10.6 -7.6 25.8 -6.1 35.0 0 C25.8 6.1 10.6 7.6 0 0Z" fill="#C8641E" transform="translate(69.6 83.7) rotate(-22)"/><path d="M81.3 130.6 Q92.4 101.2 111.3 84.6" stroke="var(--bark)" stroke-width="3.0" fill="none" stroke-linecap="round"/><path d="M92.4 101.2 L112.7 92.8" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M112.0 116.6 Q125.4 89.7 141.9 66.8" stroke="var(--bark)" stroke-width="2.9" fill="none" stroke-linecap="round"/><path d="M125.4 89.7 L124.0 66.6" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M142.7 104.2 Q152.8 86.2 167.3 76.3" stroke="var(--bark)" stroke-width="2.7" fill="none" stroke-linecap="round"/><path d="M152.8 86.2 L167.2 82.5" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M0 0 C8.3 -5.9 20.1 -4.7 27.1 0 C20.1 4.7 8.3 5.9 0 0Z" fill="#9A3F16" transform="translate(167.3 76.3) rotate(3)"/><path d="M173.3 93.9 Q188.5 68.3 198.3 55.4" stroke="var(--bark)" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M188.5 68.3 L188.0 49.9" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M234.7 80.6 Q252.3 64.7 277.4 45.8" stroke="var(--bark)" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M252.3 64.7 L258.5 43.6" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M265.3 78.2 Q288.3 108.2 311.7 122.7" stroke="var(--bark)" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M288.3 108.2 L313.7 112.4" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M0 0 C8.3 -6.0 20.2 -4.8 27.4 0 C20.2 4.8 8.3 6.0 0 0Z" fill="#D9933A" transform="translate(311.7 122.7) rotate(103)"/><path d="M296.0 78.7 Q319.4 89.2 328.5 100.4" stroke="var(--bark)" stroke-width="2.1" fill="none" stroke-linecap="round"/><path d="M319.4 89.2 L335.1 89.1" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M326.7 82.1 Q339.0 99.3 356.3 121.1" stroke="var(--bark)" stroke-width="1.9" fill="none" stroke-linecap="round"/><path d="M339.0 99.3 L357.6 105.5" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M388.0 97.1 Q404.9 114.0 411.9 125.9" stroke="var(--bark)" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M404.9 114.0 L406.3 128.8" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M0 0 C7.9 -5.7 19.3 -4.5 26.1 0 C19.3 4.5 7.9 5.7 0 0Z" fill="#7A3413" transform="translate(411.9 125.9) rotate(85)"/><path d="M418.7 108.2 Q431.1 119.0 437.0 134.7" stroke="var(--bark)" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M431.1 119.0 L431.2 131.9" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M449.3 121.1 Q454.1 147.5 467.7 158.7" stroke="var(--bark)" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M454.1 147.5 L468.7 155.7" stroke="var(--bark)" stroke-width="1.2" fill="none" stroke-linecap="round"/></symbol>
+    <symbol id="sun" viewBox="0 0 600 600"><g fill="none" stroke="currentColor" stroke-width=".8" stroke-linecap="round"><circle cx="300" cy="300" r="118"/><circle cx="300" cy="300" r="106"/><path d="M300 168 L300 38"/><path d="M322.9 170 L337.2 89.3"/><path d="M345.1 176 L381.4 76.4"/><path d="M366 185.7 L431 73.1"/><path d="M384.8 198.9 L437.6 136.1"/><path d="M401.1 215.2 L482.3 147"/><path d="M414.3 234 L526.9 169"/><path d="M424 254.9 L501.1 226.8"/><path d="M430 277.1 L534.4 258.7"/><path d="M432 300 L562 300"/><path d="M430 322.9 L510.7 337.2"/><path d="M424 345.1 L523.6 381.4"/><path d="M414.3 366 L526.9 431"/><path d="M401.1 384.8 L463.9 437.6"/><path d="M384.8 401.1 L453 482.3"/><path d="M366 414.3 L431 526.9"/><path d="M345.1 424 L373.2 501.1"/><path d="M322.9 430 L341.3 534.4"/><path d="M300 432 L300 562"/><path d="M277.1 430 L262.8 510.7"/><path d="M254.9 424 L218.6 523.6"/><path d="M234 414.3 L169 526.9"/><path d="M215.2 401.1 L162.4 463.9"/><path d="M198.9 384.8 L117.7 453"/><path d="M185.7 366 L73.1 431"/><path d="M176 345.1 L98.9 373.2"/><path d="M170 322.9 L65.6 341.3"/><path d="M168 300 L38 300"/><path d="M170 277.1 L89.3 262.8"/><path d="M176 254.9 L76.4 218.6"/><path d="M185.7 234 L73.1 169"/><path d="M198.9 215.2 L136.1 162.4"/><path d="M215.2 198.9 L147 117.7"/><path d="M234 185.7 L169 73.1"/><path d="M254.9 176 L226.8 98.9"/><path d="M277.1 170 L258.7 65.6"/></g></symbol>
+    <symbol id="branch" viewBox="-10 -20 590 280"><path d="M20 161.2 L27.7 157.3 L35.3 153.4 L43 149.5 L50.7 145.6 L58.3 141.8 L66 138 L73.7 134.3 L81.3 130.6 L89 127 L96.7 123.4 L104.3 120 L112 116.6 L119.7 113.4 L127.3 110.2 L135 107.2 L142.7 104.2 L150.3 101.5 L158 98.8 L165.7 96.3 L173.3 93.9 L181 91.7 L188.7 89.6 L196.3 87.7 L204 85.9 L211.7 84.3 L219.3 82.9 L227 81.7 L234.7 80.6 L242.3 79.7 L250 79 L257.7 78.5 L265.3 78.2 L273 78 L280.7 78 L288.3 78.3 L296 78.7 L303.7 79.2 L311.3 80 L319 80.9 L326.7 82.1 L334.3 83.4 L342 84.8 L349.7 86.5 L357.3 88.3 L365 90.3 L372.7 92.4 L380.3 94.7 L388 97.1 L395.7 99.7 L403.3 102.4 L411 105.2 L418.7 108.2 L426.3 111.2 L434 114.4 L441.7 117.7 L449.3 121.1 L457 124.6 L464.7 128.2 L472.3 131.8 L480 135.5" stroke="var(--stem)" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M0 0 C21.1 -14.1 52.9 -11.3 70.5 0 C52.9 11.3 21.1 14.1 0 0Z" fill="var(--leaf-2)" transform="translate(50.7 145.6) rotate(-73)"/><path d="M0 0 C23.4 -15.6 58.5 -12.5 77.9 0 C58.5 12.5 23.4 15.6 0 0Z" fill="var(--leaf-3)" transform="translate(50.7 145.6) rotate(5.2)"/><path d="M0 0 C20.9 -13.9 52.3 -11.2 69.7 0 C52.3 11.2 20.9 13.9 0 0Z" fill="var(--leaf-2)" transform="translate(81.3 130.6) rotate(-56.9)"/><path d="M0 0 C17.1 -11.4 42.7 -9.1 56.9 0 C42.7 9.1 17.1 11.4 0 0Z" fill="var(--leaf-3)" transform="translate(81.3 130.6) rotate(19)"/><path d="M0 0 C20.2 -13.4 50.4 -10.7 67.2 0 C50.4 10.7 20.2 13.4 0 0Z" fill="var(--leaf-2)" transform="translate(112 116.6) rotate(-59)"/><path d="M0 0 C20.3 -13.5 50.7 -10.8 67.7 0 C50.7 10.8 20.3 13.5 0 0Z" fill="var(--leaf-1)" transform="translate(112 116.6) rotate(8.1)"/><path d="M0 0 C15.8 -10.6 39.6 -8.5 52.8 0 C39.6 8.5 15.8 10.6 0 0Z" fill="var(--leaf-1)" transform="translate(142.7 104.2) rotate(-48.7)"/><path d="M0 0 C20.8 -13.9 52 -11.1 69.3 0 C52 11.1 20.8 13.9 0 0Z" fill="var(--leaf-3)" transform="translate(142.7 104.2) rotate(14.5)"/><path d="M0 0 C18.4 -12.3 46 -9.8 61.3 0 C46 9.8 18.4 12.3 0 0Z" fill="var(--leaf-2)" transform="translate(173.3 93.9) rotate(-57)"/><path d="M0 0 C17 -11.4 42.6 -9.1 56.8 0 C42.6 9.1 17 11.4 0 0Z" fill="var(--leaf-1)" transform="translate(204 85.9) rotate(27.3)"/><path d="M0 0 C15.9 -10.6 39.7 -8.5 53 0 C39.7 8.5 15.9 10.6 0 0Z" fill="var(--leaf-2)" transform="translate(234.7 80.6) rotate(-39.2)"/><path d="M0 0 C14.1 -9.4 35.2 -7.5 46.9 0 C35.2 7.5 14.1 9.4 0 0Z" fill="var(--leaf-2)" transform="translate(265.3 78.2) rotate(-31.3)"/><path d="M0 0 C19.2 -12.8 48 -10.2 64 0 C48 10.2 19.2 12.8 0 0Z" fill="var(--leaf-1)" transform="translate(265.3 78.2) rotate(43.8)"/><path d="M0 0 C18.3 -12.2 45.7 -9.8 61 0 C45.7 9.8 18.3 12.2 0 0Z" fill="var(--leaf-2)" transform="translate(296 78.7) rotate(-24.7)"/><path d="M0 0 C15.2 -10.2 38.1 -8.1 50.8 0 C38.1 8.1 15.2 10.2 0 0Z" fill="var(--leaf-3)" transform="translate(296 78.7) rotate(33.8)"/><path d="M0 0 C16.2 -10.8 40.5 -8.6 54 0 C40.5 8.6 16.2 10.8 0 0Z" fill="var(--leaf-2)" transform="translate(326.7 82.1) rotate(-25.1)"/><path d="M0 0 C17.8 -11.9 44.5 -9.5 59.3 0 C44.5 9.5 17.8 11.9 0 0Z" fill="var(--leaf-1)" transform="translate(326.7 82.1) rotate(52.8)"/><path d="M0 0 C12 -8 30 -6.4 40 0 C30 6.4 12 8 0 0Z" fill="var(--leaf-2)" transform="translate(357.3 88.3) rotate(51.7)"/><path d="M0 0 C13.7 -9.2 34.3 -7.3 45.8 0 C34.3 7.3 13.7 9.2 0 0Z" fill="var(--leaf-3)" transform="translate(388 97.1) rotate(50.3)"/><path d="M0 0 C13 -8.7 32.5 -6.9 43.3 0 C32.5 6.9 13 8.7 0 0Z" fill="var(--leaf-2)" transform="translate(418.7 108.2) rotate(-13.8)"/><path d="M0 0 C12 -8 30 -6.4 39.9 0 C30 6.4 12 8 0 0Z" fill="var(--leaf-3)" transform="translate(418.7 108.2) rotate(55.3)"/><path d="M0 0 C14.6 -9.7 36.5 -7.8 48.6 0 C36.5 7.8 14.6 9.7 0 0Z" fill="var(--leaf-2)" transform="translate(449.3 121.1) rotate(-7.8)"/><path d="M0 0 C13.3 -8.8 33.1 -7.1 44.2 0 C33.1 7.1 13.3 8.8 0 0Z" fill="var(--leaf-1)" transform="translate(449.3 121.1) rotate(63.9)"/><path d="M0 0 C18 -12 46 -9 64 0 C46 9 18 12 0 0Z" fill="var(--leaf-2)" transform="translate(480 135.5) rotate(25.8)"/><path d="M158 98.8 q4 12 2 20" stroke="var(--stem)" stroke-width="1.4" fill="none"/><ellipse cx="160" cy="127.8" rx="7.5" ry="10" fill="var(--olive-fruit)"/><ellipse cx="158" cy="123.8" rx="2" ry="3" fill="#fff" opacity=".35"/><path d="M280.7 78 q4 12 2 20" stroke="var(--stem)" stroke-width="1.4" fill="none"/><ellipse cx="282.7" cy="107" rx="7.5" ry="10" fill="var(--olive-fruit)"/><ellipse cx="280.7" cy="103" rx="2" ry="3" fill="#fff" opacity=".35"/><path d="M380.3 94.7 q4 12 2 20" stroke="var(--stem)" stroke-width="1.4" fill="none"/><ellipse cx="382.3" cy="123.7" rx="7.5" ry="10" fill="var(--olive-fruit)"/><ellipse cx="380.3" cy="119.7" rx="2" ry="3" fill="#fff" opacity=".35"/></symbol>
     <symbol id="mark" viewBox="0 0 64 64"><g fill="currentColor"><ellipse cx="25.6" cy="34" rx="7.4" ry="9.8"/><ellipse cx="38.4" cy="34" rx="7.4" ry="9.8"/><ellipse cx="32" cy="34" rx="8" ry="10.4"/><path d="M30.6 24.6c-.2-2.6.6-4.6 2.6-5.8l1.3 1.3c-1.5 1.1-2 2.6-1.8 4.6z"/></g><g fill="var(--face,var(--milk))"><path d="M24.2 32.6l2.6-4 2.6 4z"/><path d="M34.6 32.6l2.6-4 2.6 4z"/><path d="M24.6 36.4c4.4 4.6 10.4 4.6 14.8 0l-2.4.4-1.4 1.6-1.6-1.4-1.8 1.6-1.8-1.6-1.6 1.4-1.4-1.6z"/></g><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M32 2v10M32 52v10M2 34h10M52 34h10M10.8 12.8l7 7M46.2 48.2l7 7M53.2 12.8l-7 7M17.8 48.2l-7 7"/><path d="M43.5 4.3l-3.4 8.6M23.9 55.1l-3.4 8.6M59.7 22.5l-8.6 3.4M12.9 41.5L4.3 44.7M59.7 45.5l-8.6-3.4M12.9 26.5L4.3 23.3M43.5 63.7l-3.4-8.6M23.9 12.9L20.5 4.3" stroke-width="1.1"/></g></symbol>
     <symbol id="bat" viewBox="0 0 100 50"><g class="w"><path d="M47 22C38 9 20 6 3 15c9 1 13 7 11 14 6-4 13-2 15 4 4-6 11-6 16-2z"/></g><g class="w r"><path d="M53 22c9-13 27-16 44-7-9 1-13 7-11 14-6-4-13-2-15 4-4-6-11-6-16-2z"/></g><path d="M50 14c-1.6 0-2.4-2.6-3.6-4.4.4 2 .3 3.6-.6 5-1.4 2-1.8 6-1 10 .8 4.4 3 8 5.2 8s4.4-3.6 5.2-8c.8-4 .4-8-1-10-.9-1.4-1-3-.6-5-1.2 1.8-2 4.4-3.6 4.4z"/></symbol>
     <symbol id="arrow" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -545,8 +531,8 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
 
 <div class="ticker" aria-label="Announcements">
   <div class="ticker-track" aria-hidden="true">
-    <span>Open Tuesday to Sunday, 5 to 10 pm</span><span>Blood Moon twist on machine two</span><span>Pistachio kataifi bubbling in the cauldron</span><span>Halloween is a Saturday. We're open 5 to 10</span><span>Costumes very welcome</span><span>Froyo is so back. From the dead</span><span>1355 Old Northern Blvd, Roslyn</span>
-    <span>Open Tuesday to Sunday, 5 to 10 pm</span><span>Blood Moon twist on machine two</span><span>Pistachio kataifi bubbling in the cauldron</span><span>Halloween is a Saturday. We're open 5 to 10</span><span>Costumes very welcome</span><span>Froyo is so back. From the dead</span><span>1355 Old Northern Blvd, Roslyn</span>
+    <span>Open Tuesday to Sunday, 5 to 10 pm</span><span>Raspberry + Vanilla Bean twist on machine two</span><span>Warm pistachio kataifi at the end of the bar</span><span>Halloween is a Saturday. We're open 5 to 10</span><span>Costumes very welcome</span><span>Froyo is so back</span><span>1355 Old Northern Blvd, Roslyn</span>
+    <span>Open Tuesday to Sunday, 5 to 10 pm</span><span>Raspberry + Vanilla Bean twist on machine two</span><span>Warm pistachio kataifi at the end of the bar</span><span>Halloween is a Saturday. We're open 5 to 10</span><span>Costumes very welcome</span><span>Froyo is so back</span><span>1355 Old Northern Blvd, Roslyn</span>
   </div>
   <p class="vh">Open Tuesday to Sunday, 5 to 10 pm. Halloween is a Saturday, and we're open 5 to 10. Costumes very welcome.</p>
 </div>
@@ -576,7 +562,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
 <div class="sheet" id="sheet" aria-label="Menu">
   <nav aria-label="Menu">
     <a class="big" href="#flavors" style="--i:0">Flavors tonight <span>01</span></a>
-    <a class="big" href="#toppings" style="--i:1">Tricks + treats <span>02</span></a>
+    <a class="big" href="#toppings" style="--i:1">Toppings tonight <span>02</span></a>
     <a class="big" href="#story" style="--i:2">Our story <span>03</span></a>
     <a class="big" href="#visit" style="--i:3">Visit <span>04</span></a>
     <a class="big" href="#faq" style="--i:4">FAQ <span>05</span></a>
@@ -593,15 +579,13 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
     <div class="stars" aria-hidden="true"></div>
     <div class="fog" aria-hidden="true"></div>
     <div class="bats" aria-hidden="true">
-      <span class="bat" style="--y:16%;--w:46px;--t:26s;--delay:-4s"><svg><use href="#bat"/></svg></span>
-      <span class="bat" style="--y:9%;--w:30px;--t:31s;--delay:-17s"><svg><use href="#bat"/></svg></span>
-      <span class="bat" style="--y:30%;--w:36px;--t:22s;--delay:-11s"><svg><use href="#bat"/></svg></span>
+      <span class="bat" style="--y:12%;--w:30px;--t:38s;--delay:-9s"><svg><use href="#bat"/></svg></span>
     </div>
     <div class="wrap hero-in">
       <div class="hero-copy">
         <p class="label kicker" data-in style="--d:0">Organic Greek froyo · Roslyn Village · After dark</p>
         <h1 class="display" id="hero-h"><span data-in style="--d:1;display:block">Greek froyo,</span><span data-in style="--d:2;display:block"><em>softly</em> haunted.</span></h1>
-        <p class="lede" data-in style="--d:3">Made in house every day from Greek yogurt and kefir, then pulled by you from six handles. Finish it at a bar of fresh fruit, trick-or-treat candy and warm pistachio kataifi straight from the cauldron.</p>
+        <p class="lede" data-in style="--d:3">Made in house every day from Greek yogurt and kefir, then pulled by you from six handles. Finish it at a bar of fresh fruit and warm pistachio kataifi.</p>
         <div class="btns" data-in style="--d:4">
           <a class="btn solid" href="#flavors">See tonight's flavors <svg aria-hidden="true"><use href="#arrow"/></svg></a>
           <a class="btn" href="#visit">Plan your visit</a>
@@ -615,14 +599,13 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
 
       <div class="arch-wrap">
         <div class="moon" aria-hidden="true"></div>
-        <div class="arch-sun" aria-hidden="true"><svg><use href="#web"/></svg></div>
+        <div class="arch-sun" aria-hidden="true"><svg><use href="#sun"/></svg></div>
         <div class="arch">
           <img src="img/hero.webp" width="1040" height="1300" alt="A cup of Ilios tart froyo swirled high into a little ghost with two dark eyes, glowing in a dark room. The sun on the cup glows pumpkin orange." fetchpriority="high">
         </div>
         <div class="branch" aria-hidden="true"><svg><use href="#branch"/></svg></div>
-        <div class="spider" aria-hidden="true"><svg viewBox="0 0 26 26"><g fill="currentColor"><circle cx="13" cy="10" r="4"/><ellipse cx="13" cy="17" rx="5.5" ry="6.5"/></g><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M9 14l-5-4-3 2M9 17l-6-1-2 3M9.5 20l-5 2-1 3M10 12l-4-6-3 0M17 14l5-4 3 2M17 17l6-1 2 3M16.5 20l5 2 1 3M16 12l4-6 3 0"/></g><g fill="#F7924A"><circle cx="11.6" cy="9.4" r=".9"/><circle cx="14.4" cy="9.4" r=".9"/></g></svg></div>
         <div class="float open" style="--d:0"><span class="dot" style="background:var(--milk);display:grid;place-items:center"><svg width="18" height="18" style="color:var(--gold)" aria-hidden="true"><use href="#mark"/></svg></span><span><small>Tonight</small><b data-status-short>5 to 10 pm</b></span></div>
-        <div class="float pour" style="--d:1"><span class="dot sw rtwist" style="margin:0"></span><span><small>Now pouring</small><b>Blood Moon twist</b></span></div>
+        <div class="float pour" style="--d:1"><span class="dot sw rtwist" style="margin:0"></span><span><small>Now pouring</small><b>Raspberry twist</b></span></div>
       </div>
     </div>
   </section>
@@ -639,7 +622,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
 
   <!-- ============================================================ flavors today
        EDIT DAILY: one <li class="flavor"> per handle that's pouring. Swap the image, name, swatch and line.
-       The October names are costumes for the regular flavors; each card's line says what's really in the cup. -->
+       In October the tart goes by Ghost Tart; it's the same Organic Original Tart. -->
   <section class="sec" id="flavors" aria-labelledby="flavors-h">
     <div class="wrap">
       <div class="sec-head">
@@ -648,33 +631,33 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
           <p class="label kicker" data-reveal style="--i:1;display:flex">Three machines · six handles</p>
           <h2 class="h2" id="flavors-h" data-reveal style="--i:2">Flavors <em>tonight</em></h2>
         </div>
-        <p class="aside" data-reveal style="--i:3">Pull one, or twist two together from the middle handle. Tart and vanilla are organic; the fruit flavors are made with real fruit. Same six as ever, in costume for October.</p>
+        <p class="aside" data-reveal style="--i:3">Pull one, or twist two together from the middle handle. Tart and vanilla are organic; the fruit flavors are made with real fruit.</p>
       </div>
 
       <ul class="flavors" data-stagger>
         <li class="flavor" data-reveal>
           <figure><img src="img/cup-tart.webp" width="800" height="1000" alt="Organic Original Tart, bright white and swirled into a little ghost with two dark eyes, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag">Organic</span><span class="tag">Classic</span></div></figure>
-          <div class="flavor-body"><h3 class="h3">Ghost Tart</h3><i class="sw tart" aria-hidden="true"></i><p>Organic Original Tart under a bedsheet. Bright, clean and properly tangy. The one we're known for.</p><span class="machine">Machine one · both handles</span></div>
+          <div class="flavor-body"><h3 class="h3">Ghost Tart</h3><i class="sw tart" aria-hidden="true"></i><p>Our Organic Original Tart, under a bedsheet. Bright, clean and properly tangy.</p><span class="machine">Machine one · both handles</span></div>
         </li>
         <li class="flavor" data-reveal>
           <figure><img src="img/cup-vanilla.webp" width="800" height="1000" alt="Organic Vanilla Bean, warm ivory with black vanilla specks and a little ghost face, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag">Organic</span></div></figure>
-          <div class="flavor-body"><h3 class="h3">Bone-White Vanilla</h3><i class="sw vanilla" aria-hidden="true"></i><p>Organic Vanilla Bean, specks and all. Soft, warm and a little floral, like a friendly ghost.</p><span class="machine">Machines two + three</span></div>
+          <div class="flavor-body"><h3 class="h3">Organic Vanilla Bean</h3><i class="sw vanilla" aria-hidden="true"></i><p>Real vanilla bean, specks and all. Soft, warm and a little floral.</p><span class="machine">Machines two + three</span></div>
         </li>
         <li class="flavor" data-reveal>
           <figure><img src="img/cup-raspberry.webp" width="800" height="1000" alt="Raspberry froyo, dusty pink, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag">Real fruit</span></div></figure>
-          <div class="flavor-body"><h3 class="h3">Blood Moon Raspberry</h3><i class="sw rasp" aria-hidden="true"></i><p>Raspberry, made with real raspberries. Dusty pink, sweet-tart, a little bit wicked.</p><span class="machine">Machine two · left handle</span></div>
+          <div class="flavor-body"><h3 class="h3">Raspberry</h3><i class="sw rasp" aria-hidden="true"></i><p>Made with real raspberries. Dusty pink and sweet-tart.</p><span class="machine">Machine two · left handle</span></div>
         </li>
         <li class="flavor" data-reveal>
           <figure><img src="img/cup-raspberry-twist.webp" width="800" height="1000" alt="Raspberry and vanilla bean twist, pink and ivory swirled together, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag gold">Twist</span></div></figure>
-          <div class="flavor-body"><h3 class="h3">Blood Moon Twist</h3><i class="sw rtwist" aria-hidden="true"></i><p>Raspberry and vanilla bean at once, spiralled together from the middle handle.</p><span class="machine">Machine two · middle handle</span></div>
+          <div class="flavor-body"><h3 class="h3">Raspberry + Vanilla Bean</h3><i class="sw rtwist" aria-hidden="true"></i><p>Both at once, spiralled together from the middle handle.</p><span class="machine">Machine two · middle handle</span></div>
         </li>
         <li class="flavor" data-reveal>
           <figure><img src="img/cup-coffee.webp" width="800" height="1000" alt="Sweet Harbor Coffee froyo, latte tan, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag">Local collab</span></div></figure>
-          <div class="flavor-body"><h3 class="h3">Midnight Coffee</h3><i class="sw coffee" aria-hidden="true"></i><p>Sweet Harbor Coffee: a latte-soft coffee froyo, made with our neighbors in Roslyn Village. For staying up late.</p><span class="machine">Machine three · left handle</span></div>
+          <div class="flavor-body"><h3 class="h3">Sweet Harbor Coffee</h3><i class="sw coffee" aria-hidden="true"></i><p>A latte-soft coffee froyo, made with our neighbors at Sweet Harbor Coffee in Roslyn Village.</p><span class="machine">Machine three · left handle</span></div>
         </li>
         <li class="flavor" data-reveal>
           <figure><img src="img/cup-coffee-twist.webp" width="800" height="1000" alt="Coffee and vanilla bean twist, tan and ivory swirled together, in an Ilios cup" loading="lazy"><div class="tags"><span class="tag gold">Twist</span></div></figure>
-          <div class="flavor-body"><h3 class="h3">Witching Hour Twist</h3><i class="sw ctwist" aria-hidden="true"></i><p>Sweet Harbor Coffee and vanilla bean, twisted. Iced-latte energy, after dark.</p><span class="machine">Machine three · middle handle</span></div>
+          <div class="flavor-body"><h3 class="h3">Coffee + Vanilla Bean</h3><i class="sw ctwist" aria-hidden="true"></i><p>Iced-latte energy. Sweet Harbor Coffee and vanilla bean, twisted.</p><span class="machine">Machine three · middle handle</span></div>
         </li>
       </ul>
 
@@ -692,14 +675,14 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
       <div class="sec-head">
         <div>
           <p class="label kicker" data-reveal>The bar, front to back</p>
-          <h2 class="h2" id="toppings-h" data-reveal style="--i:1">Tricks + <em>treats</em></h2>
+          <h2 class="h2" id="toppings-h" data-reveal style="--i:1">Toppings <em>tonight</em></h2>
         </div>
         <div data-reveal style="--i:2">
           <div class="seg" id="seg" role="group" aria-label="Filter toppings">
             <button type="button" aria-pressed="true" data-filter="all">All <sup data-count="all"></sup></button>
             <button type="button" aria-pressed="false" data-filter="fruit">Fruit <sup data-count="fruit"></sup></button>
             <button type="button" aria-pressed="false" data-filter="candy">Candy &amp; crunch <sup data-count="candy"></sup></button>
-            <button type="button" aria-pressed="false" data-filter="warm">Cauldron <sup data-count="warm"></sup></button>
+            <button type="button" aria-pressed="false" data-filter="warm">Warm <sup data-count="warm"></sup></button>
             <div class="seg-on" id="segOn" aria-hidden="true"></div>
           </div>
         </div>
@@ -707,25 +690,25 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
 
       <div class="groups" id="groups" aria-live="polite">
         <div class="group" data-group="fruit">
-          <div class="group-h"><h3 class="h3">The witch's garden</h3><p>Fresh fruit + sauce · self serve · first along the bar</p></div>
+          <div class="group-h"><h3 class="h3">Fresh fruit + sauce</h3><p>Self serve · first along the bar</p></div>
           <ul class="items">
             <li><i class="c" style="background:#E27C78"></i><span><b>Strawberries</b><small>Diced</small></span></li>
             <li><i class="c" style="background:#F2C35E"></i><span><b>Golden mango</b><small>Diced</small></span></li>
             <li><i class="c" style="background:#C9A26B"></i><span><b>Granola</b><small>Nut free, gluten free</small></span><em class="pill">GF</em></li>
             <li><i class="c" style="background:#7A4E32"></i><span><b>Medjool dates</b><small>Chopped</small></span></li>
             <li><i class="c" style="background:#8E5A7A"></i><span><b>Fresh figs</b><small>Quartered</small></span></li>
-            <li><i class="c" style="background:#C4435C"></i><span><b>Raspberry sauce</b><small>Ladled, blood red</small></span></li>
+            <li><i class="c" style="background:#C4435C"></i><span><b>Raspberry sauce</b><small>Ladled</small></span></li>
             <li><i class="c" style="background:#9BB53F"></i><span><b>Kiwi</b><small>Diced</small></span></li>
             <li><i class="c" style="background:#55618F"></i><span><b>Blueberries</b><small>Whole</small></span></li>
             <li><i class="c" style="background:#BBCB6E"></i><span><b>Green grapes</b><small>Whole</small></span></li>
-            <li><i class="c" style="background:#D3E2A8"></i><span><b>Honeydew</b><small>Melon balls. Or eyeballs</small></span></li>
+            <li><i class="c" style="background:#D3E2A8"></i><span><b>Honeydew</b><small>Melon balls</small></span></li>
             <li><i class="c" style="background:#F7F3EC"></i><span><b>Coconut</b><small>Shredded</small></span></li>
             <li class="soon"><i class="c" style="background:#F2D16B"></i><span><b>Pineapple</b><small>Cubes</small></span><em class="pill">Back soon</em></li>
           </ul>
         </div>
 
         <div class="group" data-group="candy">
-          <div class="group-h"><h3 class="h3">Trick-or-treat</h3><p>Candy + crunch · self serve · the middle of the bar</p></div>
+          <div class="group-h"><h3 class="h3">Candy + crunch</h3><p>Self serve · the middle of the bar</p></div>
           <ul class="items">
             <li><i class="c" style="background:conic-gradient(#F28C6B 0 25%,#F4D35E 0 50%,#8CC084 0 75%,#E57A9A 0)"></i><span><b>Gummy bears</b></span></li>
             <li><i class="c" style="background:conic-gradient(#D94F45 0 20%,#F2B53C 0 40%,#4C8C4A 0 60%,#3E6FB0 0 80%,#7A4A2E 0)"></i><span><b>M&amp;M's</b></span></li>
@@ -733,13 +716,13 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
             <li><i class="c" style="background:#5A3A2A"></i><span><b>Brownie bites</b></span></li>
             <li><i class="c" style="background:linear-gradient(#5E8C4E 0 33%,#F2E2B4 0 66%,#D9675F 0)"></i><span><b>Rainbow cookies</b><small>NY tricolor, sliced</small></span></li>
             <li><i class="c" style="background:#4A2C20"></i><span><b>Chocolate chips</b></span></li>
-            <li><i class="c" style="background:#5B3A29"></i><span><b>Chocolate jimmies</b><small>Bat black</small></span></li>
+            <li><i class="c" style="background:#5B3A29"></i><span><b>Chocolate jimmies</b></span></li>
             <li><i class="c" style="background:#EFE2C4"></i><span><b>Rice Krispies treats</b><small>Cubed</small></span></li>
-            <li><i class="c" style="background:#2D2A2A"></i><span><b>Oreo crumble</b><small>Graveyard dirt</small></span></li>
+            <li><i class="c" style="background:#2D2A2A"></i><span><b>Oreo crumble</b></span></li>
             <li><i class="c" style="background:#C8955C"></i><span><b>Mini chocolate chip cookies</b></span></li>
             <li><i class="c" style="background:#B87A43"></i><span><b>Biscoff cookies</b><small>Broken</small></span></li>
             <li><i class="c" style="background:#D8B78A"></i><span><b>Cookie dough</b><small>Scooped</small></span></li>
-            <li><i class="c" style="background:linear-gradient(135deg,#E85D6C 0 50%,#F4C54A 0)"></i><span><b>Sour strips, Swedish Fish + worms</b><small>Freshly dug</small></span></li>
+            <li><i class="c" style="background:linear-gradient(135deg,#E85D6C 0 50%,#F4C54A 0)"></i><span><b>Sour strips, Swedish Fish + worms</b></span></li>
             <li><i class="c" style="background:linear-gradient(135deg,#F4C6CF 0 50%,#FBF6F2 0)"></i><span><b>Strawberry mochi</b></span></li>
             <li><i class="c" style="background:#6B4430"></i><span><b>Chocolate bar chunks</b></span></li>
           </ul>
@@ -757,7 +740,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
           </ul>
         </div>
       </div>
-      <p class="bar-foot">The bar changes with the season and the day. Got an allergy? Ask us before you build your cup. No tricks.</p>
+      <p class="bar-foot">The bar changes with the season and the day. Got an allergy? Ask us before you build your cup.</p>
     </div>
   </section>
 
@@ -790,7 +773,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
           <p class="label kicker" data-reveal>How it works</p>
           <h2 class="h2" id="how-h" data-reveal style="--i:1">Pull. Top. <em>Weigh.</em></h2>
         </div>
-        <p class="aside" data-reveal style="--i:2">Self serve, the way froyo should be. Staff are always happy to pour for you, costume or not.</p>
+        <p class="aside" data-reveal style="--i:2">Self serve, the way froyo should be. Staff are always happy to pour for you.</p>
       </div>
       <ol class="steps">
         <li class="step" data-reveal style="--i:0">
@@ -803,13 +786,13 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
           <span class="n">02</span>
           <svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="18" cy="14" rx="7" ry="9" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M21 22l13 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
           <h3 class="h3">Top</h3>
-          <p>Walk the bar back toward the door: fresh fruit first, then trick-or-treat candy, then the cauldron behind the glass.</p>
+          <p>Walk the bar back toward the door: fresh fruit first, then candy and crunch, then the cauldron behind the glass.</p>
         </li>
         <li class="step" data-reveal style="--i:2">
           <span class="n">03</span>
           <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 36h32M12 36l3-14h18l3 14M24 22v-8M18 14h12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <h3 class="h3">Weigh</h3>
-          <p>Pay by weight at the register, under the gold sun. Have as much, or as little, as you like. No tricks.</p>
+          <p>Pay by weight at the register, under the gold sun. Have as much, or as little, as you like.</p>
         </li>
       </ol>
     </div>
@@ -836,7 +819,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
       <div class="sec-head">
         <div>
           <p class="label kicker" data-reveal>The shop</p>
-          <h2 class="h2" id="shop-h" data-reveal style="--i:1">Come in, <em>if you dare.</em></h2>
+          <h2 class="h2" id="shop-h" data-reveal style="--i:1">Come in, <em>stay a while.</em></h2>
         </div>
         <p class="aside" data-reveal style="--i:2">A white Victorian storefront on Old Northern Blvd, with a porch, columns and slate-grey doors. Honestly, it was built to be haunted. The playlist inside stays loud and very European summer.</p>
       </div>
@@ -887,8 +870,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
     <div class="wrap faq-in">
       <div>
         <p class="label kicker" data-reveal>Good questions</p>
-        <h2 class="h2" id="faq-h" data-reveal style="--i:1;margin-top:20px">Before you <em>creep by.</em></h2>
-        <div class="ghost" aria-hidden="true"><svg viewBox="0 0 80 96"><path d="M40 4C19 4 8 20 8 42v48l8-7 8 7 8-7 8 7 8-7 8 7 8-7 8 7V42C72 20 61 4 40 4Z" fill="currentColor"/><g fill="#100C13"><ellipse cx="30" cy="40" rx="4.6" ry="6.6"/><ellipse cx="50" cy="40" rx="4.6" ry="6.6"/><ellipse cx="40" cy="55" rx="3.6" ry="4.6"/></g><g fill="#fff"><circle cx="28.6" cy="37.4" r="1.4"/><circle cx="48.6" cy="37.4" r="1.4"/></g></svg></div>
+        <h2 class="h2" id="faq-h" data-reveal style="--i:1;margin-top:20px">Before you <em>come by.</em></h2>
       </div>
       <div data-reveal style="--i:1">
         <details name="faq" open>
@@ -935,7 +917,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
       </div>
       <div class="grid4">
         <a href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal><img src="img/cup-top.webp" width="900" height="900" alt="A cup of Ilios froyo from above" loading="lazy"></a>
-        <a class="quote" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal style="--i:1"><small>Overheard by the register</small><b>Froyo is so back. From the dead.</b></a>
+        <a class="quote" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal style="--i:1"><small>Overheard by the register</small><b>Froyo is so back.</b></a>
         <a href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal style="--i:2"><img src="img/cup-raspberry-twist.webp" width="800" height="1000" alt="A raspberry and vanilla bean twist" loading="lazy" style="object-position:50% 45%;transform:scale(1.25)"></a>
         <a class="sage" href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener" data-reveal style="--i:3"><img src="img/cauldron.svg" width="860" height="600" alt="Warm pistachio kataifi bubbling in a cauldron" loading="lazy" style="object-fit:contain;padding:10%"></a>
       </div>
@@ -943,7 +925,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
       <div class="news" data-reveal>
         <div>
           <h2 class="h2">The monthly <em>flavor drop.</em></h2>
-          <p class="lede">One email when the machines change. No tricks.</p>
+          <p class="lede">One email when the machines change. That's it.</p>
         </div>
         <!-- DEPLOY STEP: point this form at the shop's mailing list (Mailchimp, Klaviyo, etc.). Until then it only confirms on the page. -->
         <form id="news" novalidate>
@@ -979,7 +961,7 @@ footer{background:#09070B;color:var(--ink);padding-top:clamp(64px,8vw,112px);ove
         <h4>Explore</h4>
         <ul>
           <li><a href="#flavors">Flavors tonight</a></li>
-          <li><a href="#toppings">Tricks + treats</a></li>
+          <li><a href="#toppings">Toppings tonight</a></li>
           <li><a href="#story">Our story</a></li>
           <li><a href="#faq">FAQ</a></li>
           <li><a href="https://www.instagram.com/iliosfroyo/" target="_blank" rel="noopener">Instagram</a></li>

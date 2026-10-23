@@ -69,11 +69,11 @@ a monthly-flavor email form, footer.
 ### Halloween: `site/2/halloween/`
 
 The same page after dark, served at `/2/halloween/`: every section, the toppings filter, the live open/closed
-status and the email form carry over, in a plum-black room with a pumpkin glow. The sun mark is a jack-o'-lantern
-sun, the olive branch is a dead one with a spider on a thread, a web sways behind the hero arch under a full moon,
-bats cross the hero, the kicker rules are candy corn, and the "on the machines tonight" line counts the nights to
-Halloween. The flavors wear October names (Ghost Tart, Blood Moon Raspberry, Witching Hour Twist...) and each card
-still says what's really in the cup; the warm station is "the cauldron". Animation stops under reduced motion.
+status and the email form carry over, in a plum-black room with a pumpkin glow. Kept deliberately light: the line
+sun still turns behind the hero arch (in candlelight) under a full moon, the olive branch stays (moonlit), one bat
+crosses now and then, the sun mark is a jack-o'-lantern sun, the kicker rules are candy corn, and the "on the
+machines tonight" line counts the nights to Halloween. The flavors keep their real names except Ghost Tart; the
+warm station is "the cauldron", and there's a costume question in the FAQ. Animation stops under reduced motion.
 
 - `site/2/halloween/index.html` is a copy of `site/2/index.html` with its own tokens, copy and decorations; daily
   edits work the same way. It links back to `/2/` from the footer.

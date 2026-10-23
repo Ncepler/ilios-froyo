@@ -48,7 +48,7 @@ def ghost(im, ex1, ex2, ey, mx, my):
     return Image.composite(Image.new('RGB', (w, h), (255, 255, 255)), im, hl.resize((w, h), Image.LANCZOS))
 
 
-def grade(im, cx=.5, cy=.45, rx=.42, ry=.42, glow=(.18, .9), lo=.5, br=1):
+def grade(im, cx=.5, cy=.45, rx=.46, ry=.46, glow=(.18, .9), lo=.4, br=1):
     im = np.asarray(im).astype(np.float32) / 255
     h, w, _ = im.shape
     y, x = np.mgrid[0:h, 0:w]
@@ -62,14 +62,14 @@ def grade(im, cx=.5, cy=.45, rx=.42, ry=.42, glow=(.18, .9), lo=.5, br=1):
     # coloured swirls (pink, latte) and the gold print keep their value, highlights included
     keep = np.clip(blur(smooth(.13, .32, sat), w / 60) * 1.6, 0, 1) * smooth(.07, .12, blur(sat, 2))
     Ln = Ln * (1 - keep) + np.clip(Ls * 1.05, 0, 1) * keep
-    spot = 1 - smooth(.55, 1.25, np.sqrt(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2))
-    lum = Ln * (.12 + .88 * spot)
+    spot = 1 - smooth(.65, 1.45, np.sqrt(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2))
+    lum = Ln * (.26 + .74 * spot)
     out = im * (lum / np.maximum(Ls, 1e-3))[..., None]
     out += smooth(.42, .55, sat)[..., None] * spot[..., None] * np.array([.09, -.01, -.06])  # gold print turns pumpkin
     out *= np.array([.97, .98, 1.03])                                                       # moonlit highlights
     out += (1 - lum[..., None]) * np.array([.06, .04, .075])                                 # plum shadows
     g = np.exp(-(((x - glow[0]) / .35) ** 2 + ((y - glow[1]) / .3) ** 2))
-    out += g[..., None] * np.array([.55, .22, .04]) * (.35 + .65 * Ln[..., None]) * .55       # pumpkin glow, low left
+    out += g[..., None] * np.array([.55, .22, .04]) * (.35 + .65 * Ln[..., None]) * .38       # pumpkin glow, low left
     out += np.random.default_rng(7).normal(0, .01, out.shape[:2])[..., None]                # grain
     return Image.fromarray((np.clip(out, 0, 1) * 255 + .5).astype(np.uint8))
 
@@ -84,7 +84,7 @@ JOBS = {
     'cup-coffee.webp': ({}, None),
     'cup-coffee-twist.webp': ({}, None),
     'cup-top.webp': ({'cx': .55}, None),
-    'station.webp': ({'cy': .45, 'rx': .5, 'ry': .55, 'glow': (.3, .85), 'lo': .5, 'br': 3}, None),
+    'station.webp': ({'cy': .45, 'rx': .55, 'ry': .6, 'glow': (.3, .85), 'lo': .45, 'br': 3}, None),
     'sun-macro.webp': ({'cx': .45, 'cy': .4, 'rx': .5, 'ry': .6}, None),
     'og.jpg': ({'rx': .5, 'ry': .7}, None),
 }
